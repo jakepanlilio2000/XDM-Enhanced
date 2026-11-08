@@ -21,7 +21,7 @@ class MainListViewFilter(
                 if (index < 0 || index >= model.rowCount) return false
                 model.getItemAt(index)
             }
-            is IdmTableModel -> {
+            is DownloadTableModel -> {
                 if (index < 0 || index >= model.rowCount) return false
                 model.getItemAt(index)
             }

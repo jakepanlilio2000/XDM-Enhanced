@@ -461,6 +461,11 @@ internal class SettingsOptionGroup<T>(private val options: List<SettingsOption<T
 
     override fun getMaximumSize(): Dimension = Dimension(Int.MAX_VALUE, preferredSize.height)
 
+    fun updateTheme() {
+        tiles.forEach { it.updateTheme() }
+        repaint()
+    }
+
     var selected: T
         get() = options[tiles.indexOfFirst { it.isSelected }.coerceAtLeast(0)].value
         set(value) {
@@ -496,6 +501,15 @@ internal class SettingsOptionGroup<T>(private val options: List<SettingsOption<T
         private fun refresh() {
             font = font.deriveFont(if (isSelected) Font.BOLD else Font.PLAIN)
             foreground = if (isSelected) UIManager.getColor("Label.foreground") else settingsMutedColor()
+        }
+
+        fun updateTheme() {
+            icon = createIcon(glyph, 26, settingsMutedColor())
+            selectedIcon = createIcon(glyph, 26, settingsAccentColor())
+            rolloverIcon = icon
+            rolloverSelectedIcon = selectedIcon
+            refresh()
+            repaint()
         }
 
         override fun paintComponent(g: Graphics) {

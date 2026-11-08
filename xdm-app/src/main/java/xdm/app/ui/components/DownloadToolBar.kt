@@ -24,7 +24,7 @@ import java.awt.Window
 import java.awt.event.ActionListener
 import javax.swing.*
 
-class IdmToolBar(
+class DownloadToolBar(
     private val onSearch: (String) -> Unit,
     private val onSort: (SortKey, Boolean) -> Unit,
     private val onAddUrl: () -> Unit,
@@ -125,6 +125,11 @@ class IdmToolBar(
         refreshGlobalStates()
     }
 
+    fun updateTheme() {
+        border = BorderFactory.createMatteBorder(0, 0, 1, 0, AppTheme.sidebarBorder)
+        repaint()
+    }
+
     private fun createToolButton(
         icon: RemixIcon,
         title: String,
@@ -192,7 +197,7 @@ class IdmToolBar(
         SingleWindows.show(SettingsWindow::class) {
             SettingsWindow().apply {
                 onSaved = onSettingsSaved
-                setLocationRelativeTo(SwingUtilities.windowForComponent(this@IdmToolBar))
+                setLocationRelativeTo(SwingUtilities.windowForComponent(this@DownloadToolBar))
                 loadConfig()
             }
         }

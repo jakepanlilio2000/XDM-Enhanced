@@ -1,8 +1,8 @@
 [Desktop Entry]
 Type=Application
-Name=Xtreme Download Manager - XDM
+Name=XDM Enhanced
 GenericName=Download Manager
-Comment=Download accelerator and video downloader
+Comment=Download accelerator and video downloader with native BitTorrent support
 Exec=/opt/xdm-app/bin/xdm-app %U
 Icon=xdm-app
 Terminal=false

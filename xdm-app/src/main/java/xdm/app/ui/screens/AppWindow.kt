@@ -24,9 +24,9 @@ import javax.swing.border.MatteBorder
 class AppWindow(image: Image, startHidden: Boolean = false) : JFrame(), ActionListener {
     private var listView: DownloadListView = createListView(MainListViewFilter(FilterState.All, null, ""))
     private lateinit var listContainer: JPanel
-    private lateinit var toolbar: IdmToolBar
-    private lateinit var sidebar: IdmCategorySidebar
-    private lateinit var statusBar: IdmStatusBar
+    private lateinit var toolbar: DownloadToolBar
+    private lateinit var sidebar: CategorySidebar
+    private lateinit var statusBar: DownloadStatusBar
     private lateinit var splitPane: JSplitPane
     private val updatePanel = UpdatePanel()
     private val autoStartPanel = AutoStartPanel()
@@ -36,6 +36,7 @@ class AppWindow(image: Image, startHidden: Boolean = false) : JFrame(), ActionLi
     private val extensionUpdatePanels = mutableMapOf<Browser, ExtensionUpdatePanel>()
     /** EDT only. The delayed update check of a hidden start, until it runs. */
     private var pendingUpdateCheck: Timer? = null
+    private val themeChangeListener = ThemeManager.ThemeChangeListener { updateTheme() }
 
     init {
         title = XDM_WINDOW_TITLE
@@ -130,12 +131,12 @@ class AppWindow(image: Image, startHidden: Boolean = false) : JFrame(), ActionLi
     private fun initWindow() {
         createMainMenu()
 
-        sidebar = IdmCategorySidebar { state, category ->
+        sidebar = CategorySidebar { state, category ->
             listView.filterStateChanged(state)
             listView.filterCategoryChanged(category)
         }
 
-        toolbar = IdmToolBar(
+        toolbar = DownloadToolBar(
             onSearch = { listView.searchTextChanged(it) },
             onSort = { key, asc -> listView.sort(key, asc) },
             onAddUrl = { app.addDownload(null) },
@@ -153,7 +154,7 @@ class AppWindow(image: Image, startHidden: Boolean = false) : JFrame(), ActionLi
             onSettingsSaved = { applyListSelectionMode() }
         )
 
-        statusBar = IdmStatusBar()
+        statusBar = DownloadStatusBar()
 
         wireListView()
 
@@ -192,9 +193,11 @@ class AppWindow(image: Image, startHidden: Boolean = false) : JFrame(), ActionLi
         addWindowListener(object : WindowAdapter() {
             override fun windowActivated(e: WindowEvent) = autoStartPanel.refresh()
             override fun windowClosing(e: WindowEvent) {
+                ThemeManager.removeThemeListener(themeChangeListener)
                 statusBar.dispose()
             }
         })
+        ThemeManager.addThemeListener(themeChangeListener)
 
         ToolTipManager.sharedInstance().initialDelay = 500
 
@@ -204,9 +207,9 @@ class AppWindow(image: Image, startHidden: Boolean = false) : JFrame(), ActionLi
 
     private fun createListView(filter: MainListViewFilter): DownloadListView =
         when (AppContext.config.listSelectionMode) {
-            ListSelectionMode.CLASSIC -> IdmTableView(filter)
+            ListSelectionMode.CLASSIC -> DownloadTableView(filter)
             ListSelectionMode.MODERN -> ModernListView(filter)
-            ListSelectionMode.TABLE -> IdmTableView(filter)
+            ListSelectionMode.TABLE -> DownloadTableView(filter)
         }
 
     private fun wireListView() {
@@ -225,9 +228,9 @@ class AppWindow(image: Image, startHidden: Boolean = false) : JFrame(), ActionLi
      */
     private fun applyListSelectionMode() {
         val wanted = when (AppContext.config.listSelectionMode) {
-            ListSelectionMode.CLASSIC -> IdmTableView::class
+            ListSelectionMode.CLASSIC -> DownloadTableView::class
             ListSelectionMode.MODERN -> ModernListView::class
-            ListSelectionMode.TABLE -> IdmTableView::class
+            ListSelectionMode.TABLE -> DownloadTableView::class
         }
         if (wanted.isInstance(listView)) return
         val old = listView.filter
@@ -239,6 +242,27 @@ class AppWindow(image: Image, startHidden: Boolean = false) : JFrame(), ActionLi
         listContainer.revalidate()
         listContainer.repaint()
         sidebar.scheduleRecount()
+    }
+
+    fun updateTheme() {
+        val os = detectOS()
+        if (os == OS.Windows) {
+            rootPane.putClientProperty("JRootPane.titleBarBackground", AppTheme.sidebarBackground)
+        }
+        splitPane.border = MatteBorder(1, 0, 0, 0, AppTheme.sidebarBorder)
+        splitPane.background = AppTheme.listBackground
+        listContainer.background = AppTheme.listBackground
+        sidebar.updateTheme()
+        toolbar.updateTheme()
+        statusBar.updateTheme()
+        listView.updateTheme()
+        revalidate()
+        repaint()
+    }
+
+    override fun dispose() {
+        ThemeManager.removeThemeListener(themeChangeListener)
+        super.dispose()
     }
 
     fun updateDownloadInView(index: Int) {
@@ -349,7 +373,7 @@ class AppWindow(image: Image, startHidden: Boolean = false) : JFrame(), ActionLi
 
             val modeMenu = JMenu("View Mode")
             val group = ButtonGroup()
-            val optTable = JRadioButtonMenuItem("Table View (IDM Default)", AppContext.config.listSelectionMode == ListSelectionMode.TABLE).apply {
+            val optTable = JRadioButtonMenuItem("Table View (Default)", AppContext.config.listSelectionMode == ListSelectionMode.TABLE).apply {
                 addActionListener {
                     AppContext.config.listSelectionMode = ListSelectionMode.TABLE
                     AppContext.config.save()
@@ -452,7 +476,7 @@ class AppWindow(image: Image, startHidden: Boolean = false) : JFrame(), ActionLi
         get() = listView.selectedItems
 
     fun selectDownloadById(id: Long) {
-        (listView as? IdmTableView)?.selectById(id)
+        (listView as? DownloadTableView)?.selectById(id)
     }
 }
 

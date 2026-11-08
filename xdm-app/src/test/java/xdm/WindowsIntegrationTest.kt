@@ -44,15 +44,15 @@ class WindowsIntegrationTest {
     fun stringValuesRoundTrip() {
         // A path with spaces and backslashes plus a quoted argument: exactly the shape that made
         // the old .reg-file approach fragile.
-        val value = """"C:\Program Files\Xtreme Download Manager\xdm-app.exe" --minimized"""
+        val value = """"C:\Program Files\XDM Enhanced\xdm-app.exe" --minimized"""
         assertTrue(Win32Registry.setString(scratchKey, "Command", value))
         assertEquals(value, Win32Registry.getString(scratchKey, "Command"))
     }
 
     @Test
     fun defaultValueRoundTrips() {
-        assertTrue(Win32Registry.setString(scratchKey, "", "URL:Xtreme Download Manager Protocol"))
-        assertEquals("URL:Xtreme Download Manager Protocol", Win32Registry.getString(scratchKey, ""))
+        assertTrue(Win32Registry.setString(scratchKey, "", "URL:XDM Enhanced Protocol"))
+        assertEquals("URL:XDM Enhanced Protocol", Win32Registry.getString(scratchKey, ""))
     }
 
     @Test

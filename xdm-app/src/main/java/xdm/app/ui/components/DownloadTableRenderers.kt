@@ -19,7 +19,7 @@ import javax.swing.*
 import javax.swing.table.DefaultTableCellRenderer
 import javax.swing.table.TableCellRenderer
 
-object IdmTableRenderers {
+object DownloadTableRenderers {
 
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm")
 
@@ -40,7 +40,7 @@ object IdmTableRenderers {
             text = value as? String ?: ""
 
             val modelRow = table.convertRowIndexToModel(row)
-            val model = table.model as? IdmTableModel
+            val model = table.model as? DownloadTableModel
             val rec = model?.getItemAt(modelRow)
 
             icon = if (rec != null) {
@@ -140,11 +140,12 @@ object IdmTableRenderers {
                     RecordStatus.READY -> "Queued"
                 }
                 if (!isSelected) {
+                    val isDark = com.formdev.flatlaf.FlatLaf.isLafDark()
                     foreground = when (status) {
-                        RecordStatus.FINISHED -> Color(46, 160, 67)
-                        RecordStatus.DOWNLOADING -> Color(56, 139, 253)
-                        RecordStatus.PAUSED -> Color(210, 153, 34)
-                        RecordStatus.ERROR -> Color(248, 81, 73)
+                        RecordStatus.FINISHED -> if (isDark) Color(63, 185, 80) else Color(26, 127, 55)
+                        RecordStatus.DOWNLOADING -> AppTheme.accent
+                        RecordStatus.PAUSED -> AppTheme.pausedForeground
+                        RecordStatus.ERROR -> AppTheme.failedForeground
                         else -> table.foreground
                     }
                 } else {
@@ -180,9 +181,10 @@ object IdmTableRenderers {
         ): Component {
             val progress = (value as? Number)?.toInt() ?: 0
             progressBar.value = progress
+            progressBar.foreground = AppTheme.accent
 
             val modelRow = table.convertRowIndexToModel(row)
-            val model = table.model as? IdmTableModel
+            val model = table.model as? DownloadTableModel
             val rec = model?.getItemAt(modelRow)
 
             progressBar.string = if (rec?.status == RecordStatus.FINISHED) {

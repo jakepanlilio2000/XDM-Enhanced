@@ -10,21 +10,21 @@ import xdm.manager.DownloadCategory
 import xdm.manager.RecordStatus
 import javax.swing.RowFilter
 
-class IdmComponentsTest : DownloadManagerTestBase() {
+class UiComponentsTest : DownloadManagerTestBase() {
 
     @Test
-    fun testIdmTableModelStructure() {
-        val model = IdmTableModel()
+    fun testDownloadTableModelStructure() {
+        val model = DownloadTableModel()
         assertEquals(9, model.columnCount)
-        assertEquals("File Name", model.getColumnName(IdmTableModel.COL_FILE_NAME))
-        assertEquals("Size", model.getColumnName(IdmTableModel.COL_SIZE))
-        assertEquals("Type", model.getColumnName(IdmTableModel.COL_TYPE))
-        assertEquals("Status", model.getColumnName(IdmTableModel.COL_STATUS))
-        assertEquals("Progress", model.getColumnName(IdmTableModel.COL_PROGRESS))
-        assertEquals("Time Left", model.getColumnName(IdmTableModel.COL_TIME_LEFT))
-        assertEquals("Transfer Rate", model.getColumnName(IdmTableModel.COL_TRANSFER_RATE))
-        assertEquals("Date Added", model.getColumnName(IdmTableModel.COL_DATE_ADDED))
-        assertEquals("Peers / Swarm", model.getColumnName(IdmTableModel.COL_SWARM))
+        assertEquals("File Name", model.getColumnName(DownloadTableModel.COL_FILE_NAME))
+        assertEquals("Size", model.getColumnName(DownloadTableModel.COL_SIZE))
+        assertEquals("Type", model.getColumnName(DownloadTableModel.COL_TYPE))
+        assertEquals("Status", model.getColumnName(DownloadTableModel.COL_STATUS))
+        assertEquals("Progress", model.getColumnName(DownloadTableModel.COL_PROGRESS))
+        assertEquals("Time Left", model.getColumnName(DownloadTableModel.COL_TIME_LEFT))
+        assertEquals("Transfer Rate", model.getColumnName(DownloadTableModel.COL_TRANSFER_RATE))
+        assertEquals("Date Added", model.getColumnName(DownloadTableModel.COL_DATE_ADDED))
+        assertEquals("Peers / Swarm", model.getColumnName(DownloadTableModel.COL_SWARM))
 
         val record1 = DbRecord(
             id = 101L,
@@ -60,20 +60,20 @@ class IdmComponentsTest : DownloadManagerTestBase() {
         model.listChanged()
 
         assertEquals(2, model.rowCount)
-        assertEquals("ubuntu-24.04.iso", model.getValueAt(0, IdmTableModel.COL_FILE_NAME))
-        assertEquals(10485760L, model.getValueAt(0, IdmTableModel.COL_SIZE))
-        assertEquals(RecordStatus.DOWNLOADING, model.getValueAt(0, IdmTableModel.COL_STATUS))
-        assertEquals(50, model.getValueAt(0, IdmTableModel.COL_PROGRESS))
-        assertEquals(120L, model.getValueAt(0, IdmTableModel.COL_TIME_LEFT))
+        assertEquals("ubuntu-24.04.iso", model.getValueAt(0, DownloadTableModel.COL_FILE_NAME))
+        assertEquals(10485760L, model.getValueAt(0, DownloadTableModel.COL_SIZE))
+        assertEquals(RecordStatus.DOWNLOADING, model.getValueAt(0, DownloadTableModel.COL_STATUS))
+        assertEquals(50, model.getValueAt(0, DownloadTableModel.COL_PROGRESS))
+        assertEquals(120L, model.getValueAt(0, DownloadTableModel.COL_TIME_LEFT))
 
-        assertEquals("Torrent", model.getValueAt(1, IdmTableModel.COL_TYPE))
-        assertEquals(RecordStatus.FINISHED, model.getValueAt(1, IdmTableModel.COL_STATUS))
-        assertEquals(100, model.getValueAt(1, IdmTableModel.COL_PROGRESS))
+        assertEquals("Torrent", model.getValueAt(1, DownloadTableModel.COL_TYPE))
+        assertEquals(RecordStatus.FINISHED, model.getValueAt(1, DownloadTableModel.COL_STATUS))
+        assertEquals(100, model.getValueAt(1, DownloadTableModel.COL_PROGRESS))
     }
 
     @Test
     fun testMainListViewFilterCriteria() {
-        val model = IdmTableModel()
+        val model = DownloadTableModel()
         val recHttpActive = DbRecord(
             id = 201L, size = 1000L, downloaded = 500L, progress = 50, date = 1000L,
             fileName = "document.pdf", eta = 10L, speed = 100f, selected = false,
@@ -146,7 +146,7 @@ class IdmComponentsTest : DownloadManagerTestBase() {
         assertFalse(checkMatch(filterSearch, 2))
 
         // Filter: Other category
-        val filterOther = MainListViewFilter(FilterState.All, IdmCategorySidebar.OTHER_CATEGORY, "")
+        val filterOther = MainListViewFilter(FilterState.All, CategorySidebar.OTHER_CATEGORY, "")
         assertFalse(checkMatch(filterOther, 0))
         assertFalse(checkMatch(filterOther, 1))
         assertFalse(checkMatch(filterOther, 2))
@@ -166,7 +166,7 @@ class IdmComponentsTest : DownloadManagerTestBase() {
             status = RecordStatus.DOWNLOADING, downloadType = DownloadType.Http
         )
 
-        val toolbar = IdmToolBar(
+        val toolbar = DownloadToolBar(
             onSearch = {}, onSort = { _, _ -> },
             onAddUrl = {}, onAddMagnet = {}, onAddTorrent = {},
             onResume = {}, onStop = {}, onStopAll = {},
@@ -221,7 +221,7 @@ class IdmComponentsTest : DownloadManagerTestBase() {
         appDB.add(rec1)
         appDB.add(rec2)
 
-        val statusBar = IdmStatusBar()
+        val statusBar = DownloadStatusBar()
         statusBar.updateMetrics()
 
         assertTrue(statusBar.speedText.contains("3.00 MB/s ↓") || statusBar.speedText.contains("3"))
@@ -265,7 +265,7 @@ class IdmComponentsTest : DownloadManagerTestBase() {
 
         var changedFilterState: FilterState? = null
         var changedCategory: DownloadCategory? = null
-        val sidebar = IdmCategorySidebar { state, category ->
+        val sidebar = CategorySidebar { state, category ->
             changedFilterState = state
             changedCategory = category
         }
@@ -283,8 +283,8 @@ class IdmComponentsTest : DownloadManagerTestBase() {
     }
 
     @Test
-    fun testIdmTableViewCardSwitchingAndSelection() {
-        val view = IdmTableView()
+    fun testDownloadTableViewCardSwitchingAndSelection() {
+        val view = DownloadTableView()
         assertEquals(0, view.records.size)
         assertEquals(0, view.selectedRowCount)
         assertTrue(view.selectedItems.isEmpty())
@@ -333,7 +333,7 @@ class IdmComponentsTest : DownloadManagerTestBase() {
             appDB.add(rec)
         }
 
-        val view = IdmTableView()
+        val view = DownloadTableView()
         assertEquals(300, view.records.size)
 
         // Perform incremental row update on row 150

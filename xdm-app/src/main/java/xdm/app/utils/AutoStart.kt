@@ -29,8 +29,8 @@ import java.io.File
  * by older versions, which lack that flag; on Windows nothing is written unless the user asks.
  */
 object AutoStart {
-    private const val LABEL = "app.xdm.autostart"
-    private const val APP_NAME = "Xtreme Download Manager"
+    private const val LABEL = "app.xdm-enhanced.autostart"
+    private const val APP_NAME = "XDM Enhanced"
 
     /** Relative to HKCU - [Win32Registry] works there and nowhere else. */
     private const val WIN_RUN_KEY = "Software\\Microsoft\\Windows\\CurrentVersion\\Run"
@@ -38,8 +38,8 @@ object AutoStart {
     /** Task Manager's and Settings > Startup's on/off flag for each [WIN_RUN_KEY] value, same name. */
     private const val WIN_APPROVED_KEY = "Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\StartupApproved\\Run"
 
-    /** Must match the MSI's RegistryValue Name; also the name XDM 8 used. */
-    private const val WIN_VALUE_NAME = "XDM"
+    /** Must match the MSI's RegistryValue Name in packaging/windows/xdm.wxs. */
+    private const val WIN_VALUE_NAME = "XDM Enhanced"
 
     private val os = detectOS()
 

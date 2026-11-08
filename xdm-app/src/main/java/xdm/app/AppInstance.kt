@@ -200,7 +200,7 @@ open class AppInstance : IAppInstance {
             }
         }
         runCatching { desktop.addAppEventListener(AppReopenedListener { showAppWindow() }) }
-        // App menu → "About Xtreme Download Manager": XDM's own dialog instead of the generic one.
+        // App menu → "About XDM Enhanced": XDM's own dialog instead of the generic one.
         // Called on the EDT; owned by the main window only while it is on screen.
         runCatching {
             desktop.setAboutHandler { AboutDialog.open(if (::appWindow.isInitialized) appWindow else null) }
@@ -221,7 +221,7 @@ open class AppInstance : IAppInstance {
     override fun showFatalError(message: String) {
         val show = Runnable {
             // Truly ownerless, so it has a taskbar button on Windows: with no main window yet, nothing else shows.
-            JOptionPane(message, JOptionPane.ERROR_MESSAGE).createDialog("XDM").apply {
+            JOptionPane(message, JOptionPane.ERROR_MESSAGE).createDialog("XDM Enhanced").apply {
                 runCatching { iconImages = windowIconImages }
                 isVisible = true
                 dispose()

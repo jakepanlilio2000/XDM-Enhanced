@@ -67,15 +67,15 @@ class AppLauncherTest {
 
     /**
      * A packaged run starts from whichever launcher the user clicked - usually
-     * "Xtreme Download Manager.exe" - but what gets written into the registry / login entry has to
+     * "XDM Enhanced.exe" - but what gets written into the registry / login entry has to
      * be the stable `xdm-app` name beside it.
      */
     @Test
     fun theStableLauncherIsPreferredOverTheOneThatStartedUs() {
-        withAppPath("Xtreme Download Manager.exe", siblings = listOf("xdm-app.exe")) { dir ->
+        withAppPath("XDM Enhanced.exe", siblings = listOf("xdm-app.exe")) { dir ->
             assertEquals(File(dir, "xdm-app.exe").absolutePath, AppLauncher.command()?.single())
         }
-        withAppPath("Xtreme Download Manager", siblings = listOf("xdm-app")) { dir ->
+        withAppPath("XDM Enhanced", siblings = listOf("xdm-app")) { dir ->
             assertEquals(File(dir, "xdm-app").absolutePath, AppLauncher.command()?.single())
         }
     }
@@ -83,9 +83,9 @@ class AppLauncherTest {
     /** An older install, or an image built before the extra launcher existed. */
     @Test
     fun theStartingLauncherIsUsedWhenThereIsNoSibling() {
-        withAppPath("Xtreme Download Manager.exe", siblings = emptyList()) { dir ->
+        withAppPath("XDM Enhanced.exe", siblings = emptyList()) { dir ->
             assertEquals(
-                File(dir, "Xtreme Download Manager.exe").absolutePath,
+                File(dir, "XDM Enhanced.exe").absolutePath,
                 AppLauncher.command()?.single()
             )
         }
@@ -93,7 +93,7 @@ class AppLauncherTest {
 
     @Test
     fun startingFromTheStableLauncherKeepsIt() {
-        withAppPath("xdm-app.exe", siblings = listOf("Xtreme Download Manager.exe")) { dir ->
+        withAppPath("xdm-app.exe", siblings = listOf("XDM Enhanced.exe")) { dir ->
             assertEquals(File(dir, "xdm-app.exe").absolutePath, AppLauncher.command()?.single())
         }
     }

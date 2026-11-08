@@ -29,17 +29,25 @@ import javax.swing.event.ListSelectionListener
 import javax.swing.event.TableModelEvent
 import javax.swing.table.TableRowSorter
 
-class IdmTableView(
+class DownloadTableView(
     final override val filter: MainListViewFilter = MainListViewFilter(FilterState.All, null, "")
 ) : JPanel(BorderLayout()), DownloadListView {
 
-    private val model: IdmTableModel = IdmTableModel()
+    private val model: DownloadTableModel = DownloadTableModel()
     private val table: JTable = JTable(model)
-    private val sorter: TableRowSorter<IdmTableModel> = TableRowSorter(model)
+    private val sorter: TableRowSorter<DownloadTableModel> = TableRowSorter(model)
     private val scrollPane: JScrollPane
     private val cardLayout = CardLayout()
     private val cardPanel = JPanel(cardLayout)
     private val emptyPanel: JPanel
+    private val emptyIconLabel = JLabel(FontIcon(RemixIcon.BOOK_SHELF_LINE, 72.px, AppTheme.sidebarIcon)).apply {
+        alignmentX = Component.CENTER_ALIGNMENT
+    }
+    private val emptyTextLabel = JLabel("No downloads found", SwingConstants.CENTER).apply {
+        alignmentX = Component.CENTER_ALIGNMENT
+        foreground = UIManager.getColor("Label.disabledForeground") ?: Color.GRAY
+        font = font.deriveFont(14f.px)
+    }
     private val listeners = mutableListOf<() -> Unit>()
 
     override var bulkSelectionCallback: ((Boolean) -> Unit)? = null
@@ -80,31 +88,31 @@ class IdmTableView(
         table.tableHeader.font = table.tableHeader.font.deriveFont(Font.BOLD, 11f.px)
 
         // Install Renderers
-        table.columnModel.getColumn(IdmTableModel.COL_FILE_NAME).cellRenderer = IdmTableRenderers.FileNameCellRenderer()
-        table.columnModel.getColumn(IdmTableModel.COL_SIZE).cellRenderer = IdmTableRenderers.SizeCellRenderer()
-        table.columnModel.getColumn(IdmTableModel.COL_TYPE).cellRenderer = IdmTableRenderers.TypeCellRenderer()
-        table.columnModel.getColumn(IdmTableModel.COL_STATUS).cellRenderer = IdmTableRenderers.StatusCellRenderer()
-        table.columnModel.getColumn(IdmTableModel.COL_PROGRESS).cellRenderer = IdmTableRenderers.ProgressCellRenderer()
-        table.columnModel.getColumn(IdmTableModel.COL_TIME_LEFT).cellRenderer = IdmTableRenderers.TimeLeftCellRenderer()
-        table.columnModel.getColumn(IdmTableModel.COL_TRANSFER_RATE).cellRenderer = IdmTableRenderers.TransferRateCellRenderer()
-        table.columnModel.getColumn(IdmTableModel.COL_DATE_ADDED).cellRenderer = IdmTableRenderers.DateAddedCellRenderer()
-        table.columnModel.getColumn(IdmTableModel.COL_SWARM).cellRenderer = IdmTableRenderers.SwarmCellRenderer()
+        table.columnModel.getColumn(DownloadTableModel.COL_FILE_NAME).cellRenderer = DownloadTableRenderers.FileNameCellRenderer()
+        table.columnModel.getColumn(DownloadTableModel.COL_SIZE).cellRenderer = DownloadTableRenderers.SizeCellRenderer()
+        table.columnModel.getColumn(DownloadTableModel.COL_TYPE).cellRenderer = DownloadTableRenderers.TypeCellRenderer()
+        table.columnModel.getColumn(DownloadTableModel.COL_STATUS).cellRenderer = DownloadTableRenderers.StatusCellRenderer()
+        table.columnModel.getColumn(DownloadTableModel.COL_PROGRESS).cellRenderer = DownloadTableRenderers.ProgressCellRenderer()
+        table.columnModel.getColumn(DownloadTableModel.COL_TIME_LEFT).cellRenderer = DownloadTableRenderers.TimeLeftCellRenderer()
+        table.columnModel.getColumn(DownloadTableModel.COL_TRANSFER_RATE).cellRenderer = DownloadTableRenderers.TransferRateCellRenderer()
+        table.columnModel.getColumn(DownloadTableModel.COL_DATE_ADDED).cellRenderer = DownloadTableRenderers.DateAddedCellRenderer()
+        table.columnModel.getColumn(DownloadTableModel.COL_SWARM).cellRenderer = DownloadTableRenderers.SwarmCellRenderer()
 
         // Set Preferred Column Widths
-        table.columnModel.getColumn(IdmTableModel.COL_FILE_NAME).preferredWidth = 240.px
-        table.columnModel.getColumn(IdmTableModel.COL_SIZE).preferredWidth = 85.px
-        table.columnModel.getColumn(IdmTableModel.COL_TYPE).preferredWidth = 80.px
-        table.columnModel.getColumn(IdmTableModel.COL_STATUS).preferredWidth = 95.px
-        table.columnModel.getColumn(IdmTableModel.COL_PROGRESS).preferredWidth = 140.px
-        table.columnModel.getColumn(IdmTableModel.COL_TIME_LEFT).preferredWidth = 85.px
-        table.columnModel.getColumn(IdmTableModel.COL_TRANSFER_RATE).preferredWidth = 95.px
-        table.columnModel.getColumn(IdmTableModel.COL_DATE_ADDED).preferredWidth = 130.px
-        table.columnModel.getColumn(IdmTableModel.COL_SWARM).preferredWidth = 110.px
+        table.columnModel.getColumn(DownloadTableModel.COL_FILE_NAME).preferredWidth = 240.px
+        table.columnModel.getColumn(DownloadTableModel.COL_SIZE).preferredWidth = 85.px
+        table.columnModel.getColumn(DownloadTableModel.COL_TYPE).preferredWidth = 80.px
+        table.columnModel.getColumn(DownloadTableModel.COL_STATUS).preferredWidth = 95.px
+        table.columnModel.getColumn(DownloadTableModel.COL_PROGRESS).preferredWidth = 140.px
+        table.columnModel.getColumn(DownloadTableModel.COL_TIME_LEFT).preferredWidth = 85.px
+        table.columnModel.getColumn(DownloadTableModel.COL_TRANSFER_RATE).preferredWidth = 95.px
+        table.columnModel.getColumn(DownloadTableModel.COL_DATE_ADDED).preferredWidth = 130.px
+        table.columnModel.getColumn(DownloadTableModel.COL_SWARM).preferredWidth = 110.px
 
         // Sorting & Filtering
         sorter.rowFilter = filter
         table.rowSorter = sorter
-        sorter.sortKeys = listOf(RowSorter.SortKey(IdmTableModel.COL_DATE_ADDED, SortOrder.DESCENDING))
+        sorter.sortKeys = listOf(RowSorter.SortKey(DownloadTableModel.COL_DATE_ADDED, SortOrder.DESCENDING))
 
         scrollPane = JScrollPane(table).apply {
             border = BorderFactory.createEmptyBorder()
@@ -115,18 +123,10 @@ class IdmTableView(
         emptyPanel = JPanel(BorderLayout()).apply {
             background = table.background
             val emptyBox = Box.createVerticalBox()
-            val iconLabel = JLabel(FontIcon(RemixIcon.BOOK_SHELF_LINE, 72.px, Color.GRAY)).apply {
-                alignmentX = Component.CENTER_ALIGNMENT
-            }
-            val textLabel = JLabel("No downloads found", SwingConstants.CENTER).apply {
-                alignmentX = Component.CENTER_ALIGNMENT
-                foreground = Color.GRAY
-                font = font.deriveFont(14f.px)
-            }
             emptyBox.add(Box.createVerticalGlue())
-            emptyBox.add(iconLabel)
+            emptyBox.add(emptyIconLabel)
             emptyBox.add(Box.createRigidArea(java.awt.Dimension(0, 10.px)))
-            emptyBox.add(textLabel)
+            emptyBox.add(emptyTextLabel)
             emptyBox.add(Box.createVerticalGlue())
             add(emptyBox, BorderLayout.CENTER)
         }
@@ -336,10 +336,10 @@ class IdmTableView(
 
     override fun sort(sortKey: SortKey, ascending: Boolean) {
         val col = when (sortKey) {
-            SortKey.NAME -> IdmTableModel.COL_FILE_NAME
-            SortKey.SIZE -> IdmTableModel.COL_SIZE
-            SortKey.TYPE -> IdmTableModel.COL_TYPE
-            SortKey.DATE -> IdmTableModel.COL_DATE_ADDED
+            SortKey.NAME -> DownloadTableModel.COL_FILE_NAME
+            SortKey.SIZE -> DownloadTableModel.COL_SIZE
+            SortKey.TYPE -> DownloadTableModel.COL_TYPE
+            SortKey.DATE -> DownloadTableModel.COL_DATE_ADDED
         }
         val order = if (ascending) SortOrder.ASCENDING else SortOrder.DESCENDING
         sorter.sortKeys = listOf(RowSorter.SortKey(col, order))
@@ -358,6 +358,18 @@ class IdmTableView(
                 table.scrollRectToVisible(table.getCellRect(viewRow, 0, true))
             }
         }
+    }
+
+    override fun updateTheme() {
+        val isDark = com.formdev.flatlaf.FlatLaf.isLafDark()
+        table.gridColor = UIManager.getColor("Table.gridColor") ?: if (isDark) Color(0x2A, 0x2D, 0x34) else Color(0xDC, 0xDE, 0xE3)
+        emptyPanel.background = table.background
+        emptyIconLabel.icon = FontIcon(RemixIcon.BOOK_SHELF_LINE, 72.px, AppTheme.sidebarIcon)
+        emptyTextLabel.foreground = UIManager.getColor("Label.disabledForeground") ?: Color.GRAY
+        table.tableHeader.updateUI()
+        table.tableHeader.font = table.tableHeader.font.deriveFont(Font.BOLD, 11f.px)
+        table.updateUI()
+        repaint()
     }
 }
 

@@ -8,7 +8,7 @@ import xdm.manager.DbRecord
 import xdm.manager.RecordStatus
 import javax.swing.table.AbstractTableModel
 
-class IdmTableModel : AbstractTableModel(), ListChangeListener {
+class DownloadTableModel : AbstractTableModel(), ListChangeListener {
 
     companion object {
         val COLUMN_NAMES = arrayOf(

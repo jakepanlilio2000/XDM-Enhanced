@@ -11,6 +11,7 @@ import xdm.app.ui.screens.settings.FoldersPanel
 import xdm.app.ui.screens.settings.GeneralPanel
 import xdm.app.ui.screens.settings.NetworkConfigPanel
 import xdm.app.ui.components.AppTheme
+import xdm.app.ui.components.ThemeManager
 import xdm.app.ui.screens.settings.settingsAccentColor
 import xdm.app.ui.screens.settings.settingsMutedColor
 import xdm.app.ui.screens.settings.settingsStroke
@@ -60,7 +61,13 @@ import javax.swing.border.MatteBorder
  * it was open ([ConfigSnapshot]).
  */
 class SettingsWindow : JFrame() {
+    private val themeChangeListener = ThemeManager.ThemeChangeListener {
+        (contentPane as? JComponent)?.border = MatteBorder(1, 0, 0, 0, AppTheme.sidebarBorder)
+        repaint()
+    }
+
     override fun dispose() {
+        ThemeManager.removeThemeListener(themeChangeListener)
         foldersPanel.dispose()
         super.dispose()
     }
@@ -152,6 +159,7 @@ class SettingsWindow : JFrame() {
 
         navList.selectedIndex = 0
         btnSave.requestFocusInWindow()
+        ThemeManager.addThemeListener(themeChangeListener)
 
         addWindowListener(object : WindowAdapter() {
             // Every page opens at its top. Layout passes run around the first show (wrapping text

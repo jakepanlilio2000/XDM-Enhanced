@@ -7,14 +7,14 @@ platform: linux
 version: ${VERSION}
 section: net
 priority: optional
-maintainer: Subhra Das Gupta
-vendor: Subhra Das Gupta
-homepage: https://xtremedownloadmanager.com
+maintainer: XDM Enhanced Contributors
+vendor: XDM Enhanced Contributors
+homepage: https://github.com/jakepanlilio2000/XDM-Enhanced
 license: GPL-3.0
 description: |-
-  Xtreme Download Manager
-  Download accelerator and video downloader: segmented downloads, HLS and DASH
-  streams, batch downloads and browser integration.
+  XDM Enhanced
+  Download accelerator and video downloader with native BitTorrent support: segmented downloads, HLS and DASH
+  streams, batch downloads, magnet links and browser integration.
 
 contents:
   - src: ${IMAGE}

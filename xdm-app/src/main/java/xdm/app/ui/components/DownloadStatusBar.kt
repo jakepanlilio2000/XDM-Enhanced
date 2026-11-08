@@ -16,7 +16,7 @@ import java.awt.Font
 import java.io.File
 import javax.swing.*
 
-class IdmStatusBar : JPanel(BorderLayout()) {
+class DownloadStatusBar : JPanel(BorderLayout()) {
 
     private val lblSpeed = JLabel().apply {
         font = font.deriveFont(11f.px)
@@ -40,12 +40,18 @@ class IdmStatusBar : JPanel(BorderLayout()) {
     val queueText: String get() = lblQueue.text
     val diskText: String get() = lblDisk.text
 
+    private val separators = mutableListOf<JSeparator>()
     private val timer = Timer(500) { updateMetrics() }
 
     init {
         preferredSize = Dimension(Short.MAX_VALUE.toInt(), 26.px)
         background = AppTheme.sidebarBackground
         border = BorderFactory.createMatteBorder(1, 0, 0, 0, AppTheme.sidebarBorder)
+
+        lblSpeed.foreground = UIManager.getColor("Label.foreground")
+        lblTasks.foreground = UIManager.getColor("Label.foreground")
+        lblQueue.foreground = UIManager.getColor("Label.foreground")
+        lblDisk.foreground = UIManager.getColor("Label.disabledForeground")
 
         val leftBox = Box.createHorizontalBox().apply {
             add(lblSpeed)
@@ -67,10 +73,24 @@ class IdmStatusBar : JPanel(BorderLayout()) {
     }
 
     private fun createSeparator(): JComponent {
-        return JSeparator(SwingConstants.VERTICAL).apply {
+        val sep = JSeparator(SwingConstants.VERTICAL).apply {
             maximumSize = Dimension(1.px, 16.px)
             foreground = AppTheme.sidebarBorder
         }
+        separators.add(sep)
+        return sep
+    }
+
+    fun updateTheme() {
+        background = AppTheme.sidebarBackground
+        border = BorderFactory.createMatteBorder(1, 0, 0, 0, AppTheme.sidebarBorder)
+        separators.forEach { it.foreground = AppTheme.sidebarBorder }
+        lblSpeed.foreground = UIManager.getColor("Label.foreground")
+        lblTasks.foreground = UIManager.getColor("Label.foreground")
+        lblQueue.foreground = UIManager.getColor("Label.foreground")
+        lblDisk.foreground = UIManager.getColor("Label.disabledForeground")
+        updateMetrics()
+        repaint()
     }
 
     fun updateMetrics() {

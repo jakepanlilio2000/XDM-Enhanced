@@ -6,7 +6,7 @@ An independent, open-source fork of Xtreme Download Manager.
 
 ## 1. Project Overview
 
-XDM Enhanced is an independent fork of Xtreme Download Manager (XDM). It extends XDM's multi-connection segmented HTTP/HTTPS download engine and streaming video grabber with native BitTorrent and magnet-link downloading capabilities, presented in an Internet Download Manager (IDM)-inspired desktop user interface.
+XDM Enhanced is an independent fork of Xtreme Download Manager (XDM). It extends XDM's multi-connection segmented HTTP/HTTPS download engine and streaming video grabber with native BitTorrent and magnet-link downloading capabilities, presented in a traditional, high-density desktop user interface.
 
 This fork is not an official upstream release. The original upstream project documentation is preserved in [README.UPSTREAM.md](README.UPSTREAM.md).
 
@@ -17,7 +17,7 @@ This fork is not an official upstream release. The original upstream project doc
 - **Native BitTorrent Engine:** BitTorrent 1.2 and 2.0 protocol support powered by `libtorrent4j` (v2.1.0-35) wrapping native `libtorrent` (Rasterbar).
 - **Magnet Links and Torrent Files:** Native ingestion of `magnet:?` URIs and `.torrent` files with background metadata resolution.
 - **Selective Downloading and File Priorities:** Pre-download file inspection dialog with file selection trees, individual file exclusion, and priority settings (Do Not Download, Normal, High, Maximum).
-- **IDM-Inspired Desktop Interface:** 7-category sidebar filter (All Downloads, Compressed, Documents, Music, Programs, Video, Torrents), high-density toolbar, customizable data table with progress indicators, status bar storage meter, and separate nonblocking progress dialogs.
+- **Traditional Desktop Interface:** 7-category sidebar filter (All Downloads, Compressed, Documents, Music, Programs, Video, Torrents), download toolbar, customizable data table with progress indicators, status bar storage meter, and separate nonblocking progress dialogs.
 - **Transfer Management:** Global and per-task download and upload bandwidth limits, active torrent concurrency limits, and queue position management (Top, Up, Down, Bottom).
 - **Seeding Rules:** Automated seeding termination based on target share ratio (e.g. 1.0x) or elapsed seeding duration.
 - **Tracker and Peer Controls:** Distributed Hash Table (DHT), Peer Exchange (PEX), and Local Service Discovery (LSD) support. Manual tracker additions, force reannounce, and live peer transfer inspection. Full compliance with BEP 27 private torrent restrictions.
@@ -26,7 +26,7 @@ This fork is not an official upstream release. The original upstream project doc
 
 ## 3. Current Development Status
 
-XDM Enhanced is in active development and preparing for its initial beta release (`v1.0.0-beta.1`). All core download pipelines, BitTorrent operations, IDM UI components, and settings persistence layers have been independently verified through automated regression suites.
+XDM Enhanced is in active development and preparing for its initial beta release (`v1.0.0-beta.1`). All core download pipelines, BitTorrent operations, desktop UI components, and settings persistence layers have been independently verified through automated regression suites.
 
 ## 4. Supported Operating Systems
 

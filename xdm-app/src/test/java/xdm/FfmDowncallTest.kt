@@ -30,8 +30,8 @@ class FfmDowncallTest {
             FunctionDescriptor.of(ValueLayout.JAVA_LONG, ValueLayout.ADDRESS)
         )
         Arena.ofConfined().use { arena ->
-            val text: MemorySegment = arena.allocateFrom("Xtreme Download Manager")
-            assertEquals(23L, strlen.invoke(text) as Long)
+            val text: MemorySegment = arena.allocateFrom("XDM Enhanced")
+            assertEquals(12L, strlen.invoke(text) as Long)
         }
     }
 

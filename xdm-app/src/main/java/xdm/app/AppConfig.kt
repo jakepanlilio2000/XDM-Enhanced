@@ -26,7 +26,7 @@ enum class ListSelectionMode(override val id: Int) : StableId {
     /** Click selects, double-click opens, right-click menu, as in a file manager. */
     CLASSIC(2),
 
-    /** High-density multi-column table inspired by IDM. */
+    /** High-density multi-column table view. */
     TABLE(3),
 }
 
@@ -74,6 +74,8 @@ interface IAppConfig : EngineConfig {
     var lang: String
     /** "dark", "light" or "system" (follow the OS, read at every startup). */
     var theme: String
+    /** Hex color string like "#3B82F6", or null for the theme's default accent. */
+    var accentColor: String?
     /** Whole-UI zoom in percent (Settings > Appearance), one of [AppConfig.UI_SCALES]; 100 leaves the UI as is. */
     var uiScale: Int
     /**
@@ -254,6 +256,7 @@ private const val F_TORRENT_SEEDING_RATIO_LIMIT = 69
 private const val F_TORRENT_SEEDING_TIME_LIMIT_MINUTES = 70
 private const val F_TORRENT_ENABLE_UPNP = 71
 private const val F_TORRENT_ENABLE_NATPMP = 72
+private const val F_ACCENT_COLOR = 73
 
 // Inside F_CATEGORIES: one F_CATEGORY record per category, in order.
 private const val F_CATEGORY = 1
@@ -308,6 +311,7 @@ class AppConfig(private val configDir: String) : IAppConfig {
     override var minVideoSize: Long = 1024
     override var lang: String = "en"
     override var theme: String = "dark"
+    override var accentColor: String? = null
     override var uiScale: Int = 100
     override var themeMigrated: Boolean = false
     override var notifiedUpdateVersion: String = ""
@@ -524,6 +528,7 @@ class AppConfig(private val configDir: String) : IAppConfig {
         w.int(F_TORRENT_SEEDING_TIME_LIMIT_MINUTES, torrentSeedingTimeLimitMinutes)
         w.bool(F_TORRENT_ENABLE_UPNP, torrentEnableUpnp)
         w.bool(F_TORRENT_ENABLE_NATPMP, torrentEnableNatPmp)
+        accentColor?.let { w.string(F_ACCENT_COLOR, it) }
         w.raw(unknownFields)
     }
 
@@ -611,6 +616,7 @@ class AppConfig(private val configDir: String) : IAppConfig {
                 F_TORRENT_SEEDING_TIME_LIMIT_MINUTES -> torrentSeedingTimeLimitMinutes = r.int()
                 F_TORRENT_ENABLE_UPNP -> torrentEnableUpnp = r.bool()
                 F_TORRENT_ENABLE_NATPMP -> torrentEnableNatPmp = r.bool()
+                F_ACCENT_COLOR -> accentColor = r.string().takeIf { it.isNotBlank() }
                 else -> unknown.raw(r.rawField())
             }
         }

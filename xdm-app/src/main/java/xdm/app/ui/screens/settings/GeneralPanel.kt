@@ -5,6 +5,7 @@ import xdm.app.AppContext
 import xdm.app.I8N
 import xdm.app.ListSelectionMode
 import xdm.app.ui.components.MessageBox
+import xdm.app.ui.components.ThemeManager
 import xdm.app.utils.RemixIcon
 import xdm.app.utils.SoundPlayer
 import xdm.app.utils.chooseFile
@@ -58,6 +59,7 @@ class GeneralPanel : SettingsPanel() {
             SettingsOption("light", I8N.text("THEME_LIGHT"), RemixIcon.SUN_FILL),
         )
     )
+    private val accentChooser = AccentChooserPanel()
 
     private val optListMode = SettingsOptionGroup(
         listOf(
@@ -116,6 +118,12 @@ class GeneralPanel : SettingsPanel() {
             )
         )
         tglPlaySound.addActionListener { updateSoundEnabledState() }
+        optTheme.onChange = {
+            ThemeManager.setTheme(optTheme.selected)
+            optTheme.updateTheme()
+            optListMode.updateTheme()
+            accentChooser.updateSelection(ThemeManager.currentAccent)
+        }
         add(settingsGap())
 
         langModel.addAll(languages.map { it.name })
@@ -123,7 +131,8 @@ class GeneralPanel : SettingsPanel() {
         add(
             settingsSection(
                 I8N.text("SETTINGS_SEC_APPEARANCE"),
-                settingsFullRow(I8N.text("MSG_THEME"), I8N.text("MSG_RESTART_NEEDED"), optTheme),
+                settingsFullRow(I8N.text("MSG_THEME"), I8N.text("MSG_THEME_SUB"), optTheme),
+                settingsFullRow(I8N.text("MSG_ACCENT"), I8N.text("MSG_ACCENT_SUB"), accentChooser),
                 settingsRow(I8N.text("UI_SIZE"), I8N.text("UI_SIZE_SUB") + "\n" + I8N.text("MSG_RESTART_NEEDED"), cmbUiScale),
                 settingsFullRow(I8N.text("LIST_MODE"), I8N.text("LIST_MODE_SUB"), optListMode),
                 settingsRow(I8N.text("MSG_LANG1"), I8N.text("MSG_LANG_SUB") + "\n" + I8N.text("MSG_RESTART_NEEDED"), cmbLang),
@@ -148,6 +157,7 @@ class GeneralPanel : SettingsPanel() {
         failedSound.path = config.failedSoundFile
         updateSoundEnabledState()
         optTheme.selected = config.theme.lowercase().takeIf { themeCodes.contains(it) } ?: "dark"
+        accentChooser.updateSelection(ThemeManager.parseHexColor(config.accentColor))
         cmbUiScale.selectedIndex = AppConfig.UI_SCALES.indexOf(config.uiScale).takeIf { it >= 0 } ?: AppConfig.UI_SCALES.indexOf(100)
         optListMode.selected = config.listSelectionMode
         languages.indexOfFirst { it.code == config.lang }.takeIf { it >= 0 }?.let { cmbLang.selectedIndex = it }
@@ -163,6 +173,7 @@ class GeneralPanel : SettingsPanel() {
         config.completeSoundFile = completeSound.path
         config.failedSoundFile = failedSound.path
         config.theme = optTheme.selected
+        config.accentColor = accentChooser.selectedColor?.let { ThemeManager.colorToHex(it) }
         AppConfig.UI_SCALES.getOrNull(cmbUiScale.selectedIndex)?.let { config.uiScale = it }
         config.listSelectionMode = optListMode.selected
         languages.getOrNull(cmbLang.selectedIndex)?.let { config.lang = it.code }

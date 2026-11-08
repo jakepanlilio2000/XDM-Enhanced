@@ -1,6 +1,7 @@
 package xdm.app
 
 import xdm.app.recording.RecordingSession
+import xdm.app.ui.components.ThemeManager
 import xdm.app.utils.AppLauncher
 import xdm.app.utils.AutoStart
 import xdm.app.utils.WaylandToolkit
@@ -50,6 +51,9 @@ object AppContext {
 
     val hasScheduler: Boolean
         get() = ::scheduler.isInitialized
+
+    val hasConfig: Boolean
+        get() = ::config.isInitialized
 
     /** True when this launch found no saved config, i.e. XDM is running for the first time. */
     var firstRun = false
@@ -130,8 +134,8 @@ object AppContext {
             // xdm-app:// is registered by the installers (MSI, Linux packages' .desktop file, macOS
             // Info.plist), never by the app (PACKAGING.md §5.4).
 
-            Logger.info("Setting up look-and-feel theme: ${config.theme}")
-            AppMain.setupTheme(config.theme, config.uiScale)
+            Logger.info("Setting up look-and-feel theme: ${config.theme}, accent: ${config.accentColor}")
+            ThemeManager.init(config)
 
             Logger.info("Setting up global authenticator...")
             config.applyAuthConfig()

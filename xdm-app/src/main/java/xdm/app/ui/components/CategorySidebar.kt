@@ -31,7 +31,7 @@ import javax.swing.tree.DefaultTreeModel
 import javax.swing.tree.TreePath
 import javax.swing.tree.TreeSelectionModel
 
-class IdmCategorySidebar(
+class CategorySidebar(
     private val onFilterChanged: (FilterState, DownloadCategory?) -> Unit
 ) : JPanel(BorderLayout()) {
 
@@ -46,7 +46,7 @@ class IdmCategorySidebar(
 
     data class SidebarNodeData(
         val title: String,
-        val icon: Icon,
+        var icon: Icon,
         val filterState: FilterState,
         val categoryId: String? = null,
         val isOther: Boolean = false,
@@ -243,6 +243,34 @@ class IdmCategorySidebar(
         menu.show(tree, x, y)
     }
 
+    fun updateTheme() {
+        background = AppTheme.sidebarBackground
+        border = BorderFactory.createMatteBorder(0, 0, 0, 1, AppTheme.sidebarBorder)
+        tree.background = AppTheme.sidebarBackground
+
+        fun setIcon(node: DefaultMutableTreeNode, icon: Icon) {
+            (node.userObject as? SidebarNodeData)?.icon = icon
+        }
+
+        val isDark = com.formdev.flatlaf.FlatLaf.isLafDark()
+        val accent = AppTheme.accent
+        setIcon(allDownloadsNode, FontIcon(RemixIcon.ARROW_DOWN_CIRCLE_LINE, 18.px, accent))
+        setIcon(compressedNode, FontIcon(RemixIcon.FILE_ZIP_LINE, 18.px, UIManager.getColor("XDM.category.CAT_COMPRESSED") ?: Color(210, 153, 34)))
+        setIcon(documentsNode, FontIcon(RemixIcon.FILE_TEXT_LINE, 18.px, UIManager.getColor("XDM.category.CAT_DOCUMENTS") ?: Color(88, 166, 255)))
+        setIcon(musicNode, FontIcon(RemixIcon.MUSIC_2_LINE, 18.px, UIManager.getColor("XDM.category.CAT_MUSIC") ?: Color(240, 136, 62)))
+        setIcon(videosNode, FontIcon(RemixIcon.MOVIE_LINE, 18.px, UIManager.getColor("XDM.category.CAT_VIDEOS") ?: Color(163, 113, 247)))
+        setIcon(programsNode, FontIcon(RemixIcon.TERMINAL_BOX_LINE, 18.px, UIManager.getColor("XDM.category.CAT_PROGRAMS") ?: Color(230, 80, 80)))
+        setIcon(otherNode, FontIcon(RemixIcon.FILE_LINE, 18.px, AppTheme.sidebarIcon))
+        setIcon(unfinishedNode, FontIcon(RemixIcon.PROGRESS_2_LINE, 18.px, accent))
+        setIcon(completedNode, FontIcon(RemixIcon.CHECKBOX_CIRCLE_LINE, 18.px, if (isDark) Color(63, 185, 80) else Color(26, 127, 55)))
+        setIcon(torrentsNode, FontIcon(RemixIcon.DOWNLOAD_2_LINE, 18.px, accent))
+        setIcon(queuesNode, FontIcon(RemixIcon.LIST_CHECK_2, 18.px, UIManager.getColor("XDM.category.CAT_MUSIC") ?: Color(210, 153, 34)))
+
+        tree.cellRenderer = CategoryTreeRenderer()
+        recount()
+        repaint()
+    }
+
     fun scheduleRecount() {
         if (!countTimer.isRunning) countTimer.start()
     }
@@ -313,7 +341,7 @@ class IdmCategorySidebar(
                 defaultComp.text = data.title
                 defaultComp.icon = data.icon
                 countBadge.text = "${data.count}"
-                countBadge.foreground = if (sel) UIManager.getColor("Tree.selectionForeground") else Color.GRAY
+                countBadge.foreground = if (sel) AppTheme.sidebarSelectedCount else AppTheme.sidebarCount
 
                 panel.removeAll()
                 panel.add(defaultComp, BorderLayout.WEST)

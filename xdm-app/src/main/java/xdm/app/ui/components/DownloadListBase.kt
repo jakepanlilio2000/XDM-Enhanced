@@ -226,4 +226,11 @@ abstract class DownloadListBase(final override val filter: MainListViewFilter) :
         val window = SwingUtilities.windowForComponent(cardPanel) as? JFrame
         SingleWindows.show(ClearDownloadsDialog::class) { ClearDownloadsDialog(window) }
     }
+
+    override fun updateTheme() {
+        cardPanel.background = AppTheme.listBackground
+        table.background = AppTheme.listBackground
+        table.updateUI()
+        table.repaint()
+    }
 }

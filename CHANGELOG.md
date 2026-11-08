@@ -23,7 +23,7 @@ This is the first independent beta release of XDM Enhanced, forked from Xtreme D
   - Configurable seeding modes (*Never*, *Unlimited*, *Ratio/Time*) with automatic termination based on share ratio or duration thresholds.
   - Full compliance with BEP 27 private torrent restrictions (disabling DHT/PEX/LSD on private infohashes).
   - Fastresume persistence (`task-$id.resume`) and crash recovery state storage in `TaskInfoDB`.
-- **IDM-Inspired Desktop Interface:**
+- **Traditional Desktop Interface:**
   - 7-category navigation sidebar with live download counters (*All Downloads*, *Compressed*, *Documents*, *Music*, *Programs*, *Video*, *Torrents*).
   - High-density customized toolbar with quick actions (*Add URL*, *Add Magnet*, *Add Torrent*, *Resume*, *Stop*, *Delete*, *Settings*, *Schedule*).
   - Sortable data table with FlatLaf progress bars, status badges, contextual right-click actions, and destination shortcuts.
@@ -35,6 +35,13 @@ This is the first independent beta release of XDM Enhanced, forked from Xtreme D
   - Windows Registry protocol handler registration for `magnet:` links (`HKCU\Software\Classes\magnet`).
   - Single-instance IPC socket handoff forwarding command-line arguments to the running application instance.
   - Browser extension handoff endpoints (`/add-torrent`, `/add-magnet`) over local loopback (`127.0.0.1:8597`).
+- **Dynamic Theming and Appearance Engine (`ThemeManager`):**
+  - Instant theme switching without application restart across all windows, dialogs, menus, and popups.
+  - Three appearance modes: `LIGHT`, `DARK`, and `SYSTEM` (with live OS tracking and documented fallback).
+  - Background daemon watcher for real-time synchronization with OS light/dark mode toggles on Windows, macOS, and Linux.
+  - User-customizable accent colors with 6 curated presets (Blue `#3B82F6`, Cyan `#06B6D4`, Green `#10B981`, Amber `#F59E0B`, Purple `#8B5CF6`, Rose `#F43F5E`), custom hex/color picker, and reset-to-default.
+  - Persistent accent color configuration storage in `AppConfig`.
+  - Visual accent color swatch selector integrated into Settings > Appearance (`AccentChooserPanel`).
 
 ### Changed
 
@@ -42,10 +49,20 @@ This is the first independent beta release of XDM Enhanced, forked from Xtreme D
 - Preserved original upstream documentation in `README.UPSTREAM.md`.
 - Authored professional, unadorned technical `README.md` for the fork.
 - Updated About dialog to identify `XDM Enhanced 1.0.0-beta.1` while preserving upstream copyright attribution.
+- Cleaned up competitor branding and acronym references across source code, UI strings, and documentation in favor of neutral, professional desktop terminology.
+- Designed original modern geometric icon merging an accelerated download arrow with a stylized "X" on a deep midnight squircle, generating high-resolution PNGs (16–512px), macOS tray template glyphs, browser extension icons, and multi-resolution Windows `xdm.ico`.
+- Unified application name to **XDM Enhanced** across the main window, About dialog, system tray, notification popups, native taskbars, application menus, desktop entries, error dialogs, and packaging metadata.
+- Isolated application state directory (`xdm-enhanced`) from official upstream XDM installations, providing automatic zero-data-loss migration of existing user configurations and databases without altering original files.
+- Updated AutoStart registry keys and launcher display names to `XDM Enhanced` to prevent collisions with official XDM installations.
 - Updated packaging scripts (`packaging/build-bundle.ps1` and `packaging/build-bundle.sh`) to preserve native `libtorrent4j` binaries (`.dll`, `.so`, `.dylib`) during foreign library stripping.
 
 ### Fixed
 
+- **Theming & UI Contrast:**
+  - Resolved low-contrast disk capacity text in `DownloadStatusBar` (`lblDisk.foreground = UIManager.getColor("Label.disabledForeground")`) and unified status bar label foregrounds to match active theme palettes.
+  - Corrected low-contrast text on light surfaces in `DownloadTableRenderers` with WCAG AA compliant colors for download status badges across both light and dark themes.
+  - Eliminated static hardcoded component backgrounds and borders across custom views (`DownloadTableView`, `CategorySidebar`, `AppToolBar`, `ModernDownloadTable`) by establishing dynamic `updateTheme()` lifecycle notifications.
+  - Removed application restart requirement for appearance mode and accent color changes in Settings > Appearance, applying updates instantaneously across all active windows and dialogs.
 - **Windows Installer Conflict & Upstream Isolation:**
   - Assigned dedicated UpgradeCode (`C6A8025B-6D3E-45E9-9BD1-314644B272C1`) in `packaging/windows/xdm.wxs` preventing accidental upgrade collision with or uninstallation of official upstream Xtreme Download Manager.
   - Isolated installation path (`%ProgramFiles%\XDM Enhanced`), registry keys (`Software\XDM Enhanced`), autostart run values, and Start Menu/Desktop shortcuts.

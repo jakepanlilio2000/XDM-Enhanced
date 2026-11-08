@@ -33,7 +33,7 @@ class AboutDialog private constructor(owner: Window?) : JDialog(owner) {
 
     init {
         setSize(400.px, 380.px)
-        title = "About XDM"
+        title = "About XDM Enhanced"
         if (owner == null) iconImages = windowIconImages
         defaultCloseOperation = DISPOSE_ON_CLOSE
         isResizable = false
@@ -58,7 +58,7 @@ class AboutDialog private constructor(owner: Window?) : JDialog(owner) {
             horizontalAlignment = SwingConstants.CENTER
         }
 
-        val forkNotice = JLabel("Independent fork with native BitTorrent & IDM interface").apply {
+        val forkNotice = JLabel("Independent fork with native BitTorrent & modern desktop interface").apply {
             font = font.deriveFont(Font.PLAIN, 11f.px)
             foreground = UIManager.getColor("Label.disabledForeground")
             horizontalAlignment = SwingConstants.CENTER

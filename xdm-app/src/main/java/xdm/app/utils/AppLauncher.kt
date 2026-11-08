@@ -7,7 +7,7 @@ import java.io.File
  * Resolves the command that starts XDM, for the places that have to hand the OS a launch command:
  * the login entry ([AutoStart]).
  *
- * A packaged build ships two launchers: the one the user sees ("Xtreme Download Manager", which
+ * A packaged build ships two launchers: the one the user sees ("XDM Enhanced", which
  * owns the Start-menu shortcut and the .app bundle) and `xdm-app` / `xdm-app.exe`, a stable,
  * space-free name added for exactly this purpose. What gets registered with the OS must not change
  * when the display name does, and must not depend on which launcher the user happened to start, so

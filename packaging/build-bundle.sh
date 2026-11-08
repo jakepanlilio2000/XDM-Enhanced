@@ -203,8 +203,8 @@ fi
 # on macOS, from CFBundleName ($MAC_DISPLAY_NAME: menu bar, Dock) and the localized CFBundleDisplayName
 # ($FINDER_DISPLAY_NAME: Finder, Launchpad, Spotlight).
 IMAGE_NAME="$LAUNCHER_NAME"
-MAC_DISPLAY_NAME="XDM"
-FINDER_DISPLAY_NAME="Xtreme Download Manager - XDM"
+MAC_DISPLAY_NAME="XDM Enhanced"
+FINDER_DISPLAY_NAME="XDM Enhanced"
 # A macOS dmg is made here from the patched app image (hdiutil, below), not by jpackage, whose dmg
 # would carry an unpatched Info.plist (no xdm-app:// scheme, broken signature).
 JPACKAGE_TYPE="$PKG_TYPE"
