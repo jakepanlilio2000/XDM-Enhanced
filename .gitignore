@@ -1,9 +1,22 @@
 target/
 .DS_Store
 .idea/
-hls-muxer
-build
+*.iml
+.project
+.classpath
+.settings/
+build/
 
+# JVM crash logs
+hs_err_pid*.log
+replay_pid*.log
+
+# Python bytecode and caches
+__pycache__/
+*.pyc
+*.pyo
+
+hls-muxer
 hls-muxer.zip
 handoff
 # Installers dropped into packaging/ (the scripts themselves write to build/)
@@ -20,7 +33,6 @@ packaging/*.zip
 # Private docs (separate repo)
 /private-docs/
 /CLAUDE.md
-hs_err_pid27504.log
 
 # Local test credentials (NTLM test VM account)
 /test-credentials/

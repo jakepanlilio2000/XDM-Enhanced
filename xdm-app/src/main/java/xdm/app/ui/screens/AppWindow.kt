@@ -6,40 +6,16 @@ import xdm.app.I8N.text
 import xdm.app.ListSelectionMode
 import xdm.app.OS
 import xdm.app.XDM_WINDOW_TITLE
-import xdm.app.ui.components.AppMenuHandler
-import xdm.app.ui.components.AppTheme
-import xdm.app.ui.components.AppToolBar
-import xdm.app.ui.components.AutoStartPanel
-import xdm.app.ui.components.FilterListPanel
-import xdm.app.ui.components.ClassicListView
-import xdm.app.ui.components.DownloadListView
-import xdm.app.ui.components.ExtensionUpdatePanel
-import xdm.app.ui.components.FilterState
-import xdm.app.ui.components.MainListViewFilter
-import xdm.app.ui.components.ModernListView
-import xdm.app.ui.components.UpdatePanel
+import xdm.app.ui.components.*
 import xdm.app.update.UpdateChecker
-import xdm.app.utils.Browser
-import xdm.app.utils.ScaledEmptyBorder
-import xdm.app.utils.WindowGeometry
-import xdm.app.utils.applyMacOSWindowCustomizations
-import xdm.app.utils.detectOS
-import xdm.app.utils.px
-import xdm.app.utils.showTrayNotification
-import xdm.app.utils.windowIconImages
+import xdm.app.utils.*
 import xdm.core.util.Logger
 import xdm.manager.DbRecord
+import xdm.manager.RecordStatus
 import java.awt.*
-import java.awt.event.ActionEvent
-import java.awt.event.ActionListener
-import java.awt.event.ComponentAdapter
-import java.awt.event.ComponentEvent
-import java.awt.event.WindowAdapter
-import java.awt.event.WindowEvent
+import java.awt.event.*
 import javax.swing.*
 import javax.swing.border.MatteBorder
-import javax.swing.event.PopupMenuEvent
-import javax.swing.event.PopupMenuListener
 
 /**
  * [startHidden]: XDM started minimized (at login). The update check then waits [HIDDEN_UPDATE_CHECK_DELAY_MS],
@@ -48,8 +24,10 @@ import javax.swing.event.PopupMenuListener
 class AppWindow(image: Image, startHidden: Boolean = false) : JFrame(), ActionListener {
     private var listView: DownloadListView = createListView(MainListViewFilter(FilterState.All, null, ""))
     private lateinit var listContainer: JPanel
-    private lateinit var toolbar: AppToolBar
-    private lateinit var filterPanel: FilterListPanel
+    private lateinit var toolbar: IdmToolBar
+    private lateinit var sidebar: IdmCategorySidebar
+    private lateinit var statusBar: IdmStatusBar
+    private lateinit var splitPane: JSplitPane
     private val updatePanel = UpdatePanel()
     private val autoStartPanel = AutoStartPanel()
     /** The banners at the bottom of the window, stacked. */
@@ -76,8 +54,6 @@ class AppWindow(image: Image, startHidden: Boolean = false) : JFrame(), ActionLi
         } else {
             checkForUpdates()
         }
-
-        //ProgressWindow().isVisible = true
     }
 
     /**
@@ -108,8 +84,6 @@ class AppWindow(image: Image, startHidden: Boolean = false) : JFrame(), ActionLi
      * not on screen also announces it with a system notification.
      */
     private fun checkForUpdates() {
-        // GitHub only supplies the latest version number; the button always opens our download page
-        // (downloadUrl in app-version.json), never the GitHub release.
         UpdateChecker.checkForUpdate { info ->
             if (info != null) {
                 SwingUtilities.invokeLater {
@@ -154,61 +128,95 @@ class AppWindow(image: Image, startHidden: Boolean = false) : JFrame(), ActionLi
     }
 
     private fun initWindow() {
-        filterPanel = FilterListPanel(
-            stateChanged = { listView.filterStateChanged(it) },
-            categoryChanged = { listView.filterCategoryChanged(it) }
+        createMainMenu()
+
+        sidebar = IdmCategorySidebar { state, category ->
+            listView.filterStateChanged(state)
+            listView.filterCategoryChanged(category)
+        }
+
+        toolbar = IdmToolBar(
+            onSearch = { listView.searchTextChanged(it) },
+            onSort = { key, asc -> listView.sort(key, asc) },
+            onAddUrl = { app.addDownload(null) },
+            onAddMagnet = { TorrentUiBridge.addMagnet(this) },
+            onAddTorrent = { TorrentUiBridge.addTorrentFile(this) },
+            onResume = { listView.selectedItems.forEach { AppMenuHandler.resumeDownload(it) } },
+            onStop = { listView.selectedItems.forEach { AppMenuHandler.pauseDownload(it) } },
+            onStopAll = {
+                AppContext.db.filter { it.status == RecordStatus.DOWNLOADING || it.status == RecordStatus.READY }
+                    .forEach { AppMenuHandler.pauseDownload(it) }
+            },
+            onDelete = { AppMenuHandler.deleteSelectedDownloads(listView.selectedItems, this) },
+            onDeleteCompleted = { AppMenuHandler.deleteCompleted(this) },
+            onScheduler = { AppContext.app.showSchedulerWindow(0) },
+            onSettingsSaved = { applyListSelectionMode() }
         )
-        toolbar = AppToolBar(
-            { listView.searchTextChanged(it) },
-            this,
-            { key, asc -> listView.sort(key, asc) },
-            { applyListSelectionMode() }
-        )
-        toolbar.setMultiSelectView(false)
-        filterPanel.countsFrom { listView.records }
+
+        statusBar = IdmStatusBar()
+
         wireListView()
 
         listContainer = JPanel(BorderLayout()).apply {
             background = AppTheme.listBackground
             add(listView.component)
         }
-        val panel = JPanel(BorderLayout(10.px, 0)).apply {
-            add(toolbar.component, BorderLayout.NORTH)
-            add(listContainer)
-            border = ScaledEmptyBorder(7, 0, 0, 0)
+
+        val rightPanel = JPanel(BorderLayout()).apply {
+            add(toolbar, BorderLayout.NORTH)
+            add(listContainer, BorderLayout.CENTER)
             background = AppTheme.listBackground
         }
 
-        val splitPane = JSplitPane(JSplitPane.HORIZONTAL_SPLIT).apply {
+        splitPane = JSplitPane(JSplitPane.HORIZONTAL_SPLIT).apply {
             border = MatteBorder(1, 0, 0, 0, AppTheme.sidebarBorder)
-            dividerLocation = 190.px
-            leftComponent = filterPanel.component
-            rightComponent = panel
+            dividerLocation = 210.px
+            leftComponent = sidebar
+            rightComponent = rightPanel
             background = AppTheme.listBackground
         }
+
         add(splitPane, BorderLayout.CENTER)
-        add(bannerStack.apply {
+
+        val southPanel = JPanel().apply {
             layout = BoxLayout(this, BoxLayout.Y_AXIS)
-            add(autoStartPanel)
-            add(updatePanel)
-        }, BorderLayout.SOUTH)
-        // Picks up a change made in the settings or in Task Manager while XDM was in the background.
+            add(statusBar)
+            add(bannerStack.apply {
+                layout = BoxLayout(this, BoxLayout.Y_AXIS)
+                add(autoStartPanel)
+                add(updatePanel)
+            })
+        }
+        add(southPanel, BorderLayout.SOUTH)
+
         addWindowListener(object : WindowAdapter() {
             override fun windowActivated(e: WindowEvent) = autoStartPanel.refresh()
+            override fun windowClosing(e: WindowEvent) {
+                statusBar.dispose()
+            }
         })
 
         ToolTipManager.sharedInstance().initialDelay = 500
+
+        TorrentUiBridge.syncSavedTorrents()
+        TorrentUiBridge.applyTorrentConfig()
     }
 
     private fun createListView(filter: MainListViewFilter): DownloadListView =
         when (AppContext.config.listSelectionMode) {
-            ListSelectionMode.CLASSIC -> ClassicListView(filter)
+            ListSelectionMode.CLASSIC -> IdmTableView(filter)
             ListSelectionMode.MODERN -> ModernListView(filter)
+            ListSelectionMode.TABLE -> IdmTableView(filter)
         }
 
     private fun wireListView() {
-        listView.addRowsChangedListener { filterPanel.scheduleRecount() }
-        listView.bulkSelectionCallback = { toolbar.setMultiSelectView(it) }
+        listView.addRowsChangedListener {
+            sidebar.scheduleRecount()
+            toolbar.refreshGlobalStates()
+        }
+        listView.bulkSelectionCallback = {
+            toolbar.updateSelectionState(listView.selectedItems)
+        }
     }
 
     /**
@@ -217,19 +225,20 @@ class AppWindow(image: Image, startHidden: Boolean = false) : JFrame(), ActionLi
      */
     private fun applyListSelectionMode() {
         val wanted = when (AppContext.config.listSelectionMode) {
-            ListSelectionMode.CLASSIC -> ClassicListView::class
+            ListSelectionMode.CLASSIC -> IdmTableView::class
             ListSelectionMode.MODERN -> ModernListView::class
+            ListSelectionMode.TABLE -> IdmTableView::class
         }
         if (wanted.isInstance(listView)) return
         val old = listView.filter
         listView = createListView(MainListViewFilter(old.filterState, old.filterCategory, old.searchText))
         wireListView()
-        toolbar.setMultiSelectView(false)
+        toolbar.updateSelectionState(emptyList())
         listContainer.removeAll()
         listContainer.add(listView.component)
         listContainer.revalidate()
         listContainer.repaint()
-        filterPanel.scheduleRecount()
+        sidebar.scheduleRecount()
     }
 
     fun updateDownloadInView(index: Int) {
@@ -248,249 +257,203 @@ class AppWindow(image: Image, startHidden: Boolean = false) : JFrame(), ActionLi
         listView.rowAdded(index)
     }
 
-
     override fun actionPerformed(e: ActionEvent) {
         Logger.info("XDM", "Command: ${e.actionCommand}")
-        if (e.source is JComponent) {
-            val name: String = (e.source as JComponent).name ?: return
-
-            when (name) {
-                "TOOL_DOWNLOAD" -> {
-                    app.addDownload(null)
-                    return
-                }
-
-                "TOOL_CLEAR" -> {
-                    clearDownloads()
-                }
-            }
-
-            if (name.startsWith("STOP")) {
-                AppMenuHandler.stopQueue(name)
-            } else if (name.startsWith("START")) {
-                AppMenuHandler.startQueue(name)
-            } else if ("TOOL_DOWNLOAD" == name || "MENU_ADD_URL" == name) {
-                app.addDownload(null)
-            } else if ("PAUSE" == name || "MENU_PAUSE" == name) {
-                // AppMenuHandler.pauseDownloads(this);
-            } else if ("LBL_SHOW_PROGRESS" == name) {
-                AppMenuHandler.showProgressWindow(this)
-            } else if ("MENU_RESTART" == name) {
-                listView.selectedItems.forEach { AppMenuHandler.restartDownload(it) }
-            } else if ("RESUME" == name || "MENU_RESUME" == name) {
-                //        AppMenuHandler.resumeDownloads(this);
-            } else if ("CTX_OPEN_FILE" == name) {
-                AppMenuHandler.openFile(this)
-            } else if ("CTX_OPEN_FOLDER" == name) {
-                //        AppMenuHandler.openFolder(this);
-            } else if ("MENU_EXIT" == name) {
-                // XDMApp.getInstance().exit();
-            } else if ("MENU_OPTIONS" == name || "OPTIONS" == name) {
-                // SettingsPage.getInstance().showPanel(this, "PG_SETTINGS");
-            } else if ("MENU_REFRESH_LINK" == name) {
-                AppMenuHandler.openRefreshPage(this)
-            } else if ("MENU_PROPERTIES" == name) {
-                //AppMenuHandler.showProperties(this)
-            } else if ("MENU_BROWSER_INT" == name) {
-                // SettingsPage.getInstance().showPanel(this, "BTN_MONITORING");
-            } else if ("MENU_SPEED_LIMITER" == name) {
-                //        int ret = SpeedLimiter.getSpeedLimit();
-                //        if (ret >= 0) {
-                //          Config.getInstance().setSpeedLimit(ret);
-                //        }
-            } else if ("DESC_Q_TITLE" == name) {
-                // SettingsPage.getInstance().showPanel(this, "Q_MAN");
-            } else if ("TOOL_DELETE" == name) {
-                Logger.info("Selected items: ${listView.selectedItems}")
-                AppMenuHandler.deleteSelectedDownloads(listView.selectedItems, this)
-            } else if ("MENU_DELETE_COMPLETED" == name) {
-                AppMenuHandler.deleteCompleted(this)
-            } else if ("MENU_ABOUT" == name) {
-                //				AboutPage aboutPage = new AboutPage(this);
-                //				aboutPage.showPanel();
-            } else if ("CTX_SAVE_AS" == name) {
-                AppMenuHandler.changeFile(this)
-            } else if ("MENU_IMPORT" == name) {
-                //        JFileChooser jfc = new JFileChooser();
-                //        if (jfc.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
-                //          File file = jfc.getSelectedFile();
-                //          XDMApp.getInstance().loadDownloadList(file);
-                //        }
-            } else if ("MENU_EXPORT" == name) {
-                //        JFileChooser jfc = new JFileChooser();
-                //        if (jfc.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
-                //          File file = jfc.getSelectedFile();
-                //          XDMApp.getInstance().saveDownloadList(file);
-                //        }
-            } else if ("MENU_CONTENTS" == name) {
-                //        XDMUtils.browseURL(XDMApp.APP_WIKI_URL);
-            } else if ("MENU_HOME_PAGE" == name) {
-                //        XDMUtils.browseURL(XDMApp.APP_HOME_URL);
-            } else if ("MENU_UPDATE" == name) {
-                //        XDMUtils.browseURL(XDMApp.APP_UPDATE_CHK_URL + XDMApp.APP_VERSION);
-            } else if ("MENU_LANG" == name) {
-                AppMenuHandler.showLanguageDlg(this)
-            } else if ("MENU_BATCH_DOWNLOAD" == name) {
-                AppMenuHandler.showBatchDialog(this)
-            } else if ("LBL_OPTIMIZE_NETWORK" == name) {
-                AppMenuHandler.optimizeRWin()
-            } else if ("LBL_TRANSLATE" == name) {
-                AppMenuHandler.openTranslationPage()
-            } else if ("LBL_SUPPORT_PAGE" == name) {
-                AppMenuHandler.openSupportPage()
-            } else if ("LBL_REPORT_PROBLEM" == name) {
-                AppMenuHandler.openBugReportPage()
-            }
-        }
-    }
-
-    private fun clearDownloads() {
-        listView.clear()
     }
 
     private fun createMainMenu() {
         val bar = JMenuBar()
 
-        val file = JMenu(text("MENU_FILE"))
+        // 1. File Menu
+        val fileMenu = JMenu("File").apply {
+            add(JMenuItem("Add URL...", FontIcon(RemixIcon.GLOBAL_LINE, 16.px)).apply {
+                accelerator = KeyStroke.getKeyStroke(KeyEvent.VK_U, KeyEvent.CTRL_DOWN_MASK)
+                addActionListener { app.addDownload(null) }
+            })
+            add(JMenuItem("Add Magnet Link...", FontIcon(RemixIcon.DOWNLOAD_2_LINE, 16.px)).apply {
+                accelerator = KeyStroke.getKeyStroke(KeyEvent.VK_M, KeyEvent.CTRL_DOWN_MASK)
+                addActionListener { TorrentUiBridge.addMagnet(this@AppWindow) }
+            })
+            add(JMenuItem("Add Torrent File...", FontIcon(RemixIcon.FILE_ZIP_LINE, 16.px)).apply {
+                accelerator = KeyStroke.getKeyStroke(KeyEvent.VK_O, KeyEvent.CTRL_DOWN_MASK)
+                addActionListener { TorrentUiBridge.addTorrentFile(this@AppWindow) }
+            })
+            add(JMenuItem("Batch Download...", FontIcon(RemixIcon.FILE_LIST_2_LINE, 16.px)).apply {
+                accelerator = KeyStroke.getKeyStroke(KeyEvent.VK_B, KeyEvent.CTRL_DOWN_MASK)
+                addActionListener { AppMenuHandler.showBatchDialog(this@AppWindow) }
+            })
+            addSeparator()
+            add(JMenuItem("Delete Selected", FontIcon(RemixIcon.DELETE_BIN_LINE, 16.px)).apply {
+                accelerator = KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0)
+                addActionListener { AppMenuHandler.deleteSelectedDownloads(listView.selectedItems, this@AppWindow) }
+            })
+            add(JMenuItem("Delete Completed", FontIcon(RemixIcon.BRUSH_LINE, 16.px)).apply {
+                addActionListener { AppMenuHandler.deleteCompleted(this@AppWindow) }
+            })
+            addSeparator()
+            add(JMenuItem("Exit", FontIcon(RemixIcon.CLOSE_CIRCLE_LINE, 16.px)).apply {
+                accelerator = KeyStroke.getKeyStroke(KeyEvent.VK_Q, KeyEvent.CTRL_DOWN_MASK)
+                addActionListener { kotlin.system.exitProcess(0) }
+            })
+        }
 
-        addMenuItem("MENU_ADD_URL", file)
-        addMenuItem("MENU_VIDEO_DWN", file)
-        addMenuItem("MENU_BATCH_DOWNLOAD", file)
-        addMenuItem("MENU_DELETE_DWN", file)
-        addMenuItem("MENU_DELETE_COMPLETED", file)
-        addMenuItem("MENU_EXPORT", file)
-        addMenuItem("MENU_IMPORT", file)
-        addMenuItem("MENU_EXIT", file)
-
-        val dwn = JMenu(text("MENU_DOWNLOAD"))
-
-        addMenuItem("MENU_PAUSE", dwn)
-        addMenuItem("MENU_RESUME", dwn)
-        addMenuItem("MENU_RESTART", dwn)
-        addMenuItem("DESC_Q_TITLE", dwn)
-
-        val popupListener: PopupMenuListener =
-            object : PopupMenuListener {
-                override fun popupMenuWillBecomeVisible(e: PopupMenuEvent) {
-//                    loadQueueMenu(startQMenu!!)
-//                    loadQueueMenu(stopQMenu!!)
+        // 2. Downloads Menu
+        val dwnMenu = JMenu("Downloads").apply {
+            add(JMenuItem("Resume Selected", FontIcon(RemixIcon.PLAY_CIRCLE_LINE, 16.px)).apply {
+                accelerator = KeyStroke.getKeyStroke(KeyEvent.VK_F2, 0)
+                addActionListener { listView.selectedItems.forEach { AppMenuHandler.resumeDownload(it) } }
+            })
+            add(JMenuItem("Pause Selected", FontIcon(RemixIcon.PAUSE_CIRCLE_LINE, 16.px)).apply {
+                accelerator = KeyStroke.getKeyStroke(KeyEvent.VK_F4, 0)
+                addActionListener { listView.selectedItems.forEach { AppMenuHandler.pauseDownload(it) } }
+            })
+            add(JMenuItem("Stop All Transfers", FontIcon(RemixIcon.CLOSE_CIRCLE_LINE, 16.px)).apply {
+                addActionListener {
+                    AppContext.db.filter { it.status == RecordStatus.DOWNLOADING || it.status == RecordStatus.READY }
+                        .forEach { AppMenuHandler.pauseDownload(it) }
                 }
+            })
+            add(JMenuItem("Restart Selected", FontIcon(RemixIcon.ARROW_UP_DOWN_FILL, 16.px)).apply {
+                addActionListener { listView.selectedItems.forEach { AppMenuHandler.restartDownload(it) } }
+            })
+            addSeparator()
+            add(JMenuItem("Download Scheduler...", FontIcon(RemixIcon.LIST_CHECK_2, 16.px)).apply {
+                addActionListener { AppContext.app.showSchedulerWindow(0) }
+            })
+        }
 
-                override fun popupMenuWillBecomeInvisible(e: PopupMenuEvent) {}
-
-                override fun popupMenuCanceled(e: PopupMenuEvent) {}
+        // 3. View Menu
+        val viewMenu = JMenu("View").apply {
+            val chkSidebar = JCheckBoxMenuItem("Show Categories Sidebar", true).apply {
+                addActionListener {
+                    splitPane.leftComponent.isVisible = isSelected
+                    splitPane.revalidate()
+                }
             }
+            val chkToolbar = JCheckBoxMenuItem("Show Toolbar", true).apply {
+                addActionListener {
+                    toolbar.isVisible = isSelected
+                    toolbar.revalidate()
+                }
+            }
+            val chkStatusBar = JCheckBoxMenuItem("Show Status Bar", true).apply {
+                addActionListener {
+                    statusBar.isVisible = isSelected
+                    statusBar.revalidate()
+                }
+            }
+            add(chkSidebar)
+            add(chkToolbar)
+            add(chkStatusBar)
+            addSeparator()
 
-//        startQMenu = addSubMenu("MENU_START_Q", dwn, popupListener)
-//        stopQMenu = addSubMenu("MENU_STOP_Q", dwn, popupListener)
+            val modeMenu = JMenu("View Mode")
+            val group = ButtonGroup()
+            val optTable = JRadioButtonMenuItem("Table View (IDM Default)", AppContext.config.listSelectionMode == ListSelectionMode.TABLE).apply {
+                addActionListener {
+                    AppContext.config.listSelectionMode = ListSelectionMode.TABLE
+                    AppContext.config.save()
+                    applyListSelectionMode()
+                }
+            }
+            val optClassic = JRadioButtonMenuItem("Classic Cards", AppContext.config.listSelectionMode == ListSelectionMode.CLASSIC).apply {
+                addActionListener {
+                    AppContext.config.listSelectionMode = ListSelectionMode.CLASSIC
+                    AppContext.config.save()
+                    applyListSelectionMode()
+                }
+            }
+            val optModern = JRadioButtonMenuItem("Modern Cards", AppContext.config.listSelectionMode == ListSelectionMode.MODERN).apply {
+                addActionListener {
+                    AppContext.config.listSelectionMode = ListSelectionMode.MODERN
+                    AppContext.config.save()
+                    applyListSelectionMode()
+                }
+            }
+            group.add(optTable)
+            group.add(optClassic)
+            group.add(optModern)
+            modeMenu.add(optTable)
+            modeMenu.add(optClassic)
+            modeMenu.add(optModern)
+            add(modeMenu)
+        }
 
-        val tools = JMenu(text("MENU_TOOLS"))
+        // 4. Tools Menu
+        val toolsMenu = JMenu("Tools").apply {
+            add(JMenuItem("Options / Settings...", FontIcon(RemixIcon.SETTINGS_4_LINE, 16.px)).apply {
+                accelerator = KeyStroke.getKeyStroke(KeyEvent.VK_F5, 0)
+                addActionListener {
+                    SingleWindows.show(SettingsWindow::class) {
+                        SettingsWindow().apply {
+                            onSaved = { applyListSelectionMode() }
+                            setLocationRelativeTo(this@AppWindow)
+                            loadConfig()
+                        }
+                    }
+                }
+            })
+            add(JMenuItem("Refresh Download Link...", FontIcon(RemixIcon.ARROW_UP_DOWN_FILL, 16.px)).apply {
+                addActionListener { AppMenuHandler.openRefreshPage(this@AppWindow) }
+            })
+            add(JMenuItem("Browser Integration...", FontIcon(RemixIcon.CHROME_FILL, 16.px)).apply {
+                addActionListener { BrowserSetupDialog(this@AppWindow).isVisible = true }
+            })
+            add(JMenuItem("Network Optimizer", FontIcon(RemixIcon.SPEED_LINE, 16.px)).apply {
+                addActionListener { AppMenuHandler.optimizeRWin() }
+            })
+            add(JMenuItem("Language...", FontIcon(RemixIcon.GLOBAL_LINE, 16.px)).apply {
+                addActionListener { AppMenuHandler.showLanguageDlg(this@AppWindow) }
+            })
+        }
 
-        addMenuItem("MENU_OPTIONS", tools)
-        addMenuItem("MENU_REFRESH_LINK", tools)
-        addMenuItem("MENU_PROPERTIES", tools)
-        addMenuItem("MENU_SPEED_LIMITER", tools)
-        addMenuItem("MENU_LANG", tools)
-        addMenuItem("MENU_MEDIA_CONVERTER", tools)
-        addMenuItem("LBL_OPTIMIZE_NETWORK", tools)
-        addMenuItem("MENU_BROWSER_INT", tools)
+        // 5. Help Menu
+        val helpMenu = JMenu("Help").apply {
+            add(JMenuItem("Documentation & Wiki", FontIcon(RemixIcon.BOOK_SHELF_LINE, 16.px)).apply {
+                addActionListener { openInDefaultBrowser(WEBSITE_HELP_URL) }
+            })
+            add(JMenuItem("Home Page", FontIcon(RemixIcon.GLOBAL_LINE, 16.px)).apply {
+                addActionListener { openInDefaultBrowser(WEBSITE_URL) }
+            })
+            add(JMenuItem("Check for Updates...", FontIcon(RemixIcon.NOTIFICATION_3_LINE, 16.px)).apply {
+                addActionListener {
+                    UpdateChecker.checkForUpdate { info ->
+                        SwingUtilities.invokeLater {
+                            if (info != null) {
+                                updatePanel.showUpdate(info.latestVersion, info.downloadUrl, info.isPreRelease)
+                            } else {
+                                MessageBox.show(this@AppWindow, "Update Check", "You are running the latest version of XDM Enhanced.")
+                            }
+                        }
+                    }
+                }
+            })
+            addSeparator()
+            add(JMenuItem("About XDM Enhanced...", FontIcon(RemixIcon.FILE_SHIELD_LINE, 16.px)).apply {
+                addActionListener { AboutDialog.open(this@AppWindow) }
+            })
+        }
 
-        val help = JMenu(text("MENU_HELP"))
-        addMenuItem("MENU_CONTENTS", help)
-        addMenuItem("MENU_HOME_PAGE", help)
-        addMenuItem("LBL_SUPPORT_PAGE", help)
-        addMenuItem("LBL_REPORT_PROBLEM", help)
-        addMenuItem("LBL_TRANSLATE", help)
-        addMenuItem("MENU_UPDATE", help)
-        addMenuItem("MENU_ABOUT", help)
-
-        bar.add(file)
-        bar.add(dwn)
-        bar.add(tools)
-        bar.add(help)
+        bar.add(fileMenu)
+        bar.add(dwnMenu)
+        bar.add(viewMenu)
+        bar.add(toolsMenu)
+        bar.add(helpMenu)
 
         jMenuBar = bar
     }
 
-    private fun addMenuItem(id: String, menu: JComponent) {
-        val mItem = JMenuItem(text(id))
-        mItem.name = id
-        mItem.addActionListener(this)
-        menu.add(mItem)
-    }
-
-    private fun addSubMenu(id: String, parentMenu: JMenu, popupListener: PopupMenuListener): JMenu {
-        val menu = JMenu(text(id))
-        menu.name = id
-        menu.addActionListener(this)
-        menu.popupMenu.addPopupMenuListener(popupListener)
-        parentMenu.add(menu)
-        return menu
-    }
-
-    /** Back where the user left it (monitor, position, size, maximized), else 800x500 centered. */
+    /** Back where the user left it (monitor, position, size, maximized), else 980x580 centered. */
     private fun setWindowSizeAndPosition() {
-        WindowGeometry.restore(this, "main", 800, 500)
-    }
-
-    private fun loadQueueMenu(menu: JMenu) {
-        if (menu.name == "MENU_START_Q") {
-            loadStartQueueMenu(menu)
-        } else if (menu.name == "MENU_STOP_Q") {
-            loadStopQueueMenu(menu)
-        }
-    }
-
-    private fun loadStopQueueMenu(menu: JMenu) {
-        //    menu.removeAll();
-        //    ArrayList<DownloadQueue> queues = XDMApp.getInstance().getQueueList();
-        //    for (int i = 0; i < queues.size(); i++) {
-        //      DownloadQueue q = queues.get(i);
-        //      if (q.isRunning()) {
-        //        JMenuItem mitem = new JMenuItem(q.getName());
-        //        mitem.setForeground(ColorResource.getLightFontColor());
-        //        mitem.setName("STOP:" + q.getQueueId());
-        //        mitem.addActionListener(this);
-        //        menu.add(mitem);
-        //      }
-        //    }
-    }
-
-    private fun loadStartQueueMenu(menu: JMenu) {
-        //    menu.removeAll();
-        //    ArrayList<DownloadQueue> queues = XDMApp.getInstance().getQueueList();
-        //    for (int i = 0; i < queues.size(); i++) {
-        //      DownloadQueue q = queues.get(i);
-        //      if (!q.isRunning()) {
-        //        JMenuItem mitem = new JMenuItem(q.getName());
-        //        mitem.setForeground(ColorResource.getLightFontColor());
-        //        mitem.setName("START:" + q.getQueueId());
-        //        mitem.addActionListener(this);
-        //        menu.add(mitem);
-        //      }
-        //    }
-    }
-
-    private fun createPopupMenu() {
-//        popupCtx = JPopupMenu()
-//        addMenuItem("CTX_OPEN_FILE", popupCtx!!)
-//        addMenuItem("CTX_OPEN_FOLDER", popupCtx!!)
-//        addMenuItem("CTX_SAVE_AS", popupCtx!!)
-//        addMenuItem("MENU_PAUSE", popupCtx!!)
-//        addMenuItem("MENU_RESUME", popupCtx!!)
-//        addMenuItem("MENU_DELETE_DWN", popupCtx!!)
-//        addMenuItem("MENU_REFRESH_LINK", popupCtx!!)
-//        addMenuItem("LBL_SHOW_PROGRESS", popupCtx!!)
-//        addMenuItem("CTX_COPY_URL", popupCtx!!)
-//        addMenuItem("CTX_COPY_FILE", popupCtx!!)
-//        addMenuItem("MENU_PROPERTIES", popupCtx!!)
-        //    popupCtx.setInvoker(listView.getComponent());
-        //    listView.installPopupMenu(popupCtx, this);
+        WindowGeometry.restore(this, "main", 980, 580)
     }
 
     val selectedDownloads: List<DbRecord>
-        get() = emptyList() // listView.getSelectedItems();
+        get() = listView.selectedItems
 
+    fun selectDownloadById(id: Long) {
+        (listView as? IdmTableView)?.selectById(id)
+    }
 }
 
 /** How long a start at login waits before its update check. */

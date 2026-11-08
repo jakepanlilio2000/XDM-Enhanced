@@ -352,9 +352,11 @@ object BrowserIntegration {
      */
     private fun onShowMessage(context: RequestContext) {
         Logger.info("INTEGRATION", "Another launch asked this instance to show itself")
-        // The arguments are read (and logged) but not acted on yet; see ShowRequest.
-        runCatching { decodeBody<ShowRequest>(context) }
-            .onSuccess { it?.let { Logger.info("INTEGRATION", "Launch arguments: ${it.args}") } }
+        val req = runCatching { decodeBody<ShowRequest>(context) }.getOrNull()
+        if (req != null && req.args.isNotEmpty()) {
+            Logger.info("INTEGRATION", "Launch arguments: ${req.args}")
+            AppContext.app.handleLaunchArgs(req.args)
+        }
         AppContext.app.showAppWindow()
     }
 
@@ -380,7 +382,14 @@ object BrowserIntegration {
 
     private fun onDownloadMessage(context: RequestContext) {
         Logger.info("Received download message..")
-        decodeBody<ExtensionMessage>(context)?.let { CaptureHandler.toDownload(it) }?.let { AppContext.app.addDownload(it) }
+        val msg = decodeBody<ExtensionMessage>(context) ?: return
+        val url = msg.url?.trim().orEmpty()
+        if (url.startsWith("magnet:", ignoreCase = true)) {
+            AppContext.app.handleIncomingUriOrFile(url)
+            return
+        }
+        val task = CaptureHandler.toDownload(msg) ?: return
+        AppContext.app.addDownload(task)
     }
 
     /** The extension's "Download all": opens the batch dialog. Replies at once, with the usual sync. */

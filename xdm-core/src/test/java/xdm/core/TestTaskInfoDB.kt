@@ -226,4 +226,25 @@ class TestTaskInfoDB : HttpDownloadTestBase() {
         assertTrue(first["cookie"].orEmpty().any { "session=s3cr3t" in it }, "Cookie not sent: ${first["cookie"]}")
         assertEquals(listOf("abc", "def"), first["x-token"]?.flatMap { it.split(",").map(String::trim) })
     }
+
+    @Test
+    fun torrent_roundTripKeepsInfoHashSelectionAndState() {
+        val task = xdm.core.downloaders.TorrentDownloadTaskInfo(
+            id = 501,
+            name = "ubuntu.iso",
+            targetFolder = "/downloads/torrents",
+            infoHash = "0123456789abcdef0123456789abcdef01234567",
+            sourceType = 1,
+            sourceUri = "/home/user/downloads/ubuntu.torrent",
+            fileSelection = listOf(true, false, true),
+            totalSize = 4_000_000_000L,
+            categoryId = "CAT_ISO",
+            lastState = 4
+        )
+        val saved = db().saveTorrentTask(task)
+        assertTrue(saved, "Task should be saved successfully")
+        val restored = db().getTorrentTask(501)
+        assertNotNull(restored)
+        assertEquals(task, restored)
+    }
 }

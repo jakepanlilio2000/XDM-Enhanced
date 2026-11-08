@@ -107,11 +107,11 @@ JAVA_OPTIONS=(
 # The image, its one launcher and the macOS bundle are all "xdm-app" (xdm-app.app): a stable,
 # space-free name, which is also what XDM registers with the OS (the login entry, the xdm-app://
 # handler). The name people see is set separately (FINDER_DISPLAY_NAME below, the .desktop Name=).
-APP_NAME="Xtreme Download Manager"
+APP_NAME="XDM Enhanced"
 LAUNCHER_NAME="xdm-app"
-VENDOR="Xtreme Download Manager"
+VENDOR="XDM Enhanced Contributors"
 URL_SCHEME="xdm-app"
-DESCRIPTION="Xtreme Download Manager"
+DESCRIPTION="XDM Enhanced"
 MAIN_CLASS="xdm.app.AppMain"
 MAIN_JAR="xdm-app.jar"
 APP_MODULE="xdm.app"
@@ -355,6 +355,7 @@ strip_foreign_natives() {
     case "$entry" in
       "$fl_dir"*"-${fl_os}-${fl_arch}."*) continue ;;
       "META-INF/native/libconscrypt_openjdk_jni-${cs_os}-${cs_arch}."*) continue ;;
+      "lib/${fl_arch}/liblibtorrent4j."*|"lib/${fl_arch}/libtorrent4j."*) continue ;;
       *) drop+=("$entry") ;;
     esac
   done < <(jar tf "$jar" | grep -E '\.(dylib|jnilib|so|dll)$' || true)
@@ -597,10 +598,11 @@ fi
 JAVA_OPTIONS+=('-Dxdm.app.dir=$APPDIR')
 
 # ---- jpackage -------------------------------------------------------------
+PKG_VERSION="${APP_VERSION%%-*}"
 ARGS=(
   --type "$JPACKAGE_TYPE"
   --name "$IMAGE_NAME"
-  --app-version "$APP_VERSION"
+  --app-version "${PKG_VERSION:-1.0.0}"
   --vendor "$VENDOR"
   --description "$DESCRIPTION"
   --copyright "$COPYRIGHT"

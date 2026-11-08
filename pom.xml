@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>xdm</groupId>
     <artifactId>xdm</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>1.0.0-beta.1</version>
     <packaging>pom</packaging>
     <properties>
         <!-- Tests are skipped by default (install/package stay fast). Run them with -DskipTests=false. -->
@@ -13,6 +13,7 @@
     <modules>
         <module>xdm-core</module>
         <module>xdm-capture</module>
+        <module>xdm-torrent</module>
         <module>xdm-manager</module>
         <!--        <module>xdm-app2</module>-->
         <module>xdm-app</module>

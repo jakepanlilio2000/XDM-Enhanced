@@ -13,6 +13,7 @@ import xdm.core.util.Logger
 import xdm.integration.BrowserIntegration
 import xdm.manager.DownloadManager
 import xdm.manager.EngineContext
+import xdm.torrent.TorrentDownloadManager
 import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
@@ -56,6 +57,16 @@ object AppContext {
 
     /** Answers 401 / 407 for every download client; asks the user through a Swing dialog. */
     val httpAuth: HttpAuth by lazy { HttpAuth(SwingCredentialPrompt) }
+
+    val torrentManager: TorrentDownloadManager by lazy {
+        val cDir = if (::configDir.isInitialized) File(configDir) else null
+        val db = if (::taskInfoDB.isInitialized) taskInfoDB else cDir?.let { TaskInfoDB(it.absolutePath) }
+        val tm = TorrentDownloadManager(configDir = cDir, taskInfoDB = db)
+        Runtime.getRuntime().addShutdownHook(Thread({
+            runCatching { tm.shutdown(saveResumeData = true, timeoutMs = 2000) }
+        }, "XDM-Torrent-ShutdownHook"))
+        tm
+    }
 
     var refreshLinkInProgress = AtomicBoolean(false)
     var refreshLinkId = AtomicLong(-1)

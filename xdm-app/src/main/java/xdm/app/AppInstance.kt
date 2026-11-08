@@ -15,6 +15,13 @@ import xdm.app.ui.screens.ProgressWindow
 import xdm.app.ui.screens.PropertiesDialog
 import xdm.app.ui.screens.RefreshLinkWindow
 import xdm.app.ui.screens.ScheduleWindow
+import xdm.app.ui.screens.TorrentUiBridge
+import xdm.app.ui.screens.NewTorrentDownloadWindow
+import xdm.torrent.TorrentMetadataParser
+import xdm.torrent.TorrentSource
+import xdm.core.util.FileUtils
+import xdm.core.util.CoreUtils
+import java.io.File
 import xdm.app.utils.SingleWindows
 import xdm.app.utils.TextContextMenu
 import xdm.app.utils.WorkingSetTrim
@@ -82,6 +89,8 @@ interface IAppInstance {
 
     fun showProgressWindow(id: Long, fileName: String)
 
+    fun updateTorrentProgressWindow(id: Long, snapshot: xdm.torrent.TorrentProgressSnapshot)
+
     fun hideProgressWindow(id: Long)
 
     fun showProgressError(id: Long, error: DownloadError)
@@ -119,9 +128,15 @@ interface IAppInstance {
 
     /** The XDM extension in [browser] is older than this XDM expects: asks the user to update it. */
     fun showExtensionUpdate(browser: Browser)
+
+    /** Handles command-line arguments (file paths, URLs, magnet URIs, flags) passed at startup or handed over. */
+    fun handleLaunchArgs(args: List<String>)
+
+    /** Handles an incoming URI (magnet, http/https, xdm-app) or local file path (.torrent). */
+    fun handleIncomingUriOrFile(raw: String)
 }
 
-class AppInstance : IAppInstance {
+open class AppInstance : IAppInstance {
     private lateinit var appWindow: AppWindow
     private val prgWndMap = mutableMapOf<Long, ProgressWindow>()
     /**
@@ -157,13 +172,14 @@ class AppInstance : IAppInstance {
                     BrowserSetupDialog(appWindow).isVisible = true
                 }
             }
+            handleLaunchArgs(args.toList())
         }
     }
 
     /**
      * On macOS a second launch does not start a second process: LaunchServices activates the
      * running app and delivers `xdm-app://...` as an Apple event, so the argv/`/show` handover the
-     * other platforms use never happens. Both events mean the same thing here - show the window.
+     * other platforms use never happens.
      */
     private fun installMacHandlers() {
         if (detectOS() != OS.MacOS || !Desktop.isDesktopSupported()) {
@@ -171,7 +187,18 @@ class AppInstance : IAppInstance {
         }
         val desktop = Desktop.getDesktop()
         // Unsupported when not running from a bundle (i.e. in development), hence runCatching.
-        runCatching { desktop.setOpenURIHandler { showAppWindow() } }
+        runCatching {
+            desktop.setOpenURIHandler { event ->
+                handleIncomingUriOrFile(event.uri.toString())
+            }
+        }
+        runCatching {
+            desktop.setOpenFileHandler { event ->
+                event.files?.forEach { file ->
+                    handleIncomingUriOrFile(file.absolutePath)
+                }
+            }
+        }
         runCatching { desktop.addAppEventListener(AppReopenedListener { showAppWindow() }) }
         // App menu → "About Xtreme Download Manager": XDM's own dialog instead of the generic one.
         // Called on the EDT; owned by the main window only while it is on screen.
@@ -356,6 +383,11 @@ class AppInstance : IAppInstance {
         runOnUIThread { prgWndMap[id]?.updateProgress(fileName, downloaded, size, speed, eta, prg, segData, files) }
     }
 
+    override fun updateTorrentProgressWindow(id: Long, snapshot: xdm.torrent.TorrentProgressSnapshot) {
+        if (snapshot.downloadedBytes > 0) pendingHandoffs.remove(id)
+        runOnUIThread { prgWndMap[id]?.updateTorrentProgress(snapshot) }
+    }
+
     override fun updateMoveProgress(id: Long, phase: MovePhase, prg: Int) {
         runOnUIThread { prgWndMap[id]?.showMoving(phase, prg) }
     }
@@ -446,5 +478,188 @@ class AppInstance : IAppInstance {
         runOnUIThread {
             BatchDownloadDialog(mainWindowOnScreen(), request).isVisible = true
         }
+    }
+
+    override fun handleLaunchArgs(args: List<String>) {
+        if (args.isEmpty()) return
+        for (arg in args) {
+            val trimmed = arg.trim().removeSurrounding("\"")
+            if (trimmed.isEmpty()) continue
+            if (trimmed.startsWith("-")) {
+                // Command line flag (--minimized, -m, etc.), not a download target
+                continue
+            }
+            if (trimmed.equals("xdm-app://launch", ignoreCase = true)) {
+                showAppWindow()
+                continue
+            }
+            handleIncomingUriOrFile(trimmed)
+        }
+    }
+
+    override fun handleIncomingUriOrFile(raw: String) {
+        val input = raw.trim().removeSurrounding("\"")
+        if (input.isEmpty()) return
+
+        runOnUIThread {
+            showAppWindow()
+
+            // 1. Magnet URI
+            if (input.startsWith("magnet:", ignoreCase = true)) {
+                handleMagnetUri(input)
+                return@runOnUIThread
+            }
+
+            // 2. Local Torrent File or file:// URI
+            val candidateFile = if (input.startsWith("file:", ignoreCase = true)) {
+                runCatching { File(java.net.URI(input)) }.getOrElse {
+                    File(input.removePrefix("file://").removePrefix("file:"))
+                }
+            } else {
+                File(input)
+            }
+
+            if (candidateFile.name.endsWith(".torrent", ignoreCase = true) ||
+                (candidateFile.exists() && candidateFile.isFile && isTorrentFile(candidateFile))
+            ) {
+                handleTorrentFile(candidateFile)
+                return@runOnUIThread
+            }
+
+            // 3. HTTP / HTTPS URL
+            if (input.startsWith("http://", ignoreCase = true) || input.startsWith("https://", ignoreCase = true)) {
+                handleHttpUrl(input)
+                return@runOnUIThread
+            }
+
+            // 4. Custom xdm-app:// protocol
+            if (input.startsWith("xdm-app://", ignoreCase = true)) {
+                val sub = input.removePrefix("xdm-app://").removePrefix("xdm-app:")
+                if (sub.isNotBlank() && !sub.equals("launch", ignoreCase = true)) {
+                    handleIncomingUriOrFile(sub)
+                }
+                return@runOnUIThread
+            }
+
+            // 5. Invalid / Unrecognized URI or file path
+            Logger.info("Invalid or unrecognized download target: $input")
+            MessageBox.show(
+                if (::appWindow.isInitialized) appWindow else null,
+                "Invalid Download Target",
+                "The specified link or file could not be opened:\n$input"
+            )
+        }
+    }
+
+    private fun isTorrentFile(file: File): Boolean = runCatching {
+        if (!file.exists() || !file.isFile || file.length() < 10) false
+        else {
+            val buf = ByteArray(1)
+            file.inputStream().use { it.read(buf) }
+            buf[0] == 'd'.code.toByte()
+        }
+    }.getOrDefault(false)
+
+    private fun handleMagnetUri(uri: String) {
+        val parent = if (::appWindow.isInitialized) appWindow else null
+        val infoHash = TorrentMetadataParser.parseMagnetInfoHash(uri)
+        if (infoHash == null) {
+            Logger.info("Invalid magnet URI: $uri")
+            MessageBox.show(
+                parent,
+                "Invalid Magnet Link",
+                "The provided magnet URI is invalid or missing a valid torrent info hash:\n$uri"
+            )
+            return
+        }
+
+        // Duplicate check
+        val existing = AppContext.torrentManager.getTaskByInfoHash(infoHash)
+        if (existing != null) {
+            Logger.info("Torrent already in list: id=${existing.id}, name=${existing.name}")
+            MessageBox.show(
+                parent,
+                "Torrent Already Exists",
+                "The torrent '${existing.name}' is already in your download list."
+            )
+            if (::appWindow.isInitialized) {
+                appWindow.selectDownloadById(existing.id)
+            }
+            return
+        }
+
+        if (!TorrentUiBridge.checkEngineAvailable(parent)) return
+        NewTorrentDownloadWindow(TorrentSource.MagnetUri(uri), null, parent).isVisible = true
+    }
+
+    private fun handleTorrentFile(file: File) {
+        val parent = if (::appWindow.isInitialized) appWindow else null
+        if (!file.exists() || !file.isFile) {
+            Logger.info("Torrent file not found: ${file.absolutePath}")
+            MessageBox.show(
+                parent,
+                "File Not Found",
+                "The specified torrent file does not exist:\n${file.absolutePath}"
+            )
+            return
+        }
+
+        val metadata = try {
+            TorrentMetadataParser.parse(file)
+        } catch (e: Throwable) {
+            Logger.error("Failed to parse torrent file: ${file.absolutePath}", e)
+            MessageBox.show(
+                parent,
+                "Invalid Torrent File",
+                "The file is corrupted or not a valid BitTorrent file:\n${e.message}"
+            )
+            return
+        }
+
+        // Duplicate check
+        val existing = AppContext.torrentManager.getTaskByInfoHash(metadata.infoHash)
+        if (existing != null) {
+            Logger.info("Torrent already in list: id=${existing.id}, name=${existing.name}")
+            MessageBox.show(
+                parent,
+                "Torrent Already Exists",
+                "The torrent '${existing.name}' is already in your download list."
+            )
+            if (::appWindow.isInitialized) {
+                appWindow.selectDownloadById(existing.id)
+            }
+            return
+        }
+
+        if (!TorrentUiBridge.checkEngineAvailable(parent)) return
+        NewTorrentDownloadWindow(TorrentSource.TorrentFile(file), metadata, parent).isVisible = true
+    }
+
+    private fun handleHttpUrl(url: String) {
+        val parent = if (::appWindow.isInitialized) appWindow else null
+        try {
+            java.net.URI(url)
+        } catch (e: Exception) {
+            MessageBox.show(parent, "Invalid URL", "The specified URL is invalid:\n$url")
+            return
+        }
+
+        val fileName = FileUtils.sanitizeFileName(FileUtils.getFileName(url)) ?: "download"
+        val (catId, targetFolder) = DesktopCaptureHost.destination(fileName, url, null)
+        val task = HttpDownloadTaskInfo(
+            id = CoreUtils.uniqueId(),
+            url = url,
+            fileName = fileName,
+            respectFileName = false,
+            cookie = null,
+            headers = null,
+            origin = null,
+            categoryId = catId,
+            targetFolder = targetFolder,
+            maxPiece = AppContext.config.maxSegments,
+            authInfo = null,
+            knownFileSize = null,
+        )
+        addDownload(task)
     }
 }

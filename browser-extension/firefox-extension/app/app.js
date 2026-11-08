@@ -223,8 +223,12 @@ class App {
     
     isSupportedProtocol(url) {
         if (!url) return false;
-        let u = new URL(url);
-        return u.protocol === 'http:' || u.protocol === 'https:';
+        try {
+            let u = new URL(url);
+            return u.protocol === 'http:' || u.protocol === 'https:' || u.protocol === 'magnet:';
+        } catch (e) {
+            return typeof url === "string" && url.startsWith("magnet:?");
+        }
     }
 
     shouldTakeOver(url, file) {
@@ -358,6 +362,16 @@ class App {
     // For the context menu only: those links were never requested by the browser, so there is no
     // observed request to replay and the cookies have to be looked up instead.
     triggerDownload(url, file, referer, size, mime) {
+        if (url && typeof url === "string" && url.startsWith("magnet:")) {
+            let data = {
+                url: url,
+                referer: referer,
+                filename: file
+            };
+            this.logger.log(data);
+            this.connector.postMessage("/download", data);
+            return;
+        }
         chrome.cookies.getAll({ "url": url }, cookies => {
             let cookieStr = undefined;
             if (cookies) {

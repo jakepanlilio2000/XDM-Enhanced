@@ -53,13 +53,19 @@ class AboutDialog private constructor(owner: Window?) : JDialog(owner) {
         }
 
         val version = UpdateChecker.loadConfig()?.currentVersion ?: ""
-        val appName = JLabel("Xtreme Download Manager $version".trim()).apply {
+        val appName = JLabel("XDM Enhanced $version".trim()).apply {
             font = font.deriveFont(Font.PLAIN, 16f.px)
             horizontalAlignment = SwingConstants.CENTER
         }
 
-        val copyright = JLabel("© 2013 - 2026 Subhra Das Gupta").apply {
-            font = font.deriveFont(Font.PLAIN, 13f.px)
+        val forkNotice = JLabel("Independent fork with native BitTorrent & IDM interface").apply {
+            font = font.deriveFont(Font.PLAIN, 11f.px)
+            foreground = UIManager.getColor("Label.disabledForeground")
+            horizontalAlignment = SwingConstants.CENTER
+        }
+
+        val copyright = JLabel("© 2013 - 2026 Subhra Das Gupta & Contributors").apply {
+            font = font.deriveFont(Font.PLAIN, 12f.px)
             horizontalAlignment = SwingConstants.CENTER
         }
 
@@ -86,6 +92,7 @@ class AboutDialog private constructor(owner: Window?) : JDialog(owner) {
 
         panel.add(logoLabel, gc)
         panel.add(appName, gc)
+        panel.add(forkNotice, gc)
         panel.add(copyright, gc)
         panel.add(githubLink, gc.apply { insets = scaledInsets(14, 0, 14, 0) })
         panel.add(website, gc.apply { insets = scaledInsets(6, 0, 6, 0) })

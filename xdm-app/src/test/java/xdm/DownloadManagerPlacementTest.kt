@@ -234,7 +234,11 @@ class DownloadManagerPlacementTest : DownloadManagerTestBase() {
         val old = File(dir, "old")
         val id = pausedHttpWithPart(old, "the only copy")
         val alias = File(dir, "alias")
-        java.nio.file.Files.createSymbolicLink(alias.toPath(), old.toPath())
+        try {
+            java.nio.file.Files.createSymbolicLink(alias.toPath(), old.toPath())
+        } catch (e: java.nio.file.FileSystemException) {
+            org.junit.jupiter.api.Assumptions.abort<Unit>("Symbolic links require elevated privileges on Windows: ${e.message}")
+        }
 
         assertEquals(ChangeFolderPlan.SAME, dm.changeFolderPlan(id, alias.absolutePath))
         assertEquals(ChangeFolderResult.DONE, changeFolder(id, alias))

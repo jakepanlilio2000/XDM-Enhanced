@@ -35,5 +35,5 @@ sealed interface FilterItem {
 }
 
 enum class FilterState() {
-    All, Incomplete, Completed
+    All, Incomplete, Completed, Torrents, Queues
 }

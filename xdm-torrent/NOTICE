@@ -1,0 +1,18 @@
+xdm-torrent: BitTorrent engine for XDM Enhanced
+Copyright 2026 XDM Enhanced Contributors
+Licensed under the GNU General Public License version 3 or later.
+
+This module incorporates the following third-party software:
+
+1. libtorrent4j (https://github.com/aldenml/libtorrent4j)
+   Copyright (c) 2014-2024 Alden Torres
+   Licensed under the MIT License.
+
+2. libtorrent (rasterbar) (https://github.com/arvidn/libtorrent)
+   Copyright (c) 2003-2024 Arvid Norberg
+   Licensed under the BSD 3-Clause License.
+
+3. KotlinX Serialization (https://github.com/Kotlin/kotlinx.serialization)
+   Copyright 2010-2024 JetBrains s.r.o.
+   Licensed under the Apache License 2.0.
+

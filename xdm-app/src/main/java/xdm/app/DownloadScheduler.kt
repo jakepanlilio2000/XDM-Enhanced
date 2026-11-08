@@ -1,5 +1,6 @@
 package xdm.app
 
+import xdm.core.downloaders.DownloadType
 import xdm.core.util.AtomicIO
 import xdm.core.util.Logger
 import xdm.manager.RecordStatus
@@ -28,6 +29,7 @@ class DownloadScheduler(private val appDB: AppDB, private val configDir: String)
 
     @Volatile
     private var running = false
+    val isRunning: Boolean get() = running
     private var thread: Thread? = null
 
     init {
@@ -80,7 +82,7 @@ class DownloadScheduler(private val appDB: AppDB, private val configDir: String)
     fun getEntryFor(downloadId: Long): ScheduleEntry? =
         entries.find { it.downloadId == downloadId }
 
-    private fun tick() {
+    internal fun tick() {
         val cal = Calendar.getInstance()
         val nowHour = cal.get(Calendar.HOUR_OF_DAY)
         val nowMinute = cal.get(Calendar.MINUTE)
@@ -147,15 +149,23 @@ class DownloadScheduler(private val appDB: AppDB, private val configDir: String)
     }
 
     private fun triggerScheduledDownload(id: Long) {
-        // resumeDownload queues the download and pumps the queue; it guards against a download that
-        // is already active or already queued, so a duplicated tick is harmless.
         Logger.info("Scheduler: starting download id=$id")
-        AppContext.downloader.resumeDownload(id)
+        val rec = appDB.getById(id)
+        if (rec?.downloadType == DownloadType.Torrent) {
+            runCatching { AppContext.torrentManager.getTask(id)?.resume() }
+        } else {
+            runCatching { AppContext.downloader.resumeDownload(id) }
+        }
     }
 
     private fun stopScheduledDownload(id: Long) {
         Logger.info("Scheduler: stopping download id=$id")
-        AppContext.downloader.stopDownload(id)
+        val rec = appDB.getById(id)
+        if (rec?.downloadType == DownloadType.Torrent) {
+            runCatching { AppContext.torrentManager.getTask(id)?.pause() }
+        } else {
+            runCatching { AppContext.downloader.stopDownload(id) }
+        }
     }
 
     private fun saveEntries() {

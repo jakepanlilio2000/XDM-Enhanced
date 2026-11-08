@@ -25,6 +25,9 @@ enum class ListSelectionMode(override val id: Int) : StableId {
 
     /** Click selects, double-click opens, right-click menu, as in a file manager. */
     CLASSIC(2),
+
+    /** High-density multi-column table inspired by IDM. */
+    TABLE(3),
 }
 
 interface IAppConfig : EngineConfig {
@@ -146,6 +149,24 @@ interface IAppConfig : EngineConfig {
     var completeSoundFile: String
     /** A user-chosen WAV played when a download fails; blank means the built-in one. */
     var failedSoundFile: String
+
+    // --- BitTorrent Settings ---
+    var torrentDownloadLimit: Int
+    var torrentUploadLimit: Int
+    var torrentMaxConnections: Int
+    var torrentMaxActiveDownloads: Int
+    var torrentMaxActiveSeeds: Int
+    var torrentMaxActiveTotal: Int
+    var torrentDhtEnabled: Boolean
+    var torrentPexEnabled: Boolean
+    var torrentLsdEnabled: Boolean
+    var torrentListenPort: Int
+    var torrentSeedingMode: String
+    var torrentSeedingRatioLimit: Float
+    var torrentSeedingTimeLimitMinutes: Int
+    var torrentEnableUpnp: Boolean
+    var torrentEnableNatPmp: Boolean
+
     fun applyAuthConfig()
 
     /**
@@ -218,6 +239,21 @@ private const val F_THEME_MIGRATED = 54
 private const val F_NOTIFIED_UPDATE_VERSION = 55
 private const val F_DETECT_SUBTITLES = 56
 private const val F_SAVE_SUBTITLES_AS_SRT = 57
+private const val F_TORRENT_DOWNLOAD_LIMIT = 58
+private const val F_TORRENT_UPLOAD_LIMIT = 59
+private const val F_TORRENT_MAX_CONNECTIONS = 60
+private const val F_TORRENT_MAX_ACTIVE_DOWNLOADS = 61
+private const val F_TORRENT_MAX_ACTIVE_SEEDS = 62
+private const val F_TORRENT_MAX_ACTIVE_TOTAL = 63
+private const val F_TORRENT_DHT_ENABLED = 64
+private const val F_TORRENT_PEX_ENABLED = 65
+private const val F_TORRENT_LSD_ENABLED = 66
+private const val F_TORRENT_LISTEN_PORT = 67
+private const val F_TORRENT_SEEDING_MODE = 68
+private const val F_TORRENT_SEEDING_RATIO_LIMIT = 69
+private const val F_TORRENT_SEEDING_TIME_LIMIT_MINUTES = 70
+private const val F_TORRENT_ENABLE_UPNP = 71
+private const val F_TORRENT_ENABLE_NATPMP = 72
 
 // Inside F_CATEGORIES: one F_CATEGORY record per category, in order.
 private const val F_CATEGORY = 1
@@ -361,6 +397,22 @@ class AppConfig(private val configDir: String) : IAppConfig {
     override var swingFileChooser: Boolean = false
     override var listSelectionMode: ListSelectionMode = ListSelectionMode.CLASSIC
 
+    override var torrentDownloadLimit: Int = 0
+    override var torrentUploadLimit: Int = 0
+    override var torrentMaxConnections: Int = 200
+    override var torrentMaxActiveDownloads: Int = 3
+    override var torrentMaxActiveSeeds: Int = 3
+    override var torrentMaxActiveTotal: Int = 5
+    override var torrentDhtEnabled: Boolean = true
+    override var torrentPexEnabled: Boolean = true
+    override var torrentLsdEnabled: Boolean = true
+    override var torrentListenPort: Int = 0
+    override var torrentSeedingMode: String = "RATIO_OR_TIME"
+    override var torrentSeedingRatioLimit: Float = 1.0f
+    override var torrentSeedingTimeLimitMinutes: Int = 60
+    override var torrentEnableUpnp: Boolean = false
+    override var torrentEnableNatPmp: Boolean = false
+
     override fun applyAuthConfig() {
         Authenticator.setDefault(DefaultAuthenticator())
     }
@@ -457,6 +509,21 @@ class AppConfig(private val configDir: String) : IAppConfig {
         w.string(F_NOTIFIED_UPDATE_VERSION, notifiedUpdateVersion)
         w.bool(F_DETECT_SUBTITLES, detectSubtitles)
         w.bool(F_SAVE_SUBTITLES_AS_SRT, saveSubtitlesAsSrt)
+        w.int(F_TORRENT_DOWNLOAD_LIMIT, torrentDownloadLimit)
+        w.int(F_TORRENT_UPLOAD_LIMIT, torrentUploadLimit)
+        w.int(F_TORRENT_MAX_CONNECTIONS, torrentMaxConnections)
+        w.int(F_TORRENT_MAX_ACTIVE_DOWNLOADS, torrentMaxActiveDownloads)
+        w.int(F_TORRENT_MAX_ACTIVE_SEEDS, torrentMaxActiveSeeds)
+        w.int(F_TORRENT_MAX_ACTIVE_TOTAL, torrentMaxActiveTotal)
+        w.bool(F_TORRENT_DHT_ENABLED, torrentDhtEnabled)
+        w.bool(F_TORRENT_PEX_ENABLED, torrentPexEnabled)
+        w.bool(F_TORRENT_LSD_ENABLED, torrentLsdEnabled)
+        w.int(F_TORRENT_LISTEN_PORT, torrentListenPort)
+        w.string(F_TORRENT_SEEDING_MODE, torrentSeedingMode)
+        w.string(F_TORRENT_SEEDING_RATIO_LIMIT, torrentSeedingRatioLimit.toString())
+        w.int(F_TORRENT_SEEDING_TIME_LIMIT_MINUTES, torrentSeedingTimeLimitMinutes)
+        w.bool(F_TORRENT_ENABLE_UPNP, torrentEnableUpnp)
+        w.bool(F_TORRENT_ENABLE_NATPMP, torrentEnableNatPmp)
         w.raw(unknownFields)
     }
 
@@ -529,6 +596,21 @@ class AppConfig(private val configDir: String) : IAppConfig {
                 F_NOTIFIED_UPDATE_VERSION -> notifiedUpdateVersion = r.string()
                 F_DETECT_SUBTITLES -> detectSubtitles = r.bool()
                 F_SAVE_SUBTITLES_AS_SRT -> saveSubtitlesAsSrt = r.bool()
+                F_TORRENT_DOWNLOAD_LIMIT -> torrentDownloadLimit = r.int()
+                F_TORRENT_UPLOAD_LIMIT -> torrentUploadLimit = r.int()
+                F_TORRENT_MAX_CONNECTIONS -> torrentMaxConnections = r.int()
+                F_TORRENT_MAX_ACTIVE_DOWNLOADS -> torrentMaxActiveDownloads = r.int()
+                F_TORRENT_MAX_ACTIVE_SEEDS -> torrentMaxActiveSeeds = r.int()
+                F_TORRENT_MAX_ACTIVE_TOTAL -> torrentMaxActiveTotal = r.int()
+                F_TORRENT_DHT_ENABLED -> torrentDhtEnabled = r.bool()
+                F_TORRENT_PEX_ENABLED -> torrentPexEnabled = r.bool()
+                F_TORRENT_LSD_ENABLED -> torrentLsdEnabled = r.bool()
+                F_TORRENT_LISTEN_PORT -> torrentListenPort = r.int()
+                F_TORRENT_SEEDING_MODE -> torrentSeedingMode = r.string()
+                F_TORRENT_SEEDING_RATIO_LIMIT -> torrentSeedingRatioLimit = r.string().toFloatOrNull() ?: 1.0f
+                F_TORRENT_SEEDING_TIME_LIMIT_MINUTES -> torrentSeedingTimeLimitMinutes = r.int()
+                F_TORRENT_ENABLE_UPNP -> torrentEnableUpnp = r.bool()
+                F_TORRENT_ENABLE_NATPMP -> torrentEnableNatPmp = r.bool()
                 else -> unknown.raw(r.rawField())
             }
         }

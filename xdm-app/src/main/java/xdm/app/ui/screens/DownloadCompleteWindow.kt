@@ -43,6 +43,7 @@ import javax.swing.BoxLayout
 import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.JFrame
+import javax.swing.KeyStroke
 import javax.swing.JLabel
 import javax.swing.JPanel
 import javax.swing.JTextField
@@ -90,6 +91,9 @@ class DownloadCompleteWindow : JFrame() {
                 Logger.error(e)
             }
         }
+    }
+    private val btnClose = JButton(text("LBL_CLOSE")).apply {
+        addActionListener { dispose() }
     }
     private val btnSkipNotification = footerIconButton(RemixIcon.NOTIFICATION_OFF_FILL, text("MSG_DONT_SHOW_AGAIN")) {
         AppContext.config.showDownloadCompleteWindow = false
@@ -351,6 +355,8 @@ class DownloadCompleteWindow : JFrame() {
                 add(btnOpenFolder)
                 add(Box.createHorizontalStrut(8.px))
                 add(btnOpenFile)
+                add(Box.createHorizontalStrut(8.px))
+                add(btnClose)
             }, BorderLayout.EAST)
         }
 
@@ -359,6 +365,11 @@ class DownloadCompleteWindow : JFrame() {
         contentPane.add(footer, BorderLayout.SOUTH)
 
         rootPane.defaultButton = btnOpenFile
+        rootPane.registerKeyboardAction(
+            { dispose() },
+            KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_ESCAPE, 0),
+            JComponent.WHEN_IN_FOCUSED_WINDOW
+        )
 
         pack()
         isResizable = true

@@ -451,6 +451,7 @@ class TestHttpSegmentedDownload : HttpDownloadTestBase() {
         awaitDone(host2)
         assertEquals(DownloadError.DiskSpaceError, host2.failure, "a missing folder must not start over")
 
+        if (tmpDir.exists()) tmpDir.deleteRecursively()
         assertTrue(parked.renameTo(tmpDir), "could not put the folder back")
         val host3 = host()
         newTask(id = 24, path = "/folder-gone", host = host3, maxSegments = 4).resume()

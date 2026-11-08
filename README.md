@@ -1,256 +1,150 @@
-<p align="center">
-  <img src="xdm-app/src/main/resources/images/xdm-logo-256.png" height="120" alt="XDM logo"/>
-</p>
+# XDM Enhanced
 
-<h1 align="center">Xtreme Download Manager</h1>
-
-<p align="center">
-  <b>Fast, resumable downloads and one-click video grabbing — right from your browser.</b>
-</p>
-
-<p align="center">
-  <a href="https://github.com/subhra74/xdm/releases"><img src="https://img.shields.io/github/downloads/subhra74/xdm/total.svg?style=flat-square&label=downloads" alt="Total downloads"/></a>
-  <a href="https://github.com/subhra74/xdm/releases/latest"><img src="https://img.shields.io/github/v/release/subhra74/xdm?style=flat-square" alt="Latest release"/></a>
-  <img src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-blue?style=flat-square" alt="Platforms"/>
-  <img src="https://img.shields.io/badge/status-active%20development-brightgreen?style=flat-square" alt="Active development"/>
-</p>
-
-<p align="center">
-  <a href="https://xtremedownloadmanager.com/">Homepage</a> ·
-  <a href="https://xtremedownloadmanager.com/#downloads">Download</a> ·
-  <a href="#-features">Features</a> ·
-  <a href="#-browser-integration">Browser integration</a> ·
-  <a href="#-building-from-source">Build</a> ·
-  <a href="#-translations">Translations</a> ·
-  <a href="https://www.reddit.com/r/xtremedownloadmanager/">Reddit</a> ·
-  <a href="CODE_SIGNING_POLICY.md">Code signing policy</a>
-</p>
-
-<p align="center">
-  <a href="https://xtremedownloadmanager.com/#downloads"><img src="docs/assets/download-button.svg" width="360" alt="Download XDM"/></a>
-</p>
-
-<p align="center">
-  <!-- <a href="https://www.youtube.com/watch?v=qrUUSFh3Xfg"><img src="docs/assets/xdm-quick-start-thumbnail.jpg" width="280" alt="Watch the XDM quick start guide on YouTube"/></a>
-  &nbsp; -->
-  <a href="https://www.youtube.com/watch?v=H_wdSvOBqKA&t=19s"><img src="docs/assets/xdm-quick-start-thumbnail.jpg" width="280" alt="Watch the XDM setup guide on YouTube"/></a>
-  &nbsp;
-  <a href="https://www.youtube.com/watch?v=WS0WH1BZ9xo"><img src="docs/assets/xdm-showcase-thumbnail.jpg" width="280" alt="Watch the top 3 XDM features on YouTube"/></a>
-  <!-- &nbsp;
-  <a href="https://www.youtube.com/watch?v=IJIxP7imtZ8"><img src="docs/assets/xdm-bulk-download-thumbnail.jpg" width="280" alt="Watch bulk social media video downloads with XDM on YouTube"/></a> -->
-  <br/>
-  <sub>
-  <!-- <b>Quick start guide</b> &nbsp;·&nbsp;  -->
-  <b>Setup guide</b> &nbsp;&nbsp;·&nbsp;&nbsp; <b>Top 3 features</b> 
-  <!-- &nbsp;·&nbsp;  -->
-  <!-- <b>Bulk social media downloads</b> -->
-  </sub>
-</p>
+An independent, open-source fork of Xtreme Download Manager.
 
 ---
 
-**Xtreme Download Manager (XDM)** speeds up downloads by splitting them across multiple connections, saves videos
-from streaming sites, and picks up broken downloads exactly where they left off. A companion browser extension hands
-downloads and detected videos straight to the app, so you never have to copy a link by hand.
+## 1. Project Overview
 
-Wondering why you'd still want a download manager on a fast connection? Read
-[Why use a download manager in an age of fast internet?](docs/why-a-download-manager.md)
+XDM Enhanced is an independent fork of Xtreme Download Manager (XDM). It extends XDM's multi-connection segmented HTTP/HTTPS download engine and streaming video grabber with native BitTorrent and magnet-link downloading capabilities, presented in an Internet Download Manager (IDM)-inspired desktop user interface.
 
-> [!NOTE]
-> As of 2026 XDM is being rebuilt and is in **active development**.
+This fork is not an official upstream release. The original upstream project documentation is preserved in [README.UPSTREAM.md](README.UPSTREAM.md).
 
-> [!CAUTION]
-> **Download XDM only from official sources.** Get the official installers from the
-> [download page](https://xtremedownloadmanager.com/#downloads) on xtremedownloadmanager.com or GitHub releases. Copies offered by other websites,
-> mirrors or "download portals" may be outdated, bundled with adware, or tampered with.
+## 2. Key Features
 
-> [!WARNING]
-> **A note for contributors:** XDM is going through a major rewrite, and the code is being restructured often.
-> Pull requests made now may need a lot of rework, or no longer apply after the next round of changes. Please hold off
-> on code contributions until things settle down. Translations, bug reports and feature ideas are very welcome in the
-> meantime. Thank you for your patience and support!
+- **Segmented HTTP/HTTPS Downloads:** Multi-connection segmented downloading directly into the destination file without a separate temporary copy or slow disk assembly step.
+- **Stream Capture:** Detection and extraction of HLS (`.m3u8`) and MPEG-DASH (`.mpd`) video streams, muxing directly to MP4 without external FFmpeg dependencies. Subtitle extraction to timed `.srt` format.
+- **Native BitTorrent Engine:** BitTorrent 1.2 and 2.0 protocol support powered by `libtorrent4j` (v2.1.0-35) wrapping native `libtorrent` (Rasterbar).
+- **Magnet Links and Torrent Files:** Native ingestion of `magnet:?` URIs and `.torrent` files with background metadata resolution.
+- **Selective Downloading and File Priorities:** Pre-download file inspection dialog with file selection trees, individual file exclusion, and priority settings (Do Not Download, Normal, High, Maximum).
+- **IDM-Inspired Desktop Interface:** 7-category sidebar filter (All Downloads, Compressed, Documents, Music, Programs, Video, Torrents), high-density toolbar, customizable data table with progress indicators, status bar storage meter, and separate nonblocking progress dialogs.
+- **Transfer Management:** Global and per-task download and upload bandwidth limits, active torrent concurrency limits, and queue position management (Top, Up, Down, Bottom).
+- **Seeding Rules:** Automated seeding termination based on target share ratio (e.g. 1.0x) or elapsed seeding duration.
+- **Tracker and Peer Controls:** Distributed Hash Table (DHT), Peer Exchange (PEX), and Local Service Discovery (LSD) support. Manual tracker additions, force reannounce, and live peer transfer inspection. Full compliance with BEP 27 private torrent restrictions.
+- **Windows System Integration:** Windows Registry associations for `.torrent` files and `magnet:` URI protocol handling, with single-instance socket argument forwarding.
+- **Security Protections:** 50 MB upper cap on torrent metadata parsing, path sanitization against directory traversal (`..`) and Windows reserved device names, and canonical path checks preventing unintended file deletion.
 
-## 📸 Screenshots
+## 3. Current Development Status
 
-| Main window | New download |
-|:---:|:---:|
-| ![XDM main window with the downloads list](screenshots/main-window.webp) | ![New download dialog](screenshots/new-download.webp) |
-| **Download progress** | **Download complete** |
-| ![Download progress window](screenshots/download-progress.webp) | ![Download complete window](screenshots/download-complete.webp) |
-| **Videos detected by the extension** | **Video download** |
-| ![Extension popup listing videos found on the page](screenshots/extension-video-list.webp) | ![New download dialog for a detected video](screenshots/video-download.webp) |
-| **Download all links on a page** | **Pick what to grab** |
-| ![Browser context menu with Download all with XDM](screenshots/download-all-menu.webp) | ![Bulk picker listing every link on the page by type](screenshots/bulk-picker.webp) |
-| **Batch download** | **HLS / DASH stream download** |
-| ![Batch download dialog: one batch or one download per link](screenshots/batch-download.webp) | ![Stream download dialog with format and audio track choice](screenshots/stream-download.webp) |
+XDM Enhanced is in active development and preparing for its initial beta release (`v1.0.0-beta.1`). All core download pipelines, BitTorrent operations, IDM UI components, and settings persistence layers have been independently verified through automated regression suites.
 
-## 🆕 What's new in XDM 9
+## 4. Supported Operating Systems
 
-XDM 9 is a ground-up rewrite. Highlights:
+| Operating System | Architecture | BitTorrent Engine | Status |
+|---|---|---|---|
+| **Windows 10 / 11** | `x64` (`amd64`) | `libtorrent4j.dll` | Fully Verified (Primary Target) |
+| **Linux** | `x64` (`amd64`) | `liblibtorrent4j.so` | Supported (Libraries Bundled) |
+| **macOS** | `x64` & `arm64` | `liblibtorrent4j.dylib` | Supported (Libraries Bundled) |
 
-- **Writes straight to the final file:** HTTP downloads go directly into your download folder, with no temp copy
-  and no slow "assembling" step at the end. Large files finish the moment the last byte arrives.
-- **Better HLS and DASH:** more reliable stream detection, a choice of quality and audio track, and muxing to MP4
-  without ffmpeg. You can also grab subtitles as `.srt`, timed to match the video.
-- **Bulk downloads:** right-click → *Download all with XDM* to grab every PDF, image or video on a page. You can
-  also save a social media profile's videos and images in one go, with video and audio merged into
-  ready-to-play MP4s.
-- **On the Chrome Web Store:** install the browser extension with one click.
-- **Modern UI:** a refreshed light and dark theme, runs natively on Wayland, a native macOS build
-  (Apple Silicon and Intel) and Windows on ARM64 support.
-- **Command-line mode:** `xdm-app --headless -o <folder> <url>` downloads HTTP, HLS and DASH from a terminal, with
-  a quality pick (`-q best|720p|audio`). It can run alongside the app.
-- **Download categories:** rules sort each download into a category and folder. You can change the folder or
-  restart a download from the list.
-- **Disk errors never restart from zero:** a full disk or a missing folder stops the download and keeps its
-  progress.
-- **Checksum verification:** check a finished file's hash from the download-complete window or the download's
-  properties.
-- **Safer downloads:** finished files are marked as coming from the internet (Mark-of-the-Web on Windows,
-  quarantine on macOS), so SmartScreen and Gatekeeper still check them. You can turn this off in settings.
-- **NTLM authentication:** works with Windows/IIS servers and corporate proxies that require NTLM.
+*Note: 32-bit Windows (x86) is deprecated upstream by libtorrent4j and is not supported.*
 
-## ✨ Features
+## 5. Requirements
 
-| | |
-|---|---|
-| ⚡ **Faster downloads** | Multi-connection segmented downloading to make the most of your bandwidth. |
-| 🧩 **Browser integration** | Works with Chrome, Firefox, Edge and other popular browsers: XDM takes over downloads from the browser automatically, so every file gets the speed boost without copying a link. |
-| 🎬 **Video grabber** | Detects and saves videos from streaming sites, including `HLS` (`.m3u8`) and `MPEG-DASH` (`.mpd`) streams, muxed to MP4 with no external tools. Pick a subtitle track and get it as an `.srt` file, timed to match the video. |
-| 🔁 **Resume anything** | Recovers downloads interrupted by network drops, crashes or power loss; refresh expired links without starting over. |
-| 📱 **Bulk social media downloads** | Save every video and image from a social media profile in a single click. Video and audio tracks are merged into ready-to-play MP4s, and ads are left out. |
-| 📦 **Batch downloads** | Grab every PDF on a page or a whole gallery of HD wallpapers at once: right-click → *Download all with XDM*, filter by type, size or name, and save them all into a single folder. |
-| 🗓️ **Scheduler & queues** | Start and stop downloads on a schedule, limit parallel downloads, shut down when done. |
-| 📋 **Paste from clipboard** | Add one link or a whole list of links straight from the clipboard. |
-| 🌐 **Proxies & auth** | HTTP and SOCKS proxies, and server/proxy authentication. |
-| 🛡️ **Antivirus scan** | Optionally scan finished downloads with your antivirus. |
-| 🖥️ **Cross-platform** | Native-feeling app on Windows, macOS and Linux, with light and dark themes. |
+### Building from Source
+- **Java Development Kit (JDK):** JDK 25 (e.g., BellSoft Liberica JDK 25 or OpenJDK 25).
+- **Build Tool:** Apache Maven 3.9 or higher.
 
-## 🧩 Browser integration
+### Running Pre-Built Packages
+- **Standalone Windows Bundle:** No external Java installation required (bundled runtime image included).
+- **Universal JAR (`xdm-app.jar`):** Java Runtime Environment (JRE) 25 (64-bit).
 
-XDM works with Chrome, Firefox, Edge, Opera, Vivaldi, Brave and other Chromium- and Firefox-based browsers.
+## 6. Building from Source
 
-| Browser | Extension |
-|---|---|
-| <img src="https://img.shields.io/badge/Chrome-4285F4?style=flat-square&logo=googlechrome&logoColor=white" alt="Chrome"/> | [Install XDM for Chrome](https://xtremedownloadmanager.com/extension/chrome/?utm_source=xdm-app) |
-| <img src="https://img.shields.io/badge/Firefox-FF7139?style=flat-square&logo=firefoxbrowser&logoColor=white" alt="Firefox"/> | [Install XDM for Firefox](https://xtremedownloadmanager.com/extension/firefox/?utm_source=xdm-app) |
-
-The extension forwards downloads and detected media to the running app over a local-only connection
-(`127.0.0.1:8597`); nothing leaves your machine.
-
-## 🛠️ Building from source
-
-**Requirements:** JDK 25 (configured as a [Maven toolchain](packaging/toolchains.sample.xml)) and Maven.
+To compile all modules and produce the universal application JAR:
 
 ```bash
-# 1. Point Maven at your JDK 25
-cp packaging/toolchains.sample.xml ~/.m2/toolchains.xml   # then edit jdkHome
+# Clone the repository
+git clone https://github.com/jakepanlilio2000/XDM-Enhanced.git
+cd XDM-Enhanced
 
-# 2. Build the app (fat jar: xdm-app/target/xdm-app.jar)
-mvn -q -pl xdm-app -am package
+# Build all modules and package the universal JAR
+mvn clean package -DskipTests
+```
 
-# 3. Run it
+The compiled fat JAR is output to:
+`xdm-app/target/xdm-app.jar`
+
+To run the complete automated test suite across all modules:
+
+```bash
+mvn test -DskipTests=false
+```
+
+### Windows Runtime Packaging (Optional)
+
+To produce the standalone Windows x64 runtime bundle (`app-image`) containing a trimmed JRE and native launcher (`xdm-app.exe`):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File packaging\build-bundle.ps1 -Type app-image -Arch x64 -SkipBuild
+```
+
+The standalone directory is output to:
+`build\dist\windows-x64\xdm-app\`
+
+## 7. Running the Application
+
+### Universal JAR
+```bash
 java -jar xdm-app/target/xdm-app.jar
 ```
 
-| Module | What it is |
-|---|---|
-| `xdm-core` | Download engine (HTTP, HLS, DASH, batch), no UI dependencies, JDK 8 compatible |
-| `xdm-app` | Swing desktop app (FlatLaf) and browser-integration server |
-| `browser-extension` | Chrome and Firefox extensions |
+### Standalone Windows Bundle
+Execute `xdm-app.exe` from the unpacked distribution folder:
+```cmd
+build\dist\windows-x64\xdm-app\xdm-app.exe
+```
 
-**Contributing?** Commits need a DCO sign-off (see [CONTRIBUTING.md](CONTRIBUTING.md)). Install the hook that adds
-it for you, once per clone. It signs with the `user.name` and `user.email` from your git config, and works with
-GitHub Desktop and other tools that have no sign-off option:
-
+### Command-Line Headless Mode
 ```bash
-# macOS / Linux
-cp .githooks/prepare-commit-msg .git/hooks/ && chmod +x .git/hooks/prepare-commit-msg
+java -jar xdm-app/target/xdm-app.jar --headless -o /path/to/downloads https://example.com/file.zip
 ```
 
-```bat
-:: Windows (Command Prompt)
-copy .githooks\prepare-commit-msg .git\hooks\
-```
+## 8. Browser Integration
 
-## 💬 Community & support
+XDM Enhanced runs an internal HTTP communication endpoint bound strictly to `127.0.0.1:8597`. It integrates with major web browsers using companion extensions:
 
-Questions, tips or need help? Join the XDM community on Reddit:
-[r/xtremedownloadmanager](https://www.reddit.com/r/xtremedownloadmanager/). Bug reports and feature requests are welcome
-on [GitHub Issues](https://github.com/subhra74/xdm/issues).
+- **Chrome, Edge, Brave, Opera, Vivaldi:** Manifest V3 extension located in `browser-extension/chrome-extension/`.
+- **Firefox:** Manifest V2 extension located in `browser-extension/firefox-extension/`.
 
-## 🌍 Translations
+The extension intercepts downloadable media and transfers, passing download URLs and magnet links directly to XDM Enhanced. The integration endpoint enforces DNS-rebinding protection and strictly verifies extension origins (`chrome-extension://` and `moz-extension://`).
 
-Want XDM in your language? Translations are welcome. Translate in the browser on
-[Weblate](https://hosted.weblate.org/projects/xdm/), and preview your work in XDM before it ships. See
-[TRANSLATING.md](TRANSLATING.md).
+## 9. Release Downloads
 
-## 🗑️ Uninstalling
+Pre-built binaries and release notes are available on the GitHub repository releases page:
 
-- **Windows:** Settings → Apps → Installed apps → *Xtreme Download Manager* → Uninstall.
-- **macOS:** quit XDM, then drag `xdm-app` from Applications to the Trash.
-- **Linux:** `sudo apt remove xdm-app` (Debian/Ubuntu), `sudo dnf remove xdm-app` (Fedora) or
-  `sudo pacman -R xdm-app` (Arch).
+https://github.com/jakepanlilio2000/XDM-Enhanced/releases
 
-Uninstalling keeps your settings and download list. To remove them too, delete the data folder:
-`%LOCALAPPDATA%\xdm-app` (Windows), `~/Library/Application Support/xdm-app` (macOS) or
-`~/.local/share/xdm-app` (Linux).
+Supported release artifacts include:
+1. **Standalone Windows x64 Bundle:** A portable directory including `xdm-app.exe` and a self-contained JRE 25 runtime.
+2. **Universal JAR (`xdm-app.jar`):** A single runnable JAR compatible with any 64-bit operating system with JRE 25 installed.
 
-## 🔏 Code signing policy
+## 10. Known Limitations
 
-Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org).
-Who builds, reviews and approves signed releases: see the [code signing policy](CODE_SIGNING_POLICY.md).
+- **32-Bit Systems:** 32-bit x86 architectures are not supported due to native BitTorrent library requirements.
+- **Windows MSI Generation:** Building WiX-based `.msi` installers requires the WiX toolset installed on the build host. The standalone `app-image` bundle provides equivalent portable installation without WiX.
+- **IPv6 Trackers:** Environments using pure IPv6-only trackers without DHT require dual-stack connectivity.
 
-## 🔒 Privacy
+## 11. Original Project Acknowledgment
 
-XDM has no accounts, analytics or tracking, and keeps your data on your computer. See the [privacy policy](PRIVACY.md).
+XDM Enhanced is an independent fork of Xtreme Download Manager, originally developed by the XDM contributors.
 
-## 📄 License
+- **Upstream Repository:** https://github.com/subhra74/xdm
+- **Original Upstream Documentation:** [README.UPSTREAM.md](README.UPSTREAM.md)
+- **Original Project Homepage:** https://xtremedownloadmanager.com/
 
-XDM is free software, licensed under the [GNU General Public License v3.0](LICENSE). XDM 8 and earlier were released
-under GPL v2.
+This fork is an independent community development and is not endorsed by or affiliated with the upstream XDM project maintainers.
 
-The download engine ([`xdm-core`](xdm-core)), the modules shared with the Android app and the Android app itself
-([`xdm-android`](xdm-android)) are GPL v3 with the additional terms in [xdm-android/NOTICE](xdm-android/NOTICE). Those
-terms cover the XDM name and logo, and include an exception that lets only the official Android store builds (Google
-Play and similar stores) combine this code with proprietary components.
+## 12. Licensing
 
-**The F-Droid build and the APKs on GitHub releases are pure GPL v3:** they are built from this public source code
-alone and contain no proprietary components. The exception does not apply to them, nor to any build you make
-yourself from the source.
+XDM Enhanced is free open-source software licensed under the **GNU General Public License v3.0 (GPL-3.0)**. See the [LICENSE](LICENSE) file for complete license terms.
 
-`xdm-core` versions up to 9.0.9 were released under the Apache License 2.0 (see [its NOTICE](xdm-core/NOTICE)). The
-desktop app (`xdm-app`) and the browser extensions are under GPL v3.
+- Original XDM Codebase: Copyright © 2013–2026 Subhra Das Gupta and upstream contributors.
+- XDM Enhanced Additions: Copyright © 2026 XDM Enhanced Contributors.
 
-## ⭐ Star history
+### Third-Party Software Notices
+- **libtorrent4j:** MIT License (Copyright © Alden Torres)
+- **libtorrent (Rasterbar):** BSD 3-Clause License (Copyright © Arvid Norberg)
+- **FlatLaf:** Apache License 2.0 (Copyright © FormDev Software GmbH)
+- **KotlinX Serialization:** Apache License 2.0 (Copyright © JetBrains s.r.o.)
 
-<a href="https://star-history.com/#subhra74/xdm&Date">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=subhra74/xdm&type=Date&theme=dark" />
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=subhra74/xdm&type=Date" />
-    <img alt="Star history chart" src="https://api.star-history.com/svg?repos=subhra74/xdm&type=Date" />
-  </picture>
-</a>
-
-## ⚖️ Disclaimer
-
-XDM is a general-purpose download manager intended for lawful use only.
-
-- XDM does not support downloading from YouTube.
-- XDM does not support DRM-protected content and does not circumvent DRM or any other technical protection measure.
-- Use XDM only to download content that you own or are authorized to download, in compliance with applicable laws
-  and the terms of service of the websites you use.
-- The XDM authors and contributors do not endorse, encourage, or condone copyright infringement or any other unlawful
-  use of this software.
-- XDM is provided "as is", without warranty of any kind, as set out in its [license](LICENSE). The authors and
-  contributors are not responsible or liable for how users use the software, or for any loss or damage arising from
-  its use.
-- XDM is not affiliated with, endorsed by, or sponsored by YouTube, Google, or any other website or service it may be
-  used with. All trademarks belong to their respective owners.
-
----
-
-<p align="center">
-  Made with ☕ by <a href="https://github.com/subhra74">subhra74</a> and contributors ·
-  <a href="https://xtremedownloadmanager.com/">xtremedownloadmanager.com</a>
-</p>
+See `xdm-torrent/NOTICE` and `xdm-core/NOTICE` for additional component notices.

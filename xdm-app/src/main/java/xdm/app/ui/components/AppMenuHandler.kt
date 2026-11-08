@@ -123,12 +123,26 @@ object AppMenuHandler {
 
     fun resumeDownload(ent: DbRecord?) {
         if (ent == null) return
-        downloader.resumeDownload(ent.id)
+        if (ent.downloadType == DownloadType.Torrent) {
+            AppContext.torrentManager.getTask(ent.id)?.resume()
+            ent.status = RecordStatus.DOWNLOADING
+            AppContext.db.update(ent)
+            AppContext.app.updateDownloadInView(ent.id)
+        } else {
+            downloader.resumeDownload(ent.id)
+        }
     }
 
     fun pauseDownload(ent: DbRecord?) {
         if (ent == null) return
-        downloader.stopDownload(ent.id)
+        if (ent.downloadType == DownloadType.Torrent) {
+            AppContext.torrentManager.getTask(ent.id)?.pause()
+            ent.status = RecordStatus.PAUSED
+            AppContext.db.update(ent)
+            AppContext.app.updateDownloadInView(ent.id)
+        } else {
+            downloader.stopDownload(ent.id)
+        }
     }
 
     private fun showConfirmDeleteDialog(window: Window?): SelectionResult {
@@ -154,17 +168,34 @@ object AppMenuHandler {
         val (approve, deleteFromDisk) = showConfirmDeleteDialog(window)
         if (approve) {
             Logger.info("XDM", "Deleting ${ent.id}")
-            downloader.deleteDownload(ent.id, deleteFromDisk)
+            if (ent.downloadType == DownloadType.Torrent) {
+                AppContext.torrentManager.removeTask(ent.id, deleteFromDisk)
+                AppContext.db.removeItem(ent.id)
+                AppContext.app.downloadsRemovedInView()
+            } else {
+                downloader.deleteDownload(ent.id, deleteFromDisk)
+            }
         }
     }
 
     fun deleteSelectedDownloads(selectedItems: List<DbRecord>, window: Window?) {
+        if (selectedItems.isEmpty()) return
         val (approve, deleteFromDisk) = showConfirmDeleteDialog(window)
         if (approve) {
             Logger.info("XDM", "Deleting ${selectedItems.size} selected")
-            val (moving, rest) = selectedItems.partition { downloader.isMoving(it.id) }
-            downloader.deleteDownloads(rest.map { it.id }, deleteFromDisk)
+            val (torrents, http) = selectedItems.partition { it.downloadType == DownloadType.Torrent }
+            for (t in torrents) {
+                AppContext.torrentManager.removeTask(t.id, deleteFromDisk)
+                AppContext.db.removeItem(t.id)
+            }
+            val (moving, rest) = http.partition { downloader.isMoving(it.id) }
+            if (rest.isNotEmpty()) {
+                downloader.deleteDownloads(rest.map { it.id }, deleteFromDisk)
+            }
             if (moving.isNotEmpty()) warnMovingSkipped(window)
+            if (torrents.isNotEmpty()) {
+                AppContext.app.downloadsRemovedInView()
+            }
         }
     }
 
@@ -390,11 +421,21 @@ object AppMenuHandler {
         //    XDMApp.getInstance().showPrgWnd(ent.getId());
     }
 
-    fun deleteCompleted(window: AppWindow?) {
-        //    if (xdm.app.ui.components.MessageBox.confirm(
-        //        window, text("DEL_TITLE"), text("DEL_FINISHED_TEXT"))) {
-        //      XDMApp.getInstance().deleteCompleted();
-        //    }
+    fun deleteCompleted(window: Window?) {
+        val finished = AppContext.db.filter { it.status == RecordStatus.FINISHED }
+        if (finished.isEmpty()) return
+        val ret = MessageBox.confirm(window, text("DEL_TITLE"), text("DEL_FINISHED_TEXT"))
+        if (ret) {
+            val (torrents, http) = finished.partition { it.downloadType == DownloadType.Torrent }
+            for (t in torrents) {
+                AppContext.torrentManager.removeTask(t.id, false)
+                AppContext.db.removeItem(t.id)
+            }
+            if (http.isNotEmpty()) {
+                downloader.deleteDownloads(http.map { it.id }, false)
+            }
+            AppContext.app.downloadsRemovedInView()
+        }
     }
 
     fun copyUrl(record: DbRecord) {
@@ -402,8 +443,17 @@ object AppMenuHandler {
             DownloadType.Http -> AppContext.taskInfoDB.getHttpTask(record.id)?.url
             DownloadType.Hls -> AppContext.taskInfoDB.getHlsTask(record.id)?.url
             DownloadType.Dash -> AppContext.taskInfoDB.getDashTask(record.id)?.url
-            // A batch has no single link: copy the page its links came from.
             DownloadType.Batch -> AppContext.taskInfoDB.getBatchTask(record.id)?.origin
+            DownloadType.Torrent -> {
+                val task = AppContext.torrentManager.getTask(record.id)
+                when {
+                    task != null && task.source is xdm.torrent.TorrentSource.MagnetUri -> (task.source as xdm.torrent.TorrentSource.MagnetUri).uri
+                    task != null && task.infoHash.isNotBlank() -> "magnet:?xt=urn:btih:${task.infoHash}"
+                    else -> AppContext.taskInfoDB.getTorrentTask(record.id)?.let {
+                        if (it.sourceUri.startsWith("magnet:?", ignoreCase = true)) it.sourceUri else if (it.infoHash.isNotBlank()) "magnet:?xt=urn:btih:${it.infoHash}" else null
+                    }
+                }
+            }
             else -> null
         }
         if (url != null) {

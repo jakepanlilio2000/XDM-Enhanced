@@ -46,6 +46,16 @@ private const val DASH_AUDIO_MIME = 23
 private const val DASH_VIDEO_MIME = 24
 private const val DASH_SUBTITLE = 25
 
+private const val TORRENT_INFO_HASH = 20
+private const val TORRENT_SOURCE_TYPE = 21
+private const val TORRENT_SOURCE_URI = 22
+private const val TORRENT_TOTAL_SIZE = 23
+private const val TORRENT_FILE_SELECTION = 24
+private const val TORRENT_LAST_STATE = 25
+private const val TORRENT_DOWNLOAD_LIMIT = 26
+private const val TORRENT_UPLOAD_LIMIT = 27
+private const val TORRENT_SEEDING_MODE = 28
+
 private const val BATCH_ID = 1
 private const val BATCH_NAME = 2
 private const val BATCH_FOLDER = 3
@@ -235,6 +245,17 @@ private fun TagWriter.common(
  * a field is added by giving it a new number above, and readers skip numbers they do not know.
  */
 class TaskInfoDB(private val configDir: String) {
+    val allTaskIds: List<Long>
+        get() {
+            val dir = File(configDir)
+            if (!dir.exists() || !dir.isDirectory) return emptyList()
+            val files = dir.listFiles { _, name -> name.startsWith("task-") && name.endsWith(".info") } ?: return emptyList()
+            return files.mapNotNull { f ->
+                val idStr = f.name.removePrefix("task-").removeSuffix(".info")
+                idStr.toLongOrNull()
+            }
+        }
+
     fun getHttpTask(id: Long): HttpDownloadTaskInfo? {
         AtomicIO.readTransacted("task-$id.info", configDir) { input ->
             val r = TaggedFile.read(input)
@@ -515,10 +536,95 @@ class TaskInfoDB(private val configDir: String) {
         }.onFailure { Logger.error("XDM", "Error saving task info ${task.id}", it) }
     }
 
+    fun getTorrentTask(id: Long): TorrentDownloadTaskInfo? {
+        AtomicIO.readTransacted("task-$id.info", configDir) { input ->
+            val r = TaggedFile.read(input)
+            val c = CommonFields()
+            var infoHash = ""
+            var sourceType = 0
+            var sourceUri = ""
+            var totalSize = 0L
+            var lastState = 0
+            var downloadLimit = 0
+            var uploadLimit = 0
+            var seedingMode = 0
+            val fileSelection = ArrayList<Boolean>()
+
+            while (true) {
+                val no = r.next()
+                if (no == -1) break
+                if (c.read(no, r)) continue
+                when (no) {
+                    TORRENT_INFO_HASH -> infoHash = r.string()
+                    TORRENT_SOURCE_TYPE -> sourceType = r.int()
+                    TORRENT_SOURCE_URI -> sourceUri = r.string()
+                    TORRENT_TOTAL_SIZE -> totalSize = r.long()
+                    TORRENT_LAST_STATE -> lastState = r.int()
+                    TORRENT_DOWNLOAD_LIMIT -> downloadLimit = r.int()
+                    TORRENT_UPLOAD_LIMIT -> uploadLimit = r.int()
+                    TORRENT_SEEDING_MODE -> seedingMode = r.int()
+                    TORRENT_FILE_SELECTION -> {
+                        val sub = r.message()
+                        while (true) {
+                            when (sub.next()) {
+                                -1 -> break
+                                1 -> fileSelection.add(sub.bool())
+                                else -> sub.skip()
+                            }
+                        }
+                    }
+                    else -> r.skip()
+                }
+            }
+            if (c.type != DownloadType.Torrent.id) return null
+            return TorrentDownloadTaskInfo(
+                id = c.id,
+                name = c.fileName,
+                targetFolder = c.targetFolder,
+                infoHash = infoHash,
+                sourceType = sourceType,
+                sourceUri = if (sourceUri.isNotBlank()) sourceUri else c.url,
+                fileSelection = fileSelection,
+                totalSize = totalSize,
+                categoryId = c.categoryId,
+                lastState = lastState,
+                downloadLimit = downloadLimit,
+                uploadLimit = uploadLimit,
+                seedingMode = seedingMode
+            )
+        }
+        return null
+    }
+
+    @Synchronized
+    fun saveTorrentTask(task: TorrentDownloadTaskInfo): Boolean =
+        AtomicIO.writeTransacted("task-${task.id}.info", configDir, ownerOnly = true) { out ->
+            TaggedFile.write(out) {
+                common(
+                    DownloadType.Torrent,
+                    task.id, task.sourceUri, task.name, false, task.categoryId,
+                    task.targetFolder, 0, null, null, null,
+                )
+                string(TORRENT_INFO_HASH, task.infoHash)
+                int(TORRENT_SOURCE_TYPE, task.sourceType)
+                string(TORRENT_SOURCE_URI, task.sourceUri)
+                long(TORRENT_TOTAL_SIZE, task.totalSize)
+                int(TORRENT_LAST_STATE, task.lastState)
+                int(TORRENT_DOWNLOAD_LIMIT, task.downloadLimit)
+                int(TORRENT_UPLOAD_LIMIT, task.uploadLimit)
+                int(TORRENT_SEEDING_MODE, task.seedingMode)
+                message(TORRENT_FILE_SELECTION) {
+                    task.fileSelection.forEach { bool(1, it) }
+                }
+            }
+        }.onFailure { Logger.error("XDM", "Error saving torrent task info ${task.id}", it) }.isSuccess
+
     fun deleteRecord(id: Long) {
         SensitiveHeaders.forget(id)
         File(configDir, "task-$id.info").delete()
         File(configDir, "task-$id.info.bak1").delete()
         File(configDir, "task-$id.info.bak2").delete()
+        File(configDir, "task-$id.torrent").delete()
+        File(configDir, "task-$id.resume").delete()
     }
 }

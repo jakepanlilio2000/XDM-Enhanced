@@ -137,9 +137,9 @@ $JavaOptions = @(
 
 # One launcher, xdm-app.exe (PACKAGING.md sect. 3.3): the MSI's shortcuts carry the display name, and
 # the login entry and the xdm-app:// handler point at this same stable, space-free name.
-$AppName     = 'Xtreme Download Manager'
+$AppName     = 'XDM Enhanced'
 $Launcher    = 'xdm-app'
-$Vendor      = 'Subhra Das Gupta'
+$Vendor      = 'XDM Enhanced Contributors'
 $MainClass   = 'xdm.app.AppMain'
 $MainJar     = 'xdm-app.jar'
 $AppModule   = 'xdm.app'
@@ -280,6 +280,7 @@ try {
   $zip.Dispose()
 }
 if (-not $AppVersion) { $AppVersion = '1.0.0' }
+$PkgVersion = ($AppVersion -replace '-.*$', '')
 
 # --------------------------------------------------------------------------
 # Drop the bundled natives for every platform except this build's target.
@@ -302,13 +303,14 @@ function Remove-ForeignNatives {
   $flArch = if ($Arch -eq 'arm64') { 'arm64' } else { 'x86_64' }
   $flKeep = "com/formdev/flatlaf/natives/*-windows-$flArch.*"
   $csKeep = "META-INF/native/conscrypt_openjdk_jni-windows-$flArch.dll"
+  $ltKeep = "lib/$flArch/libtorrent4j.dll"
 
   $before = (Get-Item $Jar).Length
   $zip = [System.IO.Compression.ZipFile]::Open($Jar, 'Update')
   try {
     $doomed = @($zip.Entries | Where-Object {
       $_.FullName -match '\.(dylib|jnilib|so|dll)$' -and
-      -not ($_.FullName -like $flKeep) -and $_.FullName -ne $csKeep
+      -not ($_.FullName -like $flKeep) -and $_.FullName -ne $csKeep -and $_.FullName -ne $ltKeep
     })
     foreach ($entry in $doomed) { $entry.Delete() }
   } finally {
@@ -482,7 +484,7 @@ $JavaOptions += @(
 $jpArgs = @(
   '--type', 'app-image'
   '--name', $Launcher
-  '--app-version', $AppVersion
+  '--app-version', $PkgVersion
   '--vendor', $Vendor
   '--description', $AppName
   # windows\resources\xdm-app.properties replaces jpackage's WinLauncher.template: ProductName would
@@ -628,7 +630,7 @@ if ($Type -eq 'msi') {
   }
 
   # MSI versions are numeric a.b.c (a, b < 256; c < 65536); only those three fields are compared.
-  if ($AppVersion -notmatch '^\d+\.\d+\.\d+$') { throw "App version '$AppVersion' is not a.b.c" }
+  if ($PkgVersion -notmatch '^\d+\.\d+\.\d+$') { throw "App version '$PkgVersion' is not a.b.c" }
 
   $Msi = Join-Path $DestDir "xdm-$AppVersion-$Arch.msi"
   Write-Host ">> wix build -> $Msi"
@@ -636,7 +638,7 @@ if ($Type -eq 'msi') {
       -arch $Arch `
       -ext WixToolset.Util.wixext -ext WixToolset.UI.wixext `
       -bindpath "AppImage=$ImageDir" `
-      -d "Version=$AppVersion" `
+      -d "Version=$PkgVersion" `
       -d "IconFile=$Icon" `
       -d "LicenseRtf=$(Join-Path $PSScriptRoot 'windows\gpl-3.0.rtf')" `
       -o $Msi

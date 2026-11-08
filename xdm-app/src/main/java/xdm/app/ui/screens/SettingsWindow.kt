@@ -4,6 +4,7 @@ import xdm.app.AppContext
 import xdm.app.ConfigSnapshot
 import xdm.app.I8N.text
 import xdm.app.ui.screens.settings.AdvancedConfigPanel
+import xdm.app.ui.screens.settings.BitTorrentPanel
 import xdm.app.ui.screens.settings.BrowserMonitorPanel
 import xdm.app.ui.screens.settings.DownloadsPanel
 import xdm.app.ui.screens.settings.FoldersPanel
@@ -71,6 +72,7 @@ class SettingsWindow : JFrame() {
     private val foldersPanel = FoldersPanel()
     private val browserMonitorPanel = BrowserMonitorPanel()
     private val networkConfigPanel = NetworkConfigPanel()
+    private val bitTorrentPanel = BitTorrentPanel()
     private val advancedConfigPanel = AdvancedConfigPanel()
 
     private val pages = listOf(
@@ -79,6 +81,7 @@ class SettingsWindow : JFrame() {
         Page("SETTINGS_FOLDERS", RemixIcon.FOLDER_3_LINE, foldersPanel),
         Page("SETTINGS_MONITORING", RemixIcon.PUZZLE_LINE, browserMonitorPanel),
         Page("SETTINGS_NETWORK", RemixIcon.WIFI_LINE, networkConfigPanel),
+        Page("SETTINGS_BITTORRENT", RemixIcon.SERVER_LINE, bitTorrentPanel),
         Page("MSG_ADV_TITLE", RemixIcon.TERMINAL_BOX_LINE, advancedConfigPanel),
     )
 
@@ -182,9 +185,11 @@ class SettingsWindow : JFrame() {
         foldersPanel.save()
         browserMonitorPanel.save()
         networkConfigPanel.save()
+        bitTorrentPanel.save()
         advancedConfigPanel.save()
         loaded?.keepChangedElsewhere(config, beforeWrite)
         config.save()
+        TorrentUiBridge.applyTorrentConfig()
         // The browser-monitor panel writes the three fields the extension gates capture on -
         // fileExtensions, videoExtensions and blockedHosts - so publish after persisting rather
         // than leaving the extension on stale config until the next watchdog /sync. Fired for any
@@ -200,6 +205,7 @@ class SettingsWindow : JFrame() {
         foldersPanel.load()
         browserMonitorPanel.load()
         networkConfigPanel.load()
+        bitTorrentPanel.load()
         advancedConfigPanel.load()
     }
 

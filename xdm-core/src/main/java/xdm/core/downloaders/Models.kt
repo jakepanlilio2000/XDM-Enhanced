@@ -288,3 +288,25 @@ sealed interface CommitResult {
     data class Success(val fileName: String, val outputDir: String) : CommitResult
     data class Failed(val error: DownloadError) : CommitResult
 }
+
+object TorrentSourceTypes {
+    const val TORRENT_FILE = 1
+    const val TORRENT_BYTES = 2
+    const val MAGNET_URI = 3
+}
+
+data class TorrentDownloadTaskInfo(
+    val id: Long,
+    val name: String,
+    val targetFolder: String,
+    val infoHash: String,
+    val sourceType: Int,
+    val sourceUri: String,
+    val fileSelection: List<Boolean> = emptyList(),
+    val totalSize: Long = 0L,
+    val categoryId: String? = null,
+    val lastState: Int = 0,
+    val downloadLimit: Int = 0,
+    val uploadLimit: Int = 0,
+    val seedingMode: Int = 0
+)
