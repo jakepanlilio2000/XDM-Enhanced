@@ -214,6 +214,7 @@ jobs:
           $dest = "build\dist\windows-x64\XDM-Enhanced-v$version-windows-x64.zip"
           if (Test-Path $dest) { Remove-Item $dest -Force }
           [System.IO.Compression.ZipFile]::CreateFromDirectory($src, $dest, [System.IO.Compression.CompressionLevel]::Optimal, $true)
+          Copy-Item $dest "$dest.bin" -Force
 
       - name: Package Browser Extensions
         if: matrix.arch == 'x64'
@@ -221,7 +222,10 @@ jobs:
         run: |
           powershell -NoProfile -ExecutionPolicy Bypass -File browser-extension\package-extensions.ps1
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          Copy-Item build\dist\extensions\*.zip build\dist\windows-x64\
+          Get-ChildItem build\dist\extensions\*.zip | ForEach-Object {
+            Copy-Item $_.FullName "build\dist\windows-x64\$($_.Name)" -Force
+            Copy-Item $_.FullName "build\dist\windows-x64\$($_.Name).bin" -Force
+          }
 
       # With a signing policy (SIGNPATH_SIGNING_POLICY above) the MSI is signed by SignPath Foundation (signpath.md):
       # it goes up zipped under a name without a dot, which the release job's download pattern skips, and SignPath
@@ -243,21 +247,21 @@ jobs:
       - if: matrix.arch == 'x64' && env.SIGNPATH_SIGNING_POLICY == 'unsigned'
         uses: actions/upload-artifact@v7
         with:
-          path: build/dist/windows-x64/*windows-x64.zip
+          path: build/dist/windows-x64/*windows-x64.zip.bin
           archive: false
           if-no-files-found: error
 
       - if: matrix.arch == 'x64' && env.SIGNPATH_SIGNING_POLICY == 'unsigned'
         uses: actions/upload-artifact@v7
         with:
-          path: build/dist/windows-x64/*Extension-Chromium*.zip
+          path: build/dist/windows-x64/*Extension-Chromium*.zip.bin
           archive: false
           if-no-files-found: error
 
       - if: matrix.arch == 'x64' && env.SIGNPATH_SIGNING_POLICY == 'unsigned'
         uses: actions/upload-artifact@v7
         with:
-          path: build/dist/windows-x64/*Extension-Firefox*.zip
+          path: build/dist/windows-x64/*Extension-Firefox*.zip.bin
           archive: false
           if-no-files-found: error
 
@@ -370,9 +374,12 @@ jobs:
 
       # XDM 8 from the Microsoft Store looks for xdmsetup-<v>.msi in the release for its update notice, so the x64 MSI
       # also goes up under that name (after signing: a byte copy, the signature stays valid).
-      - name: Copy x64 MSI for XDM 8 Store update notice
+      - name: Copy x64 MSI for XDM 8 Store update notice and restore zip files
         run: |
           shopt -s nullglob
+          for f in dist/*.zip.bin; do
+            mv "$f" "${f%.bin}"
+          done
           msi=(dist/xdm-*-x64.msi)
           if [[ ${#msi[@]} -ge 1 ]]; then
             v="${msi[0]##*/xdm-}"; v="${v%-x64.msi}"
