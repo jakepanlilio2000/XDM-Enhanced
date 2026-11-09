@@ -197,6 +197,7 @@ if ($foundMakensis) {
 }
 
 Write-Host ''
+if ($missing) {
   Write-Host "Missing: $($missing -join ', ')"
   Write-Host 'Without the .NET SDK and WiX, build-bundle.ps1 can still build the app image (no -Type msi).'
 } else {

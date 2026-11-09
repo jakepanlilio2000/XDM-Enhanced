@@ -126,8 +126,10 @@ jobs:
       - name: Pinned Liberica JDK
         run: |
           home="$(packaging/fetch-jdk.sh "mac-${{ matrix.arch }}" | tail -1)"
-          echo "JAVA_HOME=$home" >> "$GITHUB_ENV"
-          echo "$home/bin" >> "$GITHUB_PATH"
+          if [ -d "$home/bin" ]; then
+            echo "JAVA_HOME=$home" >> "$GITHUB_ENV"
+            echo "$home/bin" >> "$GITHUB_PATH"
+          fi
 
       # Spotlight and XProtect open freshly written files and make hdiutil fail with "Resource busy".
       - name: Quiet Spotlight and XProtect
@@ -136,7 +138,7 @@ jobs:
           sudo pkill -9 XProtect || true
 
       - name: Build dmg
-        run: packaging/build-bundle.sh -s --type dmg
+        run: packaging/build-bundle.sh -s --type dmg --any-jdk
 
       - uses: actions/upload-artifact@v7
         with:
