@@ -54,7 +54,7 @@ Fourth beta release of **XDM Enhanced** — an independent, open-source download
 |---|---|---|
 | `XDM-Enhanced-Setup-v1.0.0-beta.4-win-x64.exe` | 63,548,724 bytes | `c31dc1c69597e7656b774162bee25ae220b38b6dd793c4d9854b9c1844ebb7eb` |
 | `XDM-Enhanced-v1.0.0-beta.4-windows-x64.zip` | 74,341,547 bytes | `eccb8cd7e63ab1b41eb701dffe42a2aefd28e8b8dc646a3807175c8cd1dfacdc` |
-| `xdm-app-1.0.0-beta.4.jar` | 94,179,254 bytes | `34adba46b03ac7d3cb4bad78e87b11ab6711db2b62674a733292c376b29d2c55` |
+| `xdm-app-1.0.0-beta.4.jar` | 94,179,254 bytes | `70de237537b2bdd9c517c1f90a3796c1310286c47443f5368bb71a4f1e2dadb8` |
 | `XDM-Enhanced-Extension-Chromium-v1.0.0-beta.4.zip` | 87,827 bytes | `b39903ea750e608b791693dde1ed07d846d27ed5dc7778038fbeba7bfb14bf19` |
 | `XDM-Enhanced-Extension-Firefox-v1.0.0-beta.4.zip` | 84,027 bytes | `2a7b5ad65015412e32783a607f694776ccf408cdce55a385d31840728e95e93f` |
 | `XDM-Enhanced-Extension-Firefox-v1.0.0-beta.4.xpi` | 84,027 bytes | `2a7b5ad65015412e32783a607f694776ccf408cdce55a385d31840728e95e93f` |
