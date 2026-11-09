@@ -22,6 +22,8 @@
   C:\Program Files\BellSoft\LibericaJDK-25, so only one of them can be installed.
 .PARAMETER InstallWix
   Install the .NET SDK (if missing) and the WiX 7 CLI, and offer to accept the WiX EULA.
+.PARAMETER InstallNsis
+  Install NSIS (via Chocolatey or winget if available) for creating the Windows NSIS installer.
 .PARAMETER AcceptWixEula
   With -InstallWix: accept the WiX 7 OSMF EULA without asking (unattended builds, e.g. CI). Passing it
   is accepting https://wixtoolset.org/osmf/ for this machine.
@@ -31,6 +33,7 @@ param(
   [ValidateSet('x64','arm64')] [string[]]$Arch,
   [switch]$InstallJdk,
   [switch]$InstallWix,
+  [switch]$InstallNsis,
   [switch]$AcceptWixEula
 )
 
@@ -189,11 +192,26 @@ $makensisCandidates = @(
 $makensisCmd = Get-Command makensis.exe -ErrorAction SilentlyContinue
 if ($makensisCmd) { $makensisCandidates = @($makensisCmd.Source) + $makensisCandidates }
 $foundMakensis = $makensisCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+
+if (-not $foundMakensis -and $InstallNsis) {
+  if (Get-Command choco.exe -ErrorAction SilentlyContinue) {
+    Write-Host '   installing NSIS via chocolatey...'
+    & choco install nsis --no-progress -y
+  } elseif (Get-Command winget.exe -ErrorAction SilentlyContinue) {
+    Write-Host '   installing NSIS via winget...'
+    & winget install NSIS.NSIS --silent --accept-source-agreements --accept-package-agreements
+  }
+  Update-SessionPath
+  $makensisCmd = Get-Command makensis.exe -ErrorAction SilentlyContinue
+  if ($makensisCmd) { $makensisCandidates = @($makensisCmd.Source) + $makensisCandidates }
+  $foundMakensis = $makensisCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+}
+
 if ($foundMakensis) {
   $ver = (& $foundMakensis /VERSION)
   Write-Host "   ok: NSIS $ver ($foundMakensis)"
 } else {
-  Write-Host '   missing (NSIS installer only): install NSIS from https://nsis.sourceforge.io/'
+  Write-Host '   missing (NSIS installer only): install NSIS from https://nsis.sourceforge.io/ or rerun with -InstallNsis'
 }
 
 Write-Host ''

@@ -174,9 +174,12 @@ jobs:
         shell: pwsh
         run: |
           powershell -NoProfile -ExecutionPolicy Bypass -File packaging\setup-windows.ps1 `
-            -Arch ${{ matrix.arch }} -InstallJdk -InstallWix -AcceptWixEula
+            -Arch ${{ matrix.arch }} -InstallJdk -InstallWix -InstallNsis -AcceptWixEula
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           "$env:USERPROFILE\.dotnet\tools" | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
+          if (Test-Path "C:\Program Files (x86)\NSIS") {
+            "C:\Program Files (x86)\NSIS" | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
+          }
 
       - name: Build MSI
         shell: pwsh
@@ -190,6 +193,13 @@ jobs:
         if: matrix.arch == 'x64'
         shell: pwsh
         run: |
+          if (-not (Get-Command makensis.exe -ErrorAction SilentlyContinue) -and -not (Test-Path "C:\Program Files (x86)\NSIS\makensis.exe")) {
+            choco install nsis --no-progress -y
+          }
+          if (Test-Path "C:\Program Files (x86)\NSIS") {
+            $env:Path += ";C:\Program Files (x86)\NSIS"
+            "C:\Program Files (x86)\NSIS" | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
+          }
           powershell -NoProfile -ExecutionPolicy Bypass -File packaging\build-bundle.ps1 `
             -Arch x64 -Type nsis -SkipBuild
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
@@ -315,7 +325,7 @@ jobs:
           if-no-files-found: error
 
   release:
-    needs: [ macos, windows, linux ]
+    needs: [ jar, macos, windows, linux ]
     if: >-
       always() && needs.jar.result == 'success' && !cancelled() &&
       (github.event_name == 'push' || inputs.release != false)
