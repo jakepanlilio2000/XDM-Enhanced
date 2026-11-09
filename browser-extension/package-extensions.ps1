@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Packages and validates the XDM Enhanced browser extensions for Chromium and Firefox.
 
@@ -119,7 +119,7 @@ function Validate-Extension($extDir, [bool]$isChrome) {
         $content = Get-Content $h.FullName -Raw -Encoding UTF8
         
         # Check script tags
-        $scriptMatches = [regex]::Matches($content, '<script\b[^>]*\bsrc=["'']([^"'']+)["''][^>]*>')
+        $scriptMatches = [regex]::Matches($content, '<script\b[^>]*\bsrc=[\x22\x27]([^\x22\x27]+)[\x22\x27][^>]*>')
         foreach ($sm in $scriptMatches) {
             $src = $sm.Groups[1].Value
             Assert-Condition (-not ($src -match '^(https?:|//)')) "$($h.Name) references remote script: $src"
@@ -129,11 +129,11 @@ function Validate-Extension($extDir, [bool]$isChrome) {
         }
         
         # Check stylesheet links
-        $linkMatches = [regex]::Matches($content, '<link\b[^>]*\bhref=["'']([^"'']+)["''][^>]*>')
+        $linkMatches = [regex]::Matches($content, '<link\b[^>]*\bhref=[\x22\x27]([^\x22\x27]+)[\x22\x27][^>]*>')
         foreach ($lm in $linkMatches) {
             $href = $lm.Groups[1].Value
             # Only check css stylesheets or icon links
-            if ($lm.Value -match 'rel=["''](stylesheet|icon)["'']' -or $href -match '\.css($|\?)') {
+            if ($lm.Value -match 'rel=[\x22\x27](stylesheet|icon)[\x22\x27]' -or $href -match '\.css($|\?)') {
                 Assert-Condition (-not ($href -match '^(https?:|//)')) "$($h.Name) references remote stylesheet: $href"
                 $localTarget = Join-Path $h.DirectoryName $href
                 $localTarget = $localTarget -replace '\?.*$', ''
@@ -158,7 +158,7 @@ function Validate-Extension($extDir, [bool]$isChrome) {
         Assert-Condition (-not ($jsContent -match '\bnew\s+Function\s*\(')) "$($j.Name) contains new Function()"
         if ($isChrome) {
             Assert-Condition (-not ($jsContent -match '\bimportScripts\s*\(')) "$($j.Name) contains importScripts()"
-            Assert-Condition (-not ($jsContent -match 'import\s*\(\s*["'']https?:')) "$($j.Name) contains dynamic remote import"
+            Assert-Condition (-not ($jsContent -match 'import\s*\(\s*[\x22\x27]https?:')) "$($j.Name) contains dynamic remote import"
         }
     }
     Write-Host "   JavaScript files: $($jsFiles.Count) verified (no eval, no new Function, no remote imports)" -ForegroundColor Green
@@ -183,7 +183,7 @@ function Create-CleanZip($srcDir, $destZip) {
         }
         
         foreach ($file in $allFiles) {
-            $relative = $file.FullName.Substring($srcDir.Length).TrimStart('\', '/')
+            $relative = $file.FullName.Substring($srcDir.Length).TrimStart([char[]]@('\', '/'))
             # Normalize to forward slashes in zip
             $zipEntryPath = $relative -replace '\\', '/'
             [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($archive, $file.FullName, $zipEntryPath, [System.IO.Compression.CompressionLevel]::Optimal) | Out-Null
