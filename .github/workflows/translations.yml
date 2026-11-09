@@ -20,6 +20,15 @@ on:
 permissions:
   contents: read
 
+env:
+  MAVEN_OPTS: >-
+    -Dhttp.keepAlive=false
+    -Dmaven.wagon.http.pool=false
+    -Dmaven.wagon.http.retryHandler.count=5
+    -Dmaven.wagon.http.serviceUnavailableRetryCount=5
+    -Dmaven.wagon.http.retryHandler.requestSentKeepAliveRuntime=5000
+    -Dmaven.wagon.rto=60000
+
 jobs:
   check:
     runs-on: ubuntu-latest

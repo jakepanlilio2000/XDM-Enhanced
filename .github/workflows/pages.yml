@@ -4,15 +4,9 @@ name: Pages
 # setting did), plus the translation generator at /xdm/translate/ (TRANSLATING.md). Rebuilt when a
 # language file changes, so the generator always offers the strings XDM ships.
 #
-# Needs Settings -> Pages -> Source: "GitHub Actions" (docs/i18n.md).
+# Automatic push trigger is temporarily disabled while GitHub Pages configuration is pending.
+# Trigger manually via workflow_dispatch when ready.
 on:
-  push:
-    branches: [ "master" ]
-    paths:
-      - "docs/**"
-      - "translation-generator/**"
-      - "xdm-app/src/main/resources/lang/**"
-      - ".github/workflows/pages.yml"
   workflow_dispatch:
 
 permissions:

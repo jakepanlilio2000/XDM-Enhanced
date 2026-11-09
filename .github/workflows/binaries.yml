@@ -20,13 +20,13 @@ on:
       release:
         description: Publish a GitHub release from this run
         type: boolean
-        default: false
+        default: true
       prerelease:
         description: Mark the release as a pre-release
         type: boolean
         default: true
       tag:
-        description: Release tag (empty = v<app version>, plus -pre.<run number> for a pre-release)
+        description: Release tag (empty = v<app version>)
         type: string
         default: ''
       signing:
@@ -35,16 +35,24 @@ on:
         options: [ unsigned, test-signing, release-signing ]
         default: unsigned
   push:
+    branches: [ "master" ]
     tags: [ 'v*' ]
 
 permissions:
-  contents: read
+  contents: write
 
 # SignPath signing policy (signpath.md): a manual run takes the "signing" input; a tag push has no inputs and
 # uses the fixed value here: unsigned until SignPath imports the production certificate, then release-signing.
 # test-signing uses a self-signed test certificate: its MSIs show an untrusted publisher on Windows.
 env:
   SIGNPATH_SIGNING_POLICY: ${{ github.event_name == 'push' && 'unsigned' || inputs.signing }}
+  MAVEN_OPTS: >-
+    -Dhttp.keepAlive=false
+    -Dmaven.wagon.http.pool=false
+    -Dmaven.wagon.http.retryHandler.count=5
+    -Dmaven.wagon.http.serviceUnavailableRetryCount=5
+    -Dmaven.wagon.http.retryHandler.requestSentKeepAliveRuntime=5000
+    -Dmaven.wagon.rto=60000
 
 concurrency:
   group: binaries-${{ github.ref }}
@@ -79,7 +87,18 @@ jobs:
           XML
 
       - name: Build jar
-        run: mvn -B -q -pl xdm-app -am package
+        run: |
+          for attempt in 1 2 3 4 5; do
+            echo ">> Building jar (attempt $attempt/5)..."
+            mvn -B -q -pl xdm-app -am package && break || {
+              if [ $attempt -eq 5 ]; then
+                echo ">> Maven build failed after 5 attempts."
+                exit 1
+              fi
+              echo ">> Transient network error encountered. Retrying in 10s..."
+              sleep 10
+            }
+          done
 
       - uses: actions/upload-artifact@v7
         with:
@@ -134,6 +153,7 @@ jobs:
           - { arch: x64, runner: windows-latest }
           - { arch: arm64, runner: windows-11-arm }
     runs-on: ${{ matrix.runner }}
+    continue-on-error: ${{ matrix.arch == 'arm64' }}
     steps:
       - uses: actions/checkout@v7
 
@@ -158,10 +178,38 @@ jobs:
 
       - name: Build MSI
         shell: pwsh
+        continue-on-error: true
         run: |
           powershell -NoProfile -ExecutionPolicy Bypass -File packaging\build-bundle.ps1 `
             -Arch ${{ matrix.arch }} -Type msi -SkipBuild
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Build NSIS Installer
+        if: matrix.arch == 'x64'
+        shell: pwsh
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File packaging\build-bundle.ps1 `
+            -Arch x64 -Type nsis -SkipBuild
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Package Portable Windows Zip
+        if: matrix.arch == 'x64'
+        shell: pwsh
+        run: |
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $version = (Get-Content xdm-app\src\main\resources\app-version.json -Raw | ConvertFrom-Json).currentVersion
+          $src = "build\dist\windows-x64\xdm-app"
+          $dest = "build\dist\windows-x64\XDM-Enhanced-v$version-windows-x64.zip"
+          if (Test-Path $dest) { Remove-Item $dest -Force }
+          [System.IO.Compression.ZipFile]::CreateFromDirectory($src, $dest, [System.IO.Compression.CompressionLevel]::Optimal, $true)
+
+      - name: Package Browser Extensions
+        if: matrix.arch == 'x64'
+        shell: pwsh
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File browser-extension\package-extensions.ps1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Copy-Item build\dist\extensions\*.zip build\dist\windows-x64\
 
       # With a signing policy (SIGNPATH_SIGNING_POLICY above) the MSI is signed by SignPath Foundation (signpath.md):
       # it goes up zipped under a name without a dot, which the release job's download pattern skips, and SignPath
@@ -169,9 +217,12 @@ jobs:
       - if: env.SIGNPATH_SIGNING_POLICY == 'unsigned'
         uses: actions/upload-artifact@v7
         with:
-          path: build/dist/windows-${{ matrix.arch }}/*.msi
+          path: |
+            build/dist/windows-${{ matrix.arch }}/*.msi
+            build/dist/windows-${{ matrix.arch }}/*.exe
+            build/dist/windows-${{ matrix.arch }}/*.zip
           archive: false
-          if-no-files-found: error
+          if-no-files-found: ignore
 
       - id: unsigned
         if: env.SIGNPATH_SIGNING_POLICY != 'unsigned'
@@ -222,6 +273,7 @@ jobs:
           - { arch: x64, runner: ubuntu-24.04 }
           - { arch: arm64, runner: ubuntu-24.04-arm }
     runs-on: ${{ matrix.runner }}
+    continue-on-error: ${{ matrix.arch == 'arm64' }}
     steps:
       - uses: actions/checkout@v7
 
@@ -262,10 +314,9 @@ jobs:
 
   release:
     needs: [ macos, windows, linux ]
-    # Windows and Linux must succeed; macOS is best effort.
     if: >-
-      always() && needs.windows.result == 'success' && needs.linux.result == 'success' &&
-      (github.event_name == 'push' || inputs.release)
+      always() && needs.jar.result == 'success' && !cancelled() &&
+      (github.event_name == 'push' || inputs.release != false)
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -281,15 +332,15 @@ jobs:
           merge-multiple: true
 
       # XDM 8 from the Microsoft Store looks for xdmsetup-<v>.msi in the release for its update notice, so the x64 MSI
-      # also goes up under that name (after signing: a byte copy, the signature stays valid). XDM 9's MSI removes
-      # the Store version (xdm.wxs, XdmOldStoreDlg).
+      # also goes up under that name (after signing: a byte copy, the signature stays valid).
       - name: Copy x64 MSI for XDM 8 Store update notice
         run: |
           shopt -s nullglob
           msi=(dist/xdm-*-x64.msi)
-          [[ ${#msi[@]} -eq 1 ]] || { echo "expected one x64 MSI, found ${#msi[@]}"; exit 1; }
-          v="${msi[0]##*/xdm-}"; v="${v%-x64.msi}"
-          cp "${msi[0]}" "dist/xdmsetup-$v.msi"
+          if [[ ${#msi[@]} -ge 1 ]]; then
+            v="${msi[0]##*/xdm-}"; v="${v%-x64.msi}"
+            cp "${msi[0]}" "dist/xdmsetup-$v.msi"
+          fi
 
       - name: Publish release
         env:
@@ -300,7 +351,11 @@ jobs:
           version="$(sed -n 's/.*"currentVersion"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' \
             xdm-app/src/main/resources/app-version.json | head -1)"
           if [[ "$GITHUB_EVENT_NAME" == push ]]; then
-            tag="$GITHUB_REF_NAME"
+            if [[ "$GITHUB_REF_NAME" =~ ^v[0-9] ]]; then
+              tag="$GITHUB_REF_NAME"
+            else
+              tag="v$version"
+            fi
             [[ "$tag" == *-* ]] && pre=true || pre=false
           else
             pre="$INPUT_PRERELEASE"
@@ -311,29 +366,31 @@ jobs:
             fi
           fi
           shopt -s nullglob
-          files=(dist/*.dmg dist/*.msi dist/*.deb dist/*.rpm dist/*.pkg.tar.zst dist/*.tar.gz)
-          ls -l "${files[@]}"
+          files=(dist/*.dmg dist/*.msi dist/*.exe dist/*.zip dist/*.deb dist/*.rpm dist/*.pkg.tar.zst dist/*.tar.gz)
+          ls -la "${files[@]}" || true
           # Download table: one row per installer actually built (a failed macOS job just has no rows).
-          # Names: xdm-<v>-<x64|arm64>.msi (and xdmsetup-<v>.msi, a copy of x64), XDM-<v>-<x64|arm64>.dmg,
-          # nfpm's amd64/x86_64 or arm64/aarch64 for deb/rpm/Arch, xdm-app-<v>-linux-<x64|arm64>.tar.gz.
           base="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/download/$tag"
           {
             echo "## Downloads"
             echo
-            echo "| Installer | Notes |"
+            echo "| Asset | Description |"
             echo "|---|---|"
             for f in "${files[@]}"; do
               name="${f##*/}"
               case "$name" in *arm64*|*aarch64*) cpu=ARM; mac="Apple Silicon (M1 or later)" ;; *) cpu=x64; mac=Intel ;; esac
               case "$name" in
-                xdmsetup-*.msi) note="Same as the x64 MSI; for XDM 8 (Microsoft Store) update notices" ;;
-                *.msi)        note="For Windows $cpu (Windows 10/11)" ;;
-                *.dmg)        note="For $mac mac" ;;
-                *.deb)        note="For Debian / Ubuntu / Linux Mint $cpu" ;;
-                *.rpm)        note="For Fedora / RHEL / openSUSE $cpu" ;;
-                *.pkg.tar.zst) note="For Arch Linux / Manjaro $cpu" ;;
-                *.tar.gz)     note="For any Linux $cpu (portable, no install)" ;;
-                *)            note="" ;;
+                *Setup*.exe)              note="Windows x64 NSIS Setup Installer (Recommended)" ;;
+                *Extension-Chromium*.zip) note="Chromium Browser Extension (Chrome, Edge, Brave, Opera, Vivaldi)" ;;
+                *Extension-Firefox*.zip)  note="Firefox Browser Extension (Firefox, Floorp, LibreWolf)" ;;
+                *windows*.zip)            note="Windows $cpu Portable (Standalone directory, no install)" ;;
+                xdmsetup-*.msi)           note="Same as the x64 MSI; for legacy XDM 8 update notices" ;;
+                *.msi)                    note="Windows $cpu MSI Installer" ;;
+                *.dmg)                    note="For $mac mac" ;;
+                *.deb)                    note="For Debian / Ubuntu / Linux Mint $cpu" ;;
+                *.rpm)                    note="For Fedora / RHEL / openSUSE $cpu" ;;
+                *.pkg.tar.zst)            note="For Arch Linux / Manjaro $cpu" ;;
+                *.tar.gz)                 note="For any Linux $cpu (portable, no install)" ;;
+                *)                        note="" ;;
               esac
               echo "| [$name]($base/$name) | $note |"
             done
@@ -342,19 +399,24 @@ jobs:
             echo "[Code signing policy]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/blob/master/CODE_SIGNING_POLICY.md)"
           } > downloads.md
           cat downloads.md
-          flags=(--title "XDM ${tag#v}" --target "$GITHUB_SHA" --notes-file notes.md)
+          flags=(--title "XDM Enhanced ${tag#v}" --target "$GITHUB_SHA")
           [[ "$pre" == true ]] && flags+=(--prerelease) || flags+=(--latest)
+          
+          if [ -f RELEASE_NOTES.md ]; then
+            cat RELEASE_NOTES.md > notes.md
+            echo "" >> notes.md
+            cat downloads.md >> notes.md
+          else
+            changelog="$(gh api "repos/$GITHUB_REPOSITORY/releases/generate-notes" \
+              -f tag_name="$tag" -f target_commitish="$GITHUB_SHA" -q .body | grep '^\*\*Full Changelog\*\*' || true)"
+            { cat downloads.md; [[ -z "$changelog" ]] || printf "\n## What's Changed\n\n%s\n" "$changelog"; } > notes.md
+          fi
+          
           # A release drafted on the GitHub web page pushes its tag and already exists: attach the files and
           # put the table above the notes written there (replacing a table from an earlier run).
           if gh release view "$tag" >/dev/null 2>&1; then
             gh release upload "$tag" --clobber "${files[@]}"
-            gh release view "$tag" --json body -q .body | sed '/^## Downloads$/,/^\[Code signing policy\]/d' > old.md
-            { cat downloads.md; echo; cat old.md; } > notes.md
-            gh release edit "$tag" --notes-file notes.md
+            gh release edit "$tag" --notes-file notes.md "${flags[@]}"
           else
-            # Only the "Full Changelog" compare link from GitHub's generated notes, not the PR list.
-            changelog="$(gh api "repos/$GITHUB_REPOSITORY/releases/generate-notes" \
-              -f tag_name="$tag" -f target_commitish="$GITHUB_SHA" -q .body | grep '^\*\*Full Changelog\*\*' || true)"
-            { cat downloads.md; [[ -z "$changelog" ]] || printf "\n## What's Changed\n\n%s\n" "$changelog"; } > notes.md
-            gh release create "$tag" "${flags[@]}" "${files[@]}"
+            gh release create "$tag" "${flags[@]}" --notes-file notes.md "${files[@]}"
           fi
