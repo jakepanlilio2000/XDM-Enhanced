@@ -229,12 +229,37 @@ jobs:
       - if: env.SIGNPATH_SIGNING_POLICY == 'unsigned'
         uses: actions/upload-artifact@v7
         with:
-          path: |
-            build/dist/windows-${{ matrix.arch }}/*.msi
-            build/dist/windows-${{ matrix.arch }}/*.exe
-            build/dist/windows-${{ matrix.arch }}/*.zip
+          path: build/dist/windows-${{ matrix.arch }}/*.msi
           archive: false
-          if-no-files-found: ignore
+          if-no-files-found: error
+
+      - if: matrix.arch == 'x64' && env.SIGNPATH_SIGNING_POLICY == 'unsigned'
+        uses: actions/upload-artifact@v7
+        with:
+          path: build/dist/windows-x64/*Setup*.exe
+          archive: false
+          if-no-files-found: error
+
+      - if: matrix.arch == 'x64' && env.SIGNPATH_SIGNING_POLICY == 'unsigned'
+        uses: actions/upload-artifact@v7
+        with:
+          path: build/dist/windows-x64/*windows-x64.zip
+          archive: false
+          if-no-files-found: error
+
+      - if: matrix.arch == 'x64' && env.SIGNPATH_SIGNING_POLICY == 'unsigned'
+        uses: actions/upload-artifact@v7
+        with:
+          path: build/dist/windows-x64/*Extension-Chromium*.zip
+          archive: false
+          if-no-files-found: error
+
+      - if: matrix.arch == 'x64' && env.SIGNPATH_SIGNING_POLICY == 'unsigned'
+        uses: actions/upload-artifact@v7
+        with:
+          path: build/dist/windows-x64/*Extension-Firefox*.zip
+          archive: false
+          if-no-files-found: error
 
       - id: unsigned
         if: env.SIGNPATH_SIGNING_POLICY != 'unsigned'
