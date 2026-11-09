@@ -1,4 +1,4 @@
-﻿<#
+<#
 .SYNOPSIS
     Packages and validates the XDM Enhanced browser extensions for Chromium and Firefox.
 
