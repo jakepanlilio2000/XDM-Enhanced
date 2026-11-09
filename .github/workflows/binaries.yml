@@ -459,7 +459,11 @@ jobs:
           # A release drafted on the GitHub web page pushes its tag and already exists: attach the files and
           # put the table above the notes written there (replacing a table from an earlier run).
           if gh release view "$tag" >/dev/null 2>&1; then
-            gh release upload "$tag" --clobber "${files[@]}"
+            for f in "${files[@]}"; do
+              name="${f##*/}"
+              gh release delete-asset "$tag" "$name" -y >/dev/null 2>&1 || true
+            done
+            gh release upload "$tag" "${files[@]}"
             gh release edit "$tag" --notes-file notes.md "${flags[@]}"
           else
             gh release create "$tag" "${flags[@]}" --notes-file notes.md "${files[@]}"
