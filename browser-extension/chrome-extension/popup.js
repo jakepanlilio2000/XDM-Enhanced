@@ -46,6 +46,32 @@ class VideoPopup {
             chrome.runtime.sendMessage({ type: "stat" }, this.onMsg.bind(this));
         });
 
+        // Initialize version and check cached update state
+        const manifest = chrome.runtime.getManifest();
+        const verTag = document.getElementById("footerVersion");
+        if (verTag) {
+            verTag.textContent = "v" + manifest.version;
+            verTag.title = `${manifest.name} v${manifest.version} (${manifest.version_name || "Enhanced"})`;
+        }
+
+        chrome.storage.local.get(["extUpdateInfo"], stored => {
+            const info = stored && stored.extUpdateInfo;
+            if (info && info.isNewer && info.latestTag) {
+                const banner = document.getElementById("extUpdateBanner");
+                const verSpan = document.getElementById("extUpdateVersion");
+                const btn = document.getElementById("extUpdateBtn");
+                if (banner && verSpan && btn) {
+                    verSpan.textContent = info.latestTag;
+                    if (info.releaseUrl) btn.href = info.releaseUrl;
+                    banner.hidden = false;
+                }
+                if (verTag) {
+                    verTag.classList.add("has-update");
+                    verTag.title = `Update available: ${info.latestTag}`;
+                }
+            }
+        });
+
         // Query registered shortcut for Grab All Links (open-bulk)
         this.loadShortcuts();
 
@@ -211,7 +237,7 @@ class VideoPopup {
         }
 
         this.connected = response.connected === true;
-        this.setConnectionState(this.connected);
+        this.setConnectionState(this.connected, response.xdmVersion);
 
         this.updateMonitoringPill(response.enabled === true);
 
@@ -270,7 +296,7 @@ class VideoPopup {
         document.getElementById('actions').hidden = list.length === 0;
     }
 
-    setConnectionState(connected) {
+    setConnectionState(connected, appVersion) {
         this.connected = connected;
         const banner = document.getElementById("disconnectedNotice");
         if (banner) banner.hidden = connected;
@@ -279,7 +305,9 @@ class VideoPopup {
         const text = document.getElementById("connectionText");
         if (pill && text) {
             pill.className = `status-pill ${connected ? "connected" : "disconnected"}`;
-            text.textContent = connected ? "Connected" : "Disconnected";
+            text.textContent = connected
+                ? (appVersion ? `Connected (App v${appVersion})` : "Connected")
+                : "Disconnected";
         }
 
         const bulkBtn = document.getElementById("bulk");

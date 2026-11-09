@@ -384,7 +384,8 @@ XDM-Enhanced/
 
 Detailed notes on all versions are documented in [CHANGELOG.md](CHANGELOG.md).
 
-- **v1.0.0-beta.3 (Current Release):** Dedicated language settings tab with live switching across 32 languages, distinct Table View vs. Classic Cards presentation modes, segmented download progress visualization bar with active connection metrics, Network Optimizer connection presets, download link refreshing with pre-flight byte-range validation, automatic file categorization by extension, magnet metadata naming resolution, existing torrent data detection and piece rechecking, and redesigned FlatLaf About dialog with GitHub integration.
+- **v1.0.0-beta.4 (Current Release):** Fork-specific GitHub release discovery for application updates (Stable and Beta channels) with package integrity verification, browser extension update notifications and supported update mechanisms, persistent download progress window on pause with accurate status indicators, native Windows Default Apps settings navigation, and comprehensive category icons with dynamic updating across download dialogs.
+- **v1.0.0-beta.3:** Dedicated language settings tab with live switching across 32 languages, distinct Table View vs. Classic Cards presentation modes, segmented download progress visualization bar with active connection metrics, Network Optimizer connection presets, download link refreshing with pre-flight byte-range validation, automatic file categorization by extension, magnet metadata naming resolution, existing torrent data detection and piece rechecking, and redesigned FlatLaf About dialog with GitHub integration.
 - **v1.0.0-beta.2:** Post-download action rules engine, download completion power actions (sleep, shutdown, hibernate), drag-and-drop file handoff, browser extension "Block this site" exclusions and multi-keyword filtering, clickable desktop browser settings tiles, NSIS setup installer, and folder persistence fixes.
 - **v1.0.0-beta.1:** Initial independent release adding native BitTorrent and magnet downloading, FlatLaf dynamic theming (Light, Dark, System modes), customizable accent color palettes, high-density desktop toolbar, storage meter, and isolated application configuration directories.
 
@@ -397,7 +398,7 @@ If you encounter an issue or unexpected behavior:
 1. Check existing issues on the [Issue Tracker](https://github.com/jakepanlilio2000/XDM-Enhanced/issues) to avoid duplicates.
 2. Open a new issue providing:
    - Operating system and version (e.g., Windows 11 23H2, Ubuntu 24.04).
-   - XDM Enhanced version (e.g., `v1.0.0-beta.3`).
+   - XDM Enhanced version (e.g., `v1.0.0-beta.4`).
    - Browser name and extension version (if reporting browser integration issues).
    - Clear steps to reproduce the problem and relevant log snippets from `%APPDATA%\xdm-enhanced\log.txt` (Windows) or `~/.xdm-enhanced/log.txt` (Linux/macOS).
 

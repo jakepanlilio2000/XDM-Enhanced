@@ -13,7 +13,8 @@ import xdm.app.utils.Browser
 import xdm.app.utils.BrowserLauncher
 import xdm.app.utils.RemixIcon
 import xdm.app.utils.ScaledEmptyBorder
-import xdm.app.utils.WEBSITE_URL
+import xdm.app.utils.GITHUB_RELEASES_URL
+import xdm.app.utils.GITHUB_REPO_URL
 import xdm.app.utils.createIcon
 import xdm.app.utils.px
 import xdm.app.utils.scaledSize
@@ -289,7 +290,12 @@ class BrowserExtensionPanel : JPanel() {
             OtherBrowser(null, true),
         )
 
-        fun extensionPageUrl(browser: String) = "$WEBSITE_URL/extension/$browser/?utm_source=xdm-app"
+        fun extensionPageUrl(browser: String): String = when (browser.lowercase()) {
+            "firefox" -> GITHUB_RELEASES_URL
+            "edge" -> GITHUB_RELEASES_URL
+            "chrome", "chromium", "brave" -> GITHUB_RELEASES_URL
+            else -> "$GITHUB_REPO_URL#browser-integration"
+        }
     }
 }
 

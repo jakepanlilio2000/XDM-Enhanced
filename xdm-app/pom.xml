@@ -4,13 +4,13 @@
     <parent>
         <groupId>xdm</groupId>
         <artifactId>xdm</artifactId>
-        <version>1.0.0-beta.3</version>
+        <version>1.0.0-beta.4</version>
     </parent>
 
     <artifactId>xdm-app</artifactId>
     <groupId>xdm-app</groupId>
     <packaging>jar</packaging>
-    <version>1.0.0-beta.3</version>
+    <version>1.0.0-beta.4</version>
 
     <name>xdm-app</name>
     <url>https://github.com/subhra74/xdm</url>
@@ -93,22 +93,22 @@
         <dependency>
             <groupId>xdm-core</groupId>
             <artifactId>xdm-core</artifactId>
-            <version>1.0.0-beta.3</version>
+            <version>1.0.0-beta.4</version>
         </dependency>
         <dependency>
             <groupId>xdm-capture</groupId>
             <artifactId>xdm-capture</artifactId>
-            <version>1.0.0-beta.3</version>
+            <version>1.0.0-beta.4</version>
         </dependency>
         <dependency>
             <groupId>xdm-manager</groupId>
             <artifactId>xdm-manager</artifactId>
-            <version>1.0.0-beta.3</version>
+            <version>1.0.0-beta.4</version>
         </dependency>
         <dependency>
             <groupId>xdm-torrent</groupId>
             <artifactId>xdm-torrent</artifactId>
-            <version>1.0.0-beta.3</version>
+            <version>1.0.0-beta.4</version>
         </dependency>
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>

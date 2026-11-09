@@ -12,11 +12,6 @@ import java.io.InputStream
 
 /**
  * Bundled update configuration, read from `/app-version.json` on the classpath.
- *
- * - [currentVersion]  the version this build identifies itself as.
- * - [updateCheckUrl]  endpoint that returns release info: the GitHub releases list (which, unlike
- *                     `/releases/latest`, includes pre-releases) or a single release object.
- * - [downloadUrl]     page opened when the user clicks the update button.
  */
 @Serializable
 data class AppVersionConfig(
@@ -25,30 +20,21 @@ data class AppVersionConfig(
     val downloadUrl: String
 )
 
-/**
- * Subset of a GitHub release we care about: the version and whether it is a pre-release. The release
- * page itself is never opened - updates go through [AppVersionConfig.downloadUrl], our website.
- */
-@Serializable
-internal data class GithubRelease(
-    val tag_name: String = "",
-    val name: String = "",
-    val prerelease: Boolean = false,
-    val draft: Boolean = false
-)
-
 /** A release version found by the check; [isPreRelease] is GitHub's flag or a `-suffix` on the tag. */
 internal data class ReleaseVersion(val version: String, val isPreRelease: Boolean)
 
 /**
- * Result handed to the UI when a newer release is found; [downloadUrl] is always our website, also
- * for a pre-release.
+ * Result handed to the UI when a newer release is found.
  */
 data class UpdateInfo(val latestVersion: String, val downloadUrl: String, val isPreRelease: Boolean)
 
 object UpdateChecker {
 
     private val json = Json { ignoreUnknownKeys = true }
+
+    const val DEFAULT_VERSION = "1.0.0-beta.4"
+    const val DEFAULT_UPDATE_URL = "https://api.github.com/repos/jakepanlilio2000/XDM-Enhanced/releases?per_page=20"
+    const val DEFAULT_DOWNLOAD_URL = "https://github.com/jakepanlilio2000/XDM-Enhanced/releases"
 
     /** Loads the bundled [AppVersionConfig], or null if it is missing/invalid. */
     fun loadConfig(): AppVersionConfig? {
@@ -66,85 +52,176 @@ object UpdateChecker {
     }
 
     /**
-     * Checks for a newer release on a background thread. [callback] is invoked
-     * with an [UpdateInfo] when a newer version exists, or with null otherwise
-     * (no update / network failure / config missing). The callback runs on the
-     * background thread; marshal to the EDT in the UI layer.
+     * Checks for a newer release on a background thread using the configured or given [channel].
      */
-    fun checkForUpdate(callback: (UpdateInfo?) -> Unit) {
+    fun checkForUpdates(channel: UpdateChannel? = null, callback: (UpdateCheckResult) -> Unit) {
         Thread {
-            callback(runCatching { check() }.getOrElse {
-                Logger.error("UPDATE", "Update check failed", it)
-                null
-            })
+            val effChannel = channel ?: try {
+                UpdateChannel.fromId(AppContext.config.updateChannel)
+            } catch (_: Throwable) {
+                UpdateChannel.BETA
+            }
+            val result = checkSync(effChannel)
+            callback(result)
         }.apply {
             isDaemon = true
             name = "xdm-update-checker"
         }.start()
     }
 
-    private fun check(): UpdateInfo? {
-        val config = loadConfig() ?: return null
-        val body = fetchReleases(config.updateCheckUrl) ?: return null
-        val latest = newestRelease(body) ?: return null
-        return if (compareVersions(latest.version, config.currentVersion) > 0) {
-            Logger.info("UPDATE", "Newer version available: ${latest.version}" +
-                    "${if (latest.isPreRelease) " (pre-release)" else ""} (current ${config.currentVersion})")
-            UpdateInfo(
-                latestVersion = latest.version.trim().removePrefix("v").removePrefix("V"),
-                downloadUrl = config.downloadUrl,
-                isPreRelease = latest.isPreRelease
-            )
-        } else {
-            Logger.info("UPDATE", "Already up to date (current ${config.currentVersion}, latest ${latest.version})")
-            null
+    /**
+     * Backward-compatible check for callers expecting [UpdateInfo].
+     */
+    fun checkForUpdate(callback: (UpdateInfo?) -> Unit) {
+        checkForUpdates { result ->
+            when (result) {
+                is UpdateCheckResult.UpdateAvailable -> {
+                    val config = loadConfig()
+                    callback(
+                        UpdateInfo(
+                            latestVersion = result.releaseInfo.version,
+                            downloadUrl = config?.downloadUrl ?: DEFAULT_DOWNLOAD_URL,
+                            isPreRelease = result.releaseInfo.isPreRelease
+                        )
+                    )
+                }
+                else -> callback(null)
+            }
         }
     }
 
     /**
-     * Picks the highest-versioned release from a GitHub response [body]: either the releases list or a
-     * single release object (`/releases/latest`). Drafts are skipped; null if nothing usable is found.
+     * Synchronously checks for updates from GitHub Releases API for the given [channel].
      */
-    internal fun newestRelease(body: String): ReleaseVersion? {
-        val element = json.parseToJsonElement(body)
-        val items: List<JsonElement> = if (element is JsonArray) element else listOf(element)
-        return items
-            .mapNotNull { runCatching { json.decodeFromJsonElement<GithubRelease>(it) }.getOrNull() }
-            .filterNot { it.draft }
-            .mapNotNull { release ->
-                val tag = release.tag_name.ifBlank { release.name }.trim()
-                if (tag.isEmpty()) null
-                else ReleaseVersion(tag, release.prerelease || splitVersion(tag).second.isNotEmpty())
-            }
-            .maxWithOrNull { a, b -> compareVersions(a.version, b.version) }
+    fun checkSync(channel: UpdateChannel, currentVersion: String? = null): UpdateCheckResult {
+        val config = loadConfig()
+        val effCurrent = currentVersion ?: config?.currentVersion ?: DEFAULT_VERSION
+        val url = config?.updateCheckUrl ?: DEFAULT_UPDATE_URL
+
+        val (statusCode, body) = fetchReleasesWithStatus(url)
+
+        if (statusCode == 403) {
+            return UpdateCheckResult.Error(
+                message = "GitHub API rate limit exceeded. Please try again later or visit the releases page directly.",
+                isRateLimit = true
+            )
+        }
+
+        if (statusCode !in 200..299 || body == null) {
+            val msg = if (statusCode == -1) "Unable to connect to GitHub. Please check your internet connection."
+            else "Update check failed with server status HTTP $statusCode."
+            return UpdateCheckResult.Error(message = msg, isNetworkError = (statusCode == -1))
+        }
+
+        val releases = try {
+            parseReleases(body)
+        } catch (e: Exception) {
+            return UpdateCheckResult.Error("Failed to parse release information: ${e.message}", cause = e)
+        }
+
+        val latest = findNewestRelease(releases, channel)
+            ?: return UpdateCheckResult.UpToDate(effCurrent, effCurrent, channel)
+
+        val cleanTag = latest.tag_name.ifBlank { latest.name }.trim()
+        val latestVer = cleanTag.removePrefix("v").removePrefix("V")
+        val isPre = latest.prerelease || splitVersion(cleanTag).second.isNotEmpty()
+
+        return if (compareVersions(cleanTag, effCurrent) > 0) {
+            Logger.info("UPDATE", "Newer version available: $cleanTag (current $effCurrent, channel ${channel.displayName})")
+            val installer = UpdateAssetResolver.resolveInstallerAsset(latest.assets)
+            val checksum = UpdateAssetResolver.resolveChecksumAsset(latest.assets)
+
+            val info = ReleaseInfo(
+                version = latestVer,
+                releaseName = latest.name.ifBlank { cleanTag },
+                releaseNotes = latest.body,
+                htmlUrl = latest.html_url.ifBlank { config?.downloadUrl ?: DEFAULT_DOWNLOAD_URL },
+                isPreRelease = isPre,
+                publishedAt = latest.published_at,
+                installerAsset = installer,
+                checksumAsset = checksum
+            )
+            UpdateCheckResult.UpdateAvailable(info, effCurrent)
+        } else {
+            Logger.info("UPDATE", "Already up to date (current $effCurrent, latest $latestVer, channel ${channel.displayName})")
+            UpdateCheckResult.UpToDate(latestVer, effCurrent, channel)
+        }
     }
 
     /**
-     * Through OkHttp and the shared TLS context like every download, and through the configured proxy.
-     * Never trust-all and never a login prompt: it is a background fetch the user did not start.
+     * Parses release JSON response into a list of [GithubRelease].
      */
-    private fun fetchReleases(url: String): String? {
-        val config = AppContext.config
-        val client = HttpClientImpl(
-            1, config.toProxy(), readTimeoutSeconds = 10,
-            proxyUser = config.proxyUser, proxyPassword = config.proxyPass,
-        )
-        try {
-            // GitHub's API rejects requests without a User-Agent.
-            val headers = mapOf(
-                "User-Agent" to listOf("XDM-Update-Checker"),
-                "Accept" to listOf("application/vnd.github+json"),
-            )
-            return client.getResponse(url, headers, null, null).getOrThrow().use { response ->
-                if (response.statusCode !in 200..299) {
-                    Logger.info("UPDATE", "Update check HTTP ${response.statusCode}")
-                    null
+    fun parseReleases(body: String): List<GithubRelease> {
+        val element = json.parseToJsonElement(body)
+        val items: List<JsonElement> = if (element is JsonArray) element else listOf(element)
+        return items.mapNotNull { runCatching { json.decodeFromJsonElement<GithubRelease>(it) }.getOrNull() }
+    }
+
+    /**
+     * Selects the newest release for the specified [channel].
+     * Drafts are always ignored.
+     * On [UpdateChannel.STABLE], pre-releases are filtered out.
+     */
+    fun findNewestRelease(releases: List<GithubRelease>, channel: UpdateChannel): GithubRelease? {
+        return releases
+            .filterNot { it.draft }
+            .filter { release ->
+                val tag = release.tag_name.ifBlank { release.name }.trim()
+                if (tag.isEmpty()) return@filter false
+                if (channel == UpdateChannel.STABLE) {
+                    !release.prerelease && splitVersion(tag).second.isEmpty()
                 } else {
-                    response.inputStream.readBytes().decodeToString()
+                    true
                 }
             }
+            .maxWithOrNull { a, b ->
+                val tagA = a.tag_name.ifBlank { a.name }.trim()
+                val tagB = b.tag_name.ifBlank { b.name }.trim()
+                compareVersions(tagA, tagB)
+            }
+    }
+
+    /**
+     * Preserved for legacy callers and tests: picks highest versioned release regardless of channel.
+     */
+    internal fun newestRelease(body: String): ReleaseVersion? {
+        val releases = try { parseReleases(body) } catch (_: Exception) { return null }
+        val newest = findNewestRelease(releases, UpdateChannel.BETA) ?: return null
+        val tag = newest.tag_name.ifBlank { newest.name }.trim()
+        return ReleaseVersion(tag, newest.prerelease || splitVersion(tag).second.isNotEmpty())
+    }
+
+    /**
+     * Executes GET request to GitHub API returning status code and response body.
+     */
+    private fun fetchReleasesWithStatus(url: String): Pair<Int, String?> {
+        val client = try {
+            val config = AppContext.config
+            HttpClientImpl(
+                1, config.toProxy(), readTimeoutSeconds = 12,
+                proxyUser = config.proxyUser, proxyPassword = config.proxyPass
+            )
+        } catch (_: Throwable) {
+            HttpClientImpl(1, null, readTimeoutSeconds = 12)
+        }
+
+        return try {
+            val headers = mapOf(
+                "User-Agent" to listOf("XDM-Update-Checker"),
+                "Accept" to listOf("application/vnd.github+json")
+            )
+            val responseResult = client.getResponse(url, headers, null, null)
+            val response = responseResult.getOrThrow()
+            response.use { res ->
+                val status = res.statusCode
+                val body = if (status in 200..299) res.inputStream.readBytes().decodeToString() else null
+                Pair(status, body)
+            }
+        } catch (e: Exception) {
+            Logger.error("UPDATE", "Failed to fetch releases from $url", e)
+            Pair(-1, null)
         } finally {
-            client.close()
+            runCatching { client.close() }
         }
     }
 

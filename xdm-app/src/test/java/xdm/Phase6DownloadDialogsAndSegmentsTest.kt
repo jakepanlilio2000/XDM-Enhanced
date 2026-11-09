@@ -112,6 +112,9 @@ class Phase6DownloadDialogsAndSegmentsTest : DownloadManagerTestBase() {
 
         // 5. Test Pause / Resume controls
         wnd.btnPauseResume.doClick()
+        // In Phase B3, clicking Pause enters the pending "Pausing..." state until backend confirmation
+        assertEquals("Pausing...", wnd.btnPauseResume.text)
+        wnd.showPaused()
         assertEquals(text("MENU_RESUME"), wnd.btnPauseResume.text)
 
         // In real app, the engine transitions rec.status to PAUSED upon pause
@@ -119,6 +122,8 @@ class Phase6DownloadDialogsAndSegmentsTest : DownloadManagerTestBase() {
         appDB.update(recHttp)
 
         wnd.btnPauseResume.doClick()
+        assertEquals("Resuming...", wnd.btnPauseResume.text)
+        wnd.showDownloading()
         assertEquals(text("MENU_PAUSE"), wnd.btnPauseResume.text)
 
         wnd.dispose()

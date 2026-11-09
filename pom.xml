@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>xdm</groupId>
     <artifactId>xdm</artifactId>
-    <version>1.0.0-beta.3</version>
+    <version>1.0.0-beta.4</version>
     <packaging>pom</packaging>
     <properties>
         <!-- Tests are skipped by default (install/package stay fast). Run them with -DskipTests=false. -->

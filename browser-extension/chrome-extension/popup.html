@@ -45,6 +45,16 @@
     </div>
   </div>
 
+  <div class="update-banner" id="extUpdateBanner" hidden>
+    <div class="notice ok" style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+      <div>
+        <h2 style="font-size: 12px; margin: 0;">Extension Update Available</h2>
+        <p style="margin: 2px 0 0; font-size: 11.5px;">New release <strong id="extUpdateVersion"></strong> is available on GitHub.</p>
+      </div>
+      <a id="extUpdateBtn" href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases" target="_blank" rel="noopener" style="background: var(--accent); color: white; padding: 4px 10px; border-radius: var(--radius); text-decoration: none; font-size: 11.5px; font-weight: 600; white-space: nowrap;">Update</a>
+    </div>
+  </div>
+
   <div class="popup-quick-actions">
     <button class="quick-action-btn" id="downloadCurrentMediaBtn" type="button" title="Download latest detected media on this page">
       <svg class="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -121,6 +131,7 @@
         <span class="status-dot"></span>
         <span id="connectionText">Connected</span>
       </div>
+      <span class="footer-version" id="footerVersion" title="Extension Version">v3.5.2</span>
       <button class="footer-link-btn" id="openSettingsBtn" type="button">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
           stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">

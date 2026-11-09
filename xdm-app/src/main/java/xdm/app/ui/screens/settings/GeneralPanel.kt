@@ -6,6 +6,8 @@ import xdm.app.I8N
 import xdm.app.ListSelectionMode
 import xdm.app.ui.components.MessageBox
 import xdm.app.ui.components.ThemeManager
+import xdm.app.ui.screens.UpdateDialog
+import xdm.app.update.UpdateChannel
 import xdm.app.utils.RemixIcon
 import xdm.app.utils.SoundPlayer
 import xdm.app.utils.chooseFile
@@ -91,6 +93,14 @@ class GeneralPanel : SettingsPanel() {
         maximumSize = preferredSize
     }
 
+    private val tglAutoUpdate = SettingsToggle()
+    private val channelModel = DefaultComboBoxModel<String>(arrayOf("Beta / Pre-release", "Stable"))
+    private val cmbUpdateChannel = rounded(JComboBox(channelModel)).apply {
+        preferredSize = Dimension(190.px, preferredSize.height)
+        maximumSize = preferredSize
+    }
+    private val tglUpdateNotifications = SettingsToggle()
+
     init {
         layout = BoxLayout(this, BoxLayout.Y_AXIS)
 
@@ -154,6 +164,22 @@ class GeneralPanel : SettingsPanel() {
                 ),
             )
         )
+        add(settingsGap())
+
+        add(
+            settingsSection(
+                I8N.text("SETTINGS_SEC_UPDATES"),
+                settingsRow(I8N.text("AUTO_UPDATE_CHECK"), I8N.text("AUTO_UPDATE_CHECK_SUB"), tglAutoUpdate),
+                settingsRow(I8N.text("UPDATE_CHANNEL"), I8N.text("UPDATE_CHANNEL_SUB"), cmbUpdateChannel),
+                settingsRow(I8N.text("UPDATE_NOTIFICATIONS"), I8N.text("UPDATE_NOTIFICATIONS_SUB"), tglUpdateNotifications),
+                settingsRow(
+                    I8N.text("CHECK_FOR_UPDATES_NOW"), I8N.text("CHECK_FOR_UPDATES_NOW_SUB"),
+                    settingsButton(I8N.text("BTN_CHECK_UPDATES_NOW")) {
+                        UpdateDialog.open(this, manualCheck = true)
+                    }
+                ),
+            )
+        )
 
         add(Box.createVerticalGlue())
     }
@@ -173,6 +199,9 @@ class GeneralPanel : SettingsPanel() {
         cmbUiScale.selectedIndex = AppConfig.UI_SCALES.indexOf(config.uiScale).takeIf { it >= 0 } ?: AppConfig.UI_SCALES.indexOf(100)
         optListMode.selected = config.listSelectionMode
         languages.indexOfFirst { it.code == config.lang }.takeIf { it >= 0 }?.let { cmbLang.selectedIndex = it }
+        tglAutoUpdate.isSelected = config.autoUpdateCheck
+        cmbUpdateChannel.selectedIndex = if (config.updateChannel.equals("stable", ignoreCase = true)) 1 else 0
+        tglUpdateNotifications.isSelected = config.updateNotificationsEnabled
     }
 
     fun save() {
@@ -189,6 +218,9 @@ class GeneralPanel : SettingsPanel() {
         AppConfig.UI_SCALES.getOrNull(cmbUiScale.selectedIndex)?.let { config.uiScale = it }
         config.listSelectionMode = optListMode.selected
         languages.getOrNull(cmbLang.selectedIndex)?.let { config.lang = it.code }
+        config.autoUpdateCheck = tglAutoUpdate.isSelected
+        config.updateChannel = if (cmbUpdateChannel.selectedIndex == 1) "stable" else "beta"
+        config.updateNotificationsEnabled = tglUpdateNotifications.isSelected
     }
 
     private fun updateSoundEnabledState() {

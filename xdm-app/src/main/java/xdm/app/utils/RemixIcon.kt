@@ -70,6 +70,8 @@ enum class RemixIcon(val codepoint: Int) {
     IMAGE_LINE(0xee48),
     INSTALL_FILL(0xee67),
     LIST_CHECK_2(0xeeb9),
+    MAGNET_FILL(0xef09),
+    MAGNET_LINE(0xef0a),
     MENU_LINE(0xef3e),
     MICROSOFT_FILL(0xef57),
     MICROSOFT_LINE(0xef58),

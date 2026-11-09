@@ -40,13 +40,18 @@ object DesktopUiSink : UiSink {
 
     override fun downloadUpdated(id: Long) = app.updateDownloadInView(id)
 
-    override fun downloadRemoved(id: Long, position: Int) = app.deleteDownloadInView(position)
+    override fun downloadRemoved(id: Long, position: Int) {
+        app.deleteDownloadInView(position)
+        app.hideProgressWindow(id)
+    }
 
     override fun downloadsRemoved() = app.downloadsRemovedInView()
 
     override fun showProgress(id: Long, fileName: String) = app.showProgressWindow(id, fileName)
 
     override fun hideProgress(id: Long) = app.hideProgressWindow(id)
+
+    override fun downloadPaused(id: Long) = app.downloadPaused(id)
 
     override fun progress(
         id: Long, fileName: String?, downloaded: Long, size: Long, speed: Float, eta: Long, progress: Int,

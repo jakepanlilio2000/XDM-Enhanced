@@ -45,6 +45,8 @@ class DownloadManagerRefreshLinkTest : DownloadManagerTestBase() {
         , "download never paused")
         val downloadedWhenPaused = appDB.getById(task.id)!!.downloaded
         assertTrue(downloadedWhenPaused > 0, "nothing was downloaded before the pause")
+        // Allow in-flight cancelled socket connections to drain before clearing request log
+        Thread.sleep(250)
 
         // The old signed URL and session are dead from here on.
         fileServer.validToken = "new"

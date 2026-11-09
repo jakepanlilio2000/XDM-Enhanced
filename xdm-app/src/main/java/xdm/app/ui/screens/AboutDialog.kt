@@ -17,6 +17,7 @@ import xdm.app.utils.px
 import xdm.app.utils.scaledInsets
 import xdm.app.utils.shownWindow
 import xdm.app.utils.windowIconImages
+import xdm.torrent.TorrentNativeLoader
 import java.awt.*
 import java.awt.datatransfer.StringSelection
 import java.awt.event.KeyEvent
@@ -47,8 +48,8 @@ class AboutDialog constructor(owner: Window?) : JDialog(owner) {
         isModal = false
         isResizable = false
 
-        val rawVersion = UpdateChecker.loadConfig()?.currentVersion ?: "1.0.0-beta.3"
-        val version = rawVersion.ifBlank { "1.0.0-beta.3" }
+        val rawVersion = UpdateChecker.loadConfig()?.currentVersion ?: "1.0.0-beta.4"
+        val version = rawVersion.ifBlank { "1.0.0-beta.4" }
         val isPreRelease = version.contains("beta", ignoreCase = true) || version.contains("alpha", ignoreCase = true) || version.contains("rc", ignoreCase = true)
         val releaseChannel = if (isPreRelease) "Beta Channel" else "Stable Channel"
 
@@ -300,15 +301,13 @@ class AboutDialog constructor(owner: Window?) : JDialog(owner) {
             isOpaque = false
         }
 
-        val libtorrentVer = try {
-            org.libtorrent4j.LibTorrent.version()
+        val (libtorrentVer, libtorrent4jVer) = try {
+            if (!TorrentNativeLoader.isLoaded) {
+                TorrentNativeLoader.load()
+            }
+            Pair(TorrentNativeLoader.version, TorrentNativeLoader.LIBTORRENT4J_VERSION)
         } catch (_: Throwable) {
-            "2.x"
-        }
-        val libtorrent4jVer = try {
-            org.libtorrent4j.LibTorrent.libtorrent4jVersion()
-        } catch (_: Throwable) {
-            "2.1.0"
+            Pair("2.x", TorrentNativeLoader.LIBTORRENT4J_VERSION)
         }
 
         val javaVer = System.getProperty("java.version") ?: "Unknown"

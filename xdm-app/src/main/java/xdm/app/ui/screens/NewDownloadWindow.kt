@@ -22,6 +22,7 @@ import xdm.app.utils.scaledInsets
 import xdm.app.utils.scaledSize
 import xdm.app.utils.validateURL
 import xdm.app.utils.windowIconImages
+import xdm.core.downloaders.DownloadType
 import xdm.core.downloaders.HttpDownloadTaskInfo
 import xdm.core.util.*
 import xdm.core.util.CoreUtils.uniqueId
@@ -45,8 +46,8 @@ import kotlin.math.max
  * the tray, and on native Wayland, where always-on-top does nothing, the taskbar is how to find it.
  */
 class NewDownloadWindow : JDialog(null as Window?) {
-    private lateinit var txtUrl: JTextField
-    private lateinit var txtFileName: JTextField
+    lateinit var txtUrl: JTextField
+    lateinit var txtFileName: JTextField
     val txtDescription = JTextField().apply {
         putClientProperty(FlatClientProperties.STYLE, "arc: 10")
         toolTipText = "Optional description or tags for this download"
@@ -55,8 +56,8 @@ class NewDownloadWindow : JDialog(null as Window?) {
     private lateinit var btnLater: JButton
     private lateinit var lblIgnore: JLabel
     lateinit var spnSegments: JSpinner
-    private lateinit var picker: DestinationPicker
-    private lateinit var lblFileInfo: JLabel
+    lateinit var picker: DestinationPicker
+    lateinit var lblFileInfo: JLabel
     private lateinit var originalFileName: String
     private lateinit var lbAddress: JLabel
     private lateinit var storageStatus: StorageStatusLabel
@@ -152,7 +153,10 @@ class NewDownloadWindow : JDialog(null as Window?) {
         }
         contentPane.add(lblFileInfo, gbcLblFileInfo)
 
-        picker = DestinationPicker(this, onChanged = { updateStorageStatus() })
+        picker = DestinationPicker(this, onChanged = {
+            updateCategoryAndFileIcon()
+            updateStorageStatus()
+        })
         picker.addTo(contentPane, firstRow = 2)
 
         // Description row (Reference B)
@@ -600,6 +604,7 @@ class NewDownloadWindow : JDialog(null as Window?) {
         // A browser capture is preselected by the category rules; an address typed by hand starts at None.
         picker.capture = taskInfo != null
         picker.reset(txtFileName.text, txtUrl.text, taskInfo?.origin)
+        updateCategoryAndFileIcon()
         updateStorageStatus()
         // Sized last: the ignore link is only part of the layout for browser-captured downloads.
         this.adjustSize()
@@ -607,17 +612,17 @@ class NewDownloadWindow : JDialog(null as Window?) {
         this.isVisible = true
     }
 
-    /** Picks the file-type glyph, the one the row will show. */
-    private fun updateFileIcon() {
+    /** Picks the category/file-type glyph and theme color. */
+    private fun updateCategoryAndFileIcon() {
         val name = txtFileName.text.orEmpty()
-        val glyph = CategoryStyle.glyphForFile(name)
-        lblFileInfo.icon = createIcon(glyph, 40, Color.GRAY)
+        val catId = if (::picker.isInitialized) picker.selectedCategory?.id else null
+        lblFileInfo.icon = CategoryStyle.createCategoryIcon(catId, name, DownloadType.Http, size = 40)
     }
 
     /** The name picks the icon and, for a capture not yet touched, re-runs the category rules. */
     private fun fileNameChanged() {
-        updateFileIcon()
         if (::picker.isInitialized) picker.fileNameChanged(txtFileName.text)
+        updateCategoryAndFileIcon()
         updateStorageStatus()
     }
 
@@ -632,6 +637,7 @@ class NewDownloadWindow : JDialog(null as Window?) {
             if (::picker.isInitialized) {
                 picker.urlChanged(text)
             }
+            updateCategoryAndFileIcon()
         } catch (err: Exception) {
             Logger.info(err)
         }

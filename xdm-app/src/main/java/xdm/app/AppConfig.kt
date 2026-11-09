@@ -90,6 +90,9 @@ interface IAppConfig : EngineConfig {
      * start at login doesn't announce the same update again. Blank when none was announced.
      */
     var notifiedUpdateVersion: String
+    var autoUpdateCheck: Boolean
+    var updateChannel: String
+    var updateNotificationsEnabled: Boolean
     override var speedLimiterEnabled: Boolean
     override var speedLimit: Int
     var startDownloadAutomatically: Boolean
@@ -283,6 +286,9 @@ private const val F_COMPLETION_ACTION = 80
 private const val F_SHOW_CATEGORIES_SIDEBAR = 81
 private const val F_SIDEBAR_DIVIDER_LOCATION = 82
 private const val F_TABLE_HIDDEN_COLUMNS = 83
+private const val F_AUTO_UPDATE_CHECK = 84
+private const val F_UPDATE_CHANNEL = 85
+private const val F_UPDATE_NOTIFICATIONS = 86
 
 // Inside F_POST_DOWNLOAD_RULES: one F_RULE record per rule, in order.
 private const val F_RULE = 1
@@ -485,6 +491,10 @@ class AppConfig(private val configDir: String) : IAppConfig {
     override var showCategoriesSidebar: Boolean = true
     override var sidebarDividerLocation: Int = 210
 
+    override var autoUpdateCheck: Boolean = true
+    override var updateChannel: String = "beta"
+    override var updateNotificationsEnabled: Boolean = true
+
     override fun applyAuthConfig() {
         Authenticator.setDefault(DefaultAuthenticator())
     }
@@ -607,6 +617,9 @@ class AppConfig(private val configDir: String) : IAppConfig {
         w.bool(F_SHOW_CATEGORIES_SIDEBAR, showCategoriesSidebar)
         w.int(F_SIDEBAR_DIVIDER_LOCATION, sidebarDividerLocation)
         w.string(F_TABLE_HIDDEN_COLUMNS, tableHiddenColumns)
+        w.bool(F_AUTO_UPDATE_CHECK, autoUpdateCheck)
+        w.string(F_UPDATE_CHANNEL, updateChannel)
+        w.bool(F_UPDATE_NOTIFICATIONS, updateNotificationsEnabled)
         w.raw(unknownFields)
     }
 
@@ -710,6 +723,9 @@ class AppConfig(private val configDir: String) : IAppConfig {
                 F_SHOW_CATEGORIES_SIDEBAR -> showCategoriesSidebar = r.bool()
                 F_SIDEBAR_DIVIDER_LOCATION -> sidebarDividerLocation = r.int()
                 F_TABLE_HIDDEN_COLUMNS -> tableHiddenColumns = r.string()
+                F_AUTO_UPDATE_CHECK -> autoUpdateCheck = r.bool()
+                F_UPDATE_CHANNEL -> updateChannel = r.string().ifBlank { "beta" }
+                F_UPDATE_NOTIFICATIONS -> updateNotificationsEnabled = r.bool()
                 else -> unknown.raw(r.rawField())
             }
         }

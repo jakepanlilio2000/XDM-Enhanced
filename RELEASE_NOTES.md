@@ -1,69 +1,50 @@
-# XDM Enhanced v1.0.0-beta.3
+# XDM Enhanced v1.0.0-beta.4
 
-Third beta release of **XDM Enhanced** — an independent, open-source download manager forked from Xtreme Download Manager (XDM). It pairs high-speed multi-connection segmented HTTP/HTTPS downloading and streaming video capture with native BitTorrent and magnet support, modern FlatLaf dynamic theming, automated post-download rules, download completion power controls, network optimization presets, and companion browser extensions.
+Fourth beta release of **XDM Enhanced** — an independent, open-source download manager forked from Xtreme Download Manager (XDM). It pairs high-speed multi-connection segmented HTTP/HTTPS downloading and streaming video capture with native BitTorrent and magnet support, modern FlatLaf dynamic theming, automated post-download rules, download completion power controls, network optimization presets, and companion browser extensions.
 
 ---
 
 ## Release Highlights
 
-- **Dedicated Language Settings Tab:** Added a dedicated tab in Settings supporting live switching across all 32 bundled languages with immediate UI refresh and persistent locale storage.
-- **Segmented Download Progress Bar:** Real-time multi-color segmented progress bar visualizer showing active HTTP connections, downloaded chunk byte boundaries, active transfer rates, and connection counts.
-- **Table View vs. Classic Cards View:** Distinct dual layout presentation modes accessible via toolbar toggle and Settings, offering a high-density tabular view with sorting and a nostalgic card-based view.
-- **Network Optimizer:** Quick connection presets (High Speed LAN / Fiber, Broadband / 4G, Slow / Mobile, or Custom) adjusting segment limits, connection timeouts, and buffer sizes.
-- **Refresh Download Link / URL:** Update expired download links with pre-flight byte-range and content-length validation before updating active or paused download tasks.
-- **Magnet Metadata Naming:** Dynamic resolution of torrent names upon magnet metadata retrieval, replacing placeholder names in real time across the UI, persistent storage, and disk paths.
-- **Existing Torrent Data Detection & Piece Recheck:** Automatic detection of existing files when adding torrents, prompting the user for verification and leveraging `libtorrent` fastresume piece hashing.
-- **Wayland & Linux Platform Settings:** Advanced settings tab providing native Wayland toolkit flags and window decoration management on Linux desktops.
-- **Redesigned About Dialog:** Professional FlatLaf application info window featuring version metadata, upstream attribution, license details, and a one-click GitHub star button.
+- **Fork-Specific Application Updater:** Dedicated in-app auto-update discovery querying releases exclusively from the GitHub fork (`jakepanlilio2000/XDM-Enhanced`). Supports both **Stable** and **Beta (Prerelease)** channels, Semantic Versioning comparison, in-app download progress tracking, cancellation, and cryptographic SHA-256 integrity verification before launching installers.
+- **Persistent Progress Dialog on Pause:** Pausing a download now keeps the progress dialog visible and open. Accurately indicates transfer transitions (`Downloading` -> `Pausing...` -> `Paused` -> `Resuming...` -> `Completed`), retains the confirmed progress percentage and byte count, stops showing stale speeds, and provides an immediate Resume button. Closing the progress window safely dismisses the dialog without canceling the download.
+- **Native Windows Default Apps Navigation:** Fixed the "Open Windows Settings" action in BitTorrent settings launching a web browser. Now natively executes Windows shell protocol navigation (`start "" "ms-settings:defaultapps"`) to directly open Windows Default Apps, with debounce rate-limiting and legacy Control Panel fallback.
+- **Categorized File & Dialog Icons:** Comprehensive category vector icon set across download dialogs. Add Download and Progress windows render distinct, theme-adaptive icons for Documents, Compressed, Music, Videos, Programs, Images, Torrents, and Other files, with dynamic icon updates when changing URLs, filenames, or categories.
+- **Browser Extension Update Integration:** Overhauled Chromium (Manifest V3) and Firefox (Manifest V2) extension update manifests and discovery endpoints. Added in-extension notifications on popup and settings pages with direct links to verified GitHub releases, while preserving localhost loopback IPC security without remote code execution.
 
 ---
 
-## Added Features & Improvements
+## Changes & Fixes
 
-### User Interface & Layout
-- **Dedicated Language Tab:**
-  - Placed alongside General, Network, and Advanced tabs in Settings.
-  - Live language switcher with instant application of translated strings across open windows.
-  - Preserves user language selection in `~/.xdm-enhanced/xdm-settings.json`.
-- **View Mode Switching:**
-  - High-density **Table View** with sortable columns (Name, Size, Progress, Speed, Status, ETA).
-  - Nostalgic **Classic Cards View** with item cards, progress rings, and action buttons.
-  - Toolbar toggle button and Settings preference for immediate view toggling.
-- **Segmented Download Progress Visualizer:**
-  - Multi-segmented visual bar displaying active chunk download boundaries in real time.
-  - Connection metric pill counters for active worker threads and segment speed distribution.
-  - Seamless fallback for single-connection downloads or streaming captures.
-- **Redesigned About Dialog:**
-  - Modern FlatLaf card styling with application icon and build metadata.
-  - Upstream project acknowledgment and licensing disclosures (GPL-3.0).
-  - Interactive "Star on GitHub" button opening `https://github.com/jakepanlilio2000/XDM-Enhanced`.
+### Added
+- **Native Application Updater (`UpdateDialog`, `UpdateChecker`):**
+  - Configurable update checks in Settings > General.
+  - Channel selector: Stable vs. Beta.
+  - Markdown-rendered release notes display.
+  - Platform/architecture asset matching.
+  - Automated SHA-256 checksum verification against published release manifests.
+- **Browser Extension Update Feeds:**
+  - `chrome-updates.xml` for enterprise-managed Chromium deployments.
+  - `updates.json` for self-hosted Firefox distributions.
+  - Synchronized desktop-extension version compatibility reporting.
 
-### BitTorrent Engine
-- **Magnet Metadata Resolution:**
-  - Replaces generic "Magnet Download" placeholder name once `.torrent` metadata is resolved from the DHT/swarm.
-  - Sanitizes filesystem characters and updates UI tables, card views, and persistent task state.
-- **Existing Torrent Data Detection & Recheck:**
-  - Proactively checks destination directories for existing payload files.
-  - Prompts user to perform full piece hash verification using `libtorrent`'s native piece-checking engine.
-  - Reuses valid pieces and repairs corrupt sectors without redownloading verified data.
+### Fixed
+- **Download Progress Window Closure on Pause:** Fixed issue where pausing an active transfer prematurely disposed the progress window.
+- **BitTorrent Windows Settings Button:** Fixed button launching web browser instead of opening `ms-settings:defaultapps`.
+- **Localization Warning:** Added missing `CAT_IMAGES=Images` entry to `en.txt` to eliminate missing translation warnings.
+- **Loopback Socket Test Draining:** Added socket drain delay in refresh link tests to eliminate race conditions during heavy parallel test execution.
 
-### Download Engine & Networking
-- **Network Optimizer Presets:**
-  - **High Speed (LAN / Fiber):** 32 max segments, 30s timeout, 128KB buffer.
-  - **Broadband / 4G:** 16 max segments, 60s timeout, 64KB buffer.
-  - **Slow / Mobile:** 8 max segments, 120s timeout, 32KB buffer.
-  - **Custom:** Full manual control over segment count, timeouts, and buffer sizes.
-- **Download Link Refresh:**
-  - Dedicated "Refresh Link" action for interrupted or expired downloads.
-  - Validates byte ranges and file length against the original task before resuming.
-- **Automatic File Categorization:**
-  - Restored category sidebar with Document, Music, Video, Program, and Archive groupings.
-  - Automatically categorizes downloads by file extension into user-configurable destination folders.
+### Improved
+- **Download Category Styling:** Added image extensions (`.png`, `.jpg`, `.webp`, `.svg`, etc.) and `.torrent` to `CategoryStyle`.
+- **DPI-Scaled Category Badges:** 36px icon badges and display labels in `ProgressWindow` for HTTP and BitTorrent downloads.
+- **Dropdown Category Icons:** Category comboboxes in `NewDownloadWindow` and `NewTorrentDownloadWindow` display scalable category icons next to each option.
 
-### Linux & Platform Integration
-- **Wayland Settings:**
-  - UI toggles for Wayland environment parameters (`-Dawt.useSystemAAFontSettings=on`, `-Dsun.java2d.opengl=true`).
-  - Safe desktop environment detection ensuring options are presented cleanly across platforms.
+---
+
+## Known Issues
+
+- **Unsigned Firefox Add-ons:** Standard Firefox release channels require unlisted Mozilla AMO signing (`web-ext sign`) for permanent `.xpi` add-on installation. Unsigned extensions can be loaded as temporary add-ons via `about:debugging` or permanently on Firefox Developer Edition/Nightly with `xpinstall.signatures.required = false`.
+- **Consumer Chrome Extension Loading:** Google Chrome consumer builds require Developer Mode to load unpacked `.zip` extension folders from outside the Chrome Web Store.
 
 ---
 
@@ -71,11 +52,12 @@ Third beta release of **XDM Enhanced** — an independent, open-source download 
 
 | Asset | Size | SHA-256 Checksum |
 |---|---|---|
-| `XDM-Enhanced-Setup-v1.0.0-beta.3-win-x64.exe` | 64,246,627 bytes | `359a0c1ed0b44464d4a199487e76c1c00cb91726e4ff02c78a5d3ecb65b51473` |
-| `XDM-Enhanced-v1.0.0-beta.3-windows-x64.zip` | 75,026,211 bytes | `0c1d437bc01d69e05f4081530cb9a5ac1b630085551e73e672e21f6fae890b7b` |
-| `xdm-app-1.0.0-beta.3.jar` | 96,637,276 bytes | `cba2726d8df15d312244de66acb5ecf91f247514abaf99f38c9ba696c7401cc8` |
-| `XDM-Enhanced-Extension-Chromium-v1.0.0-beta.3.zip` | 84,171 bytes | `df7fb949f395a7219c270ab45c7c15040b670f1fc8b3c6bfe50004c1273f234e` |
-| `XDM-Enhanced-Extension-Firefox-v1.0.0-beta.3.zip` | 80,353 bytes | `c331e30bbbd5bd61b29a212ee66059c9bcebc74135b01c129753159a41333c9a` |
+| `XDM-Enhanced-Setup-v1.0.0-beta.4-win-x64.exe` | 63,548,724 bytes | `c31dc1c69597e7656b774162bee25ae220b38b6dd793c4d9854b9c1844ebb7eb` |
+| `XDM-Enhanced-v1.0.0-beta.4-windows-x64.zip` | 74,341,547 bytes | `eccb8cd7e63ab1b41eb701dffe42a2aefd28e8b8dc646a3807175c8cd1dfacdc` |
+| `xdm-app-1.0.0-beta.4.jar` | 94,179,254 bytes | `34adba46b03ac7d3cb4bad78e87b11ab6711db2b62674a733292c376b29d2c55` |
+| `XDM-Enhanced-Extension-Chromium-v1.0.0-beta.4.zip` | 87,827 bytes | `b39903ea750e608b791693dde1ed07d846d27ed5dc7778038fbeba7bfb14bf19` |
+| `XDM-Enhanced-Extension-Firefox-v1.0.0-beta.4.zip` | 84,027 bytes | `2a7b5ad65015412e32783a607f694776ccf408cdce55a385d31840728e95e93f` |
+| `XDM-Enhanced-Extension-Firefox-v1.0.0-beta.4.xpi` | 84,027 bytes | `2a7b5ad65015412e32783a607f694776ccf408cdce55a385d31840728e95e93f` |
 | `SHA256SUMS.txt` | | Included in release |
 
 ---

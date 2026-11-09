@@ -5,10 +5,10 @@ import xdm.app.AppContext
 import xdm.app.I8N.text
 import xdm.app.ui.screens.AboutDialog
 import xdm.app.ui.screens.SettingsWindow
+import xdm.app.ui.screens.UpdateDialog
 import xdm.app.utils.RemixIcon
 import xdm.app.update.UpdateChecker
 import xdm.app.utils.SingleWindows
-import xdm.app.utils.UPDATE_CHECK_PAGE_URL
 import xdm.app.utils.WEBSITE_HELP_URL
 import xdm.app.utils.WEBSITE_URL
 import xdm.app.utils.createIcon
@@ -224,10 +224,7 @@ class AppToolBar(
                 }
 
                 "MENU_UPDATE" -> {
-                    val version = UpdateChecker.loadConfig()?.currentVersion
-                    openInDefaultBrowser(
-                        if (version != null) "$UPDATE_CHECK_PAGE_URL?v=$version" else "$WEBSITE_URL/download/"
-                    )
+                    UpdateDialog.open(SwingUtilities.windowForComponent(toolbar), manualCheck = true)
                 }
 
                 "MENU_HELP_SUP" -> {

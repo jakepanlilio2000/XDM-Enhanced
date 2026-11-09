@@ -1109,3 +1109,56 @@ body {
 .keyword-chip .chip-remove:hover {
     color: #ef4444;
 }
+
+/* ---- Extension Updates & Diagnostics ---- */
+.diag-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.diag-item {
+    background: var(--bg-subtle);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.diag-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+.diag-value {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    word-break: break-all;
+}
+
+.footer-version {
+    font-size: 11px;
+    color: var(--text-muted);
+    opacity: 0.85;
+    margin-left: auto;
+    margin-right: 8px;
+    white-space: nowrap;
+}
+
+.footer-version.has-update {
+    color: var(--accent);
+    font-weight: 600;
+    opacity: 1;
+}
+
+.ext-update-card {
+    border-left: 3px solid var(--accent);
+}
+

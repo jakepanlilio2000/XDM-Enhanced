@@ -1,6 +1,7 @@
 package xdm.app.ui.screens.settings
 
 import xdm.app.AppContext
+import xdm.app.ui.components.MessageBox
 import xdm.app.utils.px
 import xdm.app.utils.scaledSize
 import xdm.app.utils.win.WindowsAssociations
@@ -13,6 +14,7 @@ import javax.swing.JComponent
 import javax.swing.JLabel
 import javax.swing.JSpinner
 import javax.swing.SpinnerNumberModel
+import javax.swing.SwingUtilities
 
 class BitTorrentPanel : SettingsPanel() {
 
@@ -79,7 +81,16 @@ class BitTorrentPanel : SettingsPanel() {
     private val tglMagnet = SettingsToggle()
     private val tglTorrent = SettingsToggle()
     private val btnDefaultApps = JButton("Open Windows Settings").apply {
-        addActionListener { WindowsAssociations.openDefaultAppsSettings() }
+        addActionListener {
+            val ok = WindowsAssociations.openDefaultAppsSettings()
+            if (!ok) {
+                MessageBox.show(
+                    SwingUtilities.getWindowAncestor(this@BitTorrentPanel),
+                    "Windows Settings",
+                    "Unable to open Windows Default Apps settings. Please open Settings > Apps > Default apps manually."
+                )
+            }
+        }
     }
 
     init {

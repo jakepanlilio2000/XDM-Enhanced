@@ -9,7 +9,7 @@
         }
     },
     "manifest_version": 2,
-    "version": "1.1.2",
+    "version": "1.1.3",
     "description": "Send downloads, web videos and links from Firefox to XDM Enhanced. Fast, modern open-source download manager.",
     "homepage_url": "https://github.com/jakepanlilio2000/XDM-Enhanced",
     "permissions": [
@@ -45,6 +45,7 @@
         "gecko": {
             "id": "xdm-enhanced-browser-monitor@jakepanlilio2000.github.io",
             "strict_min_version": "109.0",
+            "update_url": "https://raw.githubusercontent.com/jakepanlilio2000/XDM-Enhanced/master/browser-extension/updates.json",
             "data_collection_permissions": {
                 "required": [
                     "none"

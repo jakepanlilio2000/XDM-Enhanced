@@ -285,15 +285,16 @@ class DestinationPicker(
         }
     }
 
-    /** Shows each category with its color dot, as the sidebar does; None with the neutral one. */
+    /** Shows each category with its proper category icon and theme color. */
     private class CategoryRenderer : DefaultListCellRenderer() {
         override fun getListCellRendererComponent(
             list: JList<*>?, value: Any?, index: Int, isSelected: Boolean, cellHasFocus: Boolean
         ): Component {
             val c = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus)
             if (c is JLabel) {
-                c.icon = CategoryDotIcon(AppTheme.tileHue((value as? Item)?.category))
-                c.iconTextGap = 4
+                val cat = (value as? Item)?.category
+                c.icon = CategoryStyle.createCategoryIcon(cat?.id, size = 16)
+                c.iconTextGap = 6.px
             }
             return c
         }

@@ -4,6 +4,7 @@ import com.formdev.flatlaf.FlatClientProperties
 import xdm.app.AppContext
 import xdm.app.I8N.text
 import xdm.app.ui.components.AppMenuHandler
+import xdm.app.ui.components.CategoryStyle
 import xdm.app.ui.components.CircularProgress
 import xdm.app.ui.components.MessageBox
 import xdm.app.ui.components.SegmentDetailTable
@@ -13,6 +14,7 @@ import xdm.app.utils.FontIcon
 import xdm.app.utils.RemixIcon
 import xdm.app.utils.ScaledEmptyBorder
 import xdm.app.utils.WEBSITE_URL
+import xdm.app.utils.openFileExternal
 import xdm.app.utils.openFolderExternal
 import xdm.app.utils.openInDefaultBrowser
 import xdm.app.utils.px
@@ -20,12 +22,14 @@ import xdm.app.utils.scaledInsets
 import xdm.app.utils.scaledSize
 import xdm.app.utils.windowIconImages
 import xdm.core.downloaders.DownloadError
+import xdm.core.downloaders.DownloadType
 import xdm.core.downloaders.web.SegmentProgress
 import xdm.core.util.FormatHelper.formatSize
 import xdm.core.util.FormatHelper.toLongEta
 import xdm.core.util.Logger
 import xdm.core.util.MovePhase
 import xdm.manager.BatchFileCounts
+import xdm.manager.DbRecord
 import xdm.manager.RecordStatus
 import xdm.manager.getFileFolder
 import xdm.torrent.TorrentProgressSnapshot
@@ -63,6 +67,16 @@ class ProgressWindow(val id: Long) : JFrame() {
 
     val lblFileName = JLabel("---").apply {
         font = font.deriveFont(Font.BOLD, 13f.px)
+    }
+
+    val lblCategoryIcon = JLabel(CategoryStyle.createCategoryIcon(null, size = 36)).apply {
+        border = ScaledEmptyBorder(0, 0, 0, 8)
+        verticalAlignment = SwingConstants.TOP
+    }
+
+    val lblCategory = JLabel("---").apply {
+        font = font.deriveFont(11f.px)
+        foreground = Color.GRAY
     }
 
     val lblUrlOrSource = JLabel("---").apply {
@@ -147,12 +161,29 @@ class ProgressWindow(val id: Long) : JFrame() {
         })
     }
 
+    enum class DialogState {
+        DOWNLOADING,
+        PAUSING,
+        PAUSED,
+        RESUMING,
+        COMPLETED,
+        ERROR
+    }
+
+    var dialogState: DialogState = DialogState.DOWNLOADING
+        private set
+
     var detailsVisible: Boolean = true
         private set
 
     val btnDetailsToggle = JButton(text("DWN_HIDE_DETAILS")).apply {
         font = font.deriveFont(11f.px)
         addActionListener { toggleDetails() }
+    }
+
+    val btnOpenFile = JButton(text("CTX_OPEN_FILE"), FontIcon(RemixIcon.FILE_LINE, 16.px)).apply {
+        isVisible = false
+        addActionListener { openFile() }
     }
 
     val btnPauseResume = JButton(text("MENU_PAUSE"), FontIcon(RemixIcon.PAUSE_CIRCLE_LINE, 16.px)).apply {
@@ -293,16 +324,26 @@ class ProgressWindow(val id: Long) : JFrame() {
         urlPanel.add(lblFileName, uGbc)
 
         uGbc.gridx = 0; uGbc.gridy = 1; uGbc.weightx = 0.0
-        urlPanel.add(JLabel("Source:").apply { font = font.deriveFont(11f.px); foreground = Color.GRAY }, uGbc)
+        urlPanel.add(JLabel("Category:").apply { font = font.deriveFont(11f.px); foreground = Color.GRAY }, uGbc)
         uGbc.gridx = 1; uGbc.gridy = 1; uGbc.weightx = 1.0
-        urlPanel.add(lblUrlOrSource, uGbc)
+        urlPanel.add(lblCategory, uGbc)
 
         uGbc.gridx = 0; uGbc.gridy = 2; uGbc.weightx = 0.0
-        urlPanel.add(JLabel("Save to:").apply { font = font.deriveFont(11f.px); foreground = Color.GRAY }, uGbc)
+        urlPanel.add(JLabel("Source:").apply { font = font.deriveFont(11f.px); foreground = Color.GRAY }, uGbc)
         uGbc.gridx = 1; uGbc.gridy = 2; uGbc.weightx = 1.0
+        urlPanel.add(lblUrlOrSource, uGbc)
+
+        uGbc.gridx = 0; uGbc.gridy = 3; uGbc.weightx = 0.0
+        urlPanel.add(JLabel("Save to:").apply { font = font.deriveFont(11f.px); foreground = Color.GRAY }, uGbc)
+        uGbc.gridx = 1; uGbc.gridy = 3; uGbc.weightx = 1.0
         urlPanel.add(lblDestination, uGbc)
 
-        topBox.add(urlPanel)
+        val headerCard = JPanel(BorderLayout(8.px, 0)).apply {
+            border = ScaledEmptyBorder(2, 2, 2, 2)
+            add(lblCategoryIcon, BorderLayout.WEST)
+            add(urlPanel, BorderLayout.CENTER)
+        }
+        topBox.add(headerCard)
         topBox.add(Box.createVerticalStrut(4.px))
 
         // Transfer statistics grid (Reference A layout)
@@ -361,6 +402,8 @@ class ProgressWindow(val id: Long) : JFrame() {
             add(leftButtons, BorderLayout.WEST)
 
             val rightButtons = Box.createHorizontalBox().apply {
+                add(btnOpenFile)
+                add(Box.createHorizontalStrut(6.px))
                 add(btnPauseResume)
                 add(Box.createHorizontalStrut(6.px))
                 add(btnCancel)
@@ -466,6 +509,13 @@ class ProgressWindow(val id: Long) : JFrame() {
         val rec = AppContext.db.getById(id) ?: return
         lblFileName.text = rec.fileName
         title = "[ ${rec.progress}% ] ${rec.fileName}"
+        lblStat1.text = "${rec.progress}%"
+        progressBar.value = rec.progress
+        progressBar.string = "${rec.progress}%"
+        this.prg.value = rec.progress
+
+        val downloadedStr = if (rec.downloaded > 0) formatSize(rec.downloaded.toDouble()) else "0 B"
+        lblStat2.text = if (rec.size > 0) "Downloaded: $downloadedStr (${rec.progress}%)" else "Downloaded: $downloadedStr"
 
         val defFolder = AppContext.config.defaultDownloadFolder
         val (file, folder) = getFileFolder(rec) ?: (rec.fileName to defFolder)
@@ -479,7 +529,14 @@ class ProgressWindow(val id: Long) : JFrame() {
             if (task != null) {
                 updateTorrentProgress(task.getSnapshot())
             } else {
-                lblUrlOrSource.text = "BitTorrent Transfer"
+                val sourceStr = AppContext.taskInfoDB.getTorrentTask(id)?.sourceUri ?: "BitTorrent Transfer"
+                lblUrlOrSource.text = sourceStr
+                lblUrlOrSource.toolTipText = sourceStr
+                if (rec.status == RecordStatus.PAUSED) {
+                    showPaused()
+                } else if (rec.status == RecordStatus.FINISHED) {
+                    showCompleted()
+                }
             }
         } else {
             val httpTask = AppContext.taskInfoDB.getHttpTask(id)
@@ -491,13 +548,25 @@ class ProgressWindow(val id: Long) : JFrame() {
                 lblUrlOrSource.toolTipText = rec.fileName
             }
             lblResumeCap.text = text("DWN_RESUME_CAPABILITY") + ": " + text("DWN_YES")
+            if (rec.status == RecordStatus.PAUSED) {
+                showPaused()
+            } else if (rec.status == RecordStatus.FINISHED) {
+                showCompleted()
+            } else {
+                updatePauseResumeButton(rec.status)
+            }
         }
 
         if (rec.size > 0) {
             lblFileSize.text = text("DWN_FILE_SIZE") + ": " + formatSize(rec.size.toDouble())
         }
 
-        updatePauseResumeButton(rec.status)
+        updateCategoryDisplay(rec.categoryId, rec.fileName, rec.downloadType)
+    }
+
+    fun updateCategoryDisplay(categoryId: String?, fileName: String? = null, downloadType: DownloadType? = null) {
+        lblCategoryIcon.icon = CategoryStyle.createCategoryIcon(categoryId, fileName ?: lblFileName.text, downloadType, size = 36)
+        lblCategory.text = CategoryStyle.displayNameForCategory(categoryId, downloadType)
     }
 
     private fun updatePauseResumeButton(status: RecordStatus) {
@@ -510,18 +579,186 @@ class ProgressWindow(val id: Long) : JFrame() {
         }
     }
 
+    fun showPausing() {
+        dialogState = DialogState.PAUSING
+        lblStat.text = "Status: Pausing..."
+        btnPauseResume.text = "Pausing..."
+        btnPauseResume.icon = FontIcon(RemixIcon.PAUSE_CIRCLE_LINE, 16.px)
+        btnPauseResume.isEnabled = false
+        btnCancel.isEnabled = true
+        btnHide.isEnabled = true
+    }
+
+    fun showPaused() {
+        dialogState = DialogState.PAUSED
+        lblStat.text = "Status: " + text("STAT_PAUSED")
+        lblStat3.text = "Transfer rate: ---"
+        lblStat4.text = "Time left: ---"
+
+        val rec = AppContext.db.getById(id)
+        val prgVal = rec?.progress ?: progressBar.value
+        lblStat1.text = "$prgVal%"
+        progressBar.value = prgVal
+        progressBar.string = "$prgVal%"
+        prg.value = prgVal
+
+        if (rec != null) {
+            val downloadedStr = if (rec.downloaded > 0) formatSize(rec.downloaded.toDouble()) else "0 B"
+            lblStat2.text = if (rec.size > 0) "Downloaded: $downloadedStr ($prgVal%)" else "Downloaded: $downloadedStr"
+            if (rec.size > 0) {
+                lblFileSize.text = "File size: " + formatSize(rec.size.toDouble())
+            }
+            if (rec.fileName.isNotBlank()) {
+                lblFileName.text = rec.fileName
+                title = "[ $prgVal% ] ${rec.fileName}"
+            }
+        }
+
+        segmentVisualizationBar.isVisible = false
+        segmentDetailTable.isVisible = false
+        lblActiveConnections.text = ""
+
+        btnOpenFile.isVisible = false
+        btnPauseResume.isVisible = true
+        btnPauseResume.text = text("MENU_RESUME")
+        btnPauseResume.icon = FontIcon(RemixIcon.PLAY_CIRCLE_LINE, 16.px)
+        btnPauseResume.isEnabled = true
+
+        btnCancel.isVisible = true
+        btnCancel.isEnabled = true
+        btnOpenFolder.isVisible = true
+        btnHide.text = text("DWN_HIDE")
+        btnHide.isVisible = true
+        btnHide.isEnabled = true
+    }
+
+    fun showResuming() {
+        dialogState = DialogState.RESUMING
+        lblStat.text = "Status: Resuming..."
+        btnPauseResume.text = "Resuming..."
+        btnPauseResume.icon = FontIcon(RemixIcon.PLAY_CIRCLE_LINE, 16.px)
+        btnPauseResume.isEnabled = false
+        lblStat3.text = "Transfer rate: ---"
+        lblStat4.text = "Time left: ---"
+        btnCancel.isEnabled = true
+        btnHide.isEnabled = true
+    }
+
+    fun showDownloading() {
+        dialogState = DialogState.DOWNLOADING
+        btnOpenFile.isVisible = false
+        btnPauseResume.isVisible = true
+        btnPauseResume.text = text("MENU_PAUSE")
+        btnPauseResume.icon = FontIcon(RemixIcon.PAUSE_CIRCLE_LINE, 16.px)
+        btnPauseResume.isEnabled = true
+        btnCancel.isVisible = true
+        btnCancel.isEnabled = true
+        btnHide.text = text("DWN_HIDE")
+        btnHide.isVisible = true
+        btnHide.isEnabled = true
+    }
+
+    fun showCompleted() {
+        dialogState = DialogState.COMPLETED
+        val rec = AppContext.db.getById(id)
+        lblStat.text = "Status: " + text("STAT_FINISHED")
+        lblStat1.text = "100%"
+        progressBar.value = 100
+        progressBar.string = "100%"
+        prg.value = 100
+        lblStat3.text = ""
+        lblStat4.text = ""
+        segmentVisualizationBar.isVisible = false
+        segmentDetailTable.isVisible = false
+        lblActiveConnections.text = ""
+
+        if (rec != null) {
+            val sizeStr = if (rec.size > 0) formatSize(rec.size.toDouble()) else (if (rec.downloaded > 0) formatSize(rec.downloaded.toDouble()) else "---")
+            lblStat2.text = "Downloaded: $sizeStr (100%)"
+            if (rec.size > 0) {
+                lblFileSize.text = "File size: " + formatSize(rec.size.toDouble())
+            }
+            if (rec.fileName.isNotBlank()) {
+                lblFileName.text = rec.fileName
+                title = "[ 100% ] ${rec.fileName}"
+            }
+        }
+
+        btnOpenFile.isVisible = true
+        btnOpenFile.isEnabled = true
+        btnPauseResume.isVisible = false
+        btnCancel.isVisible = false
+        btnOpenFolder.isVisible = true
+        btnHide.text = text("LBL_CLOSE")
+        btnHide.isVisible = true
+        btnHide.isEnabled = true
+    }
+
+    fun onRecordUpdated(rec: DbRecord) {
+        if (rec.id != id) return
+        if (isError) return
+
+        if (rec.fileName.isNotBlank() && lblFileName.text != rec.fileName) {
+            lblFileName.text = rec.fileName
+            title = "[ ${rec.progress}% ] ${rec.fileName}"
+        }
+
+        updateCategoryDisplay(rec.categoryId, rec.fileName, rec.downloadType)
+
+        when (rec.status) {
+            RecordStatus.PAUSED -> showPaused()
+            RecordStatus.DOWNLOADING -> {
+                if (dialogState == DialogState.RESUMING || dialogState == DialogState.PAUSED) {
+                    showDownloading()
+                }
+            }
+            RecordStatus.READY -> {
+                if (dialogState == DialogState.PAUSED) {
+                    showResuming()
+                }
+            }
+            RecordStatus.FINISHED -> showCompleted()
+            RecordStatus.ERROR -> {
+                if (!isError) showPaused()
+            }
+            else -> {}
+        }
+    }
+
+    private fun openFile() {
+        val rec = AppContext.db.getById(id) ?: return
+        val (fileName, folder) = getFileFolder(rec) ?: (rec.fileName to lblDestination.text)
+        val targetFolder = folder ?: lblDestination.text
+        if (!fileName.isNullOrBlank() && !targetFolder.isNullOrBlank()) {
+            try {
+                openFileExternal(fileName, targetFolder)
+            } catch (e: Throwable) {
+                Logger.error("Failed to open file", e)
+            }
+        }
+    }
+
     private fun togglePauseResume() {
         if (isError) {
             hideWindow()
             return
         }
         val rec = AppContext.db.getById(id) ?: return
-        if (rec.status == RecordStatus.DOWNLOADING || rec.status == RecordStatus.READY || rec.status == RecordStatus.ASSEMBLING) {
-            AppMenuHandler.pauseDownload(rec)
-            updatePauseResumeButton(RecordStatus.PAUSED)
-        } else {
+        if (rec.status == RecordStatus.FINISHED || dialogState == DialogState.COMPLETED) {
+            openFile()
+            return
+        }
+
+        if (dialogState == DialogState.PAUSING || dialogState == DialogState.RESUMING) {
+            return
+        }
+
+        if (rec.status == RecordStatus.PAUSED || rec.status == RecordStatus.ERROR || dialogState == DialogState.PAUSED) {
+            showResuming()
             AppMenuHandler.resumeDownload(rec)
-            updatePauseResumeButton(RecordStatus.DOWNLOADING)
+        } else {
+            showPausing()
+            AppMenuHandler.pauseDownload(rec)
         }
     }
 
@@ -572,11 +809,37 @@ class ProgressWindow(val id: Long) : JFrame() {
         segData: Collection<SegmentProgress>,
         files: BatchFileCounts? = null,
     ) {
+        if (dialogState == DialogState.PAUSING) {
+            val prgVal = prg
+            progressBar.value = prgVal
+            progressBar.string = "$prgVal%"
+            this.prg.value = prgVal
+            if (downloaded > 0) {
+                lblStat2.text = "Downloaded: " + formatSize(downloaded.toDouble()) + (if (size > 0) " ($prgVal%)" else "")
+            }
+            return
+        }
+
+        if (dialogState == DialogState.PAUSED || dialogState == DialogState.COMPLETED) {
+            return
+        }
+
+        if (dialogState == DialogState.RESUMING) {
+            showDownloading()
+        } else if (!btnPauseResume.isEnabled && dialogState != DialogState.PAUSING) {
+            btnPauseResume.isEnabled = true
+            btnPauseResume.text = text("MENU_PAUSE")
+            btnPauseResume.icon = FontIcon(RemixIcon.PAUSE_CIRCLE_LINE, 16.px)
+        }
+
         lblStat.text = files?.let { batchFilesText(it) } ?: "Status: Receiving data..."
         fileName?.let {
             lblFileName.text = it
             title = "[ $prg% ] $it"
         }
+
+        val rec = AppContext.db.getById(id)
+        updateCategoryDisplay(rec?.categoryId, fileName ?: lblFileName.text, rec?.downloadType ?: DownloadType.Http)
 
         lblStat1.text = "$prg%"
         progressBar.value = prg
@@ -625,6 +888,9 @@ class ProgressWindow(val id: Long) : JFrame() {
         lblFileName.text = snapshot.name
         title = "[ ${snapshot.progressPercent}% ] ${snapshot.name}"
 
+        val rec = AppContext.db.getById(id)
+        updateCategoryDisplay(rec?.categoryId, snapshot.name, DownloadType.Torrent)
+
         btnTorrentDetails.isVisible = true
 
         val sourceStr = if (snapshot.infoHash.isNotBlank()) "torrent://${snapshot.infoHash}" else "BitTorrent Transfer"
@@ -636,6 +902,33 @@ class ProgressWindow(val id: Long) : JFrame() {
         lblDestination.toolTipText = destFolder
 
         val isChecking = snapshot.state == TorrentTaskState.CHECKING_FILES
+        val isPaused = snapshot.state == TorrentTaskState.PAUSED || snapshot.state == TorrentTaskState.STOPPED
+        val isFinished = snapshot.state == TorrentTaskState.FINISHED
+
+        if (isFinished) {
+            showCompleted()
+            return
+        }
+
+        if (isPaused) {
+            dialogState = DialogState.PAUSED
+            btnOpenFile.isVisible = false
+            btnPauseResume.isVisible = true
+            btnPauseResume.text = text("MENU_RESUME")
+            btnPauseResume.icon = FontIcon(RemixIcon.PLAY_CIRCLE_LINE, 16.px)
+            btnPauseResume.isEnabled = true
+            btnCancel.isVisible = true
+            btnCancel.isEnabled = true
+        } else if (dialogState == DialogState.RESUMING) {
+            showDownloading()
+        } else if (dialogState != DialogState.PAUSING) {
+            btnOpenFile.isVisible = false
+            btnPauseResume.isVisible = true
+            btnPauseResume.text = text("MENU_PAUSE")
+            btnPauseResume.icon = FontIcon(RemixIcon.PAUSE_CIRCLE_LINE, 16.px)
+            btnPauseResume.isEnabled = true
+        }
+
         val statusStr = when (snapshot.state) {
             TorrentTaskState.DOWNLOADING_METADATA -> "Downloading metadata..."
             TorrentTaskState.CHECKING_FILES -> "Checking existing files (${snapshot.checkingProgressPercent}%)..."
@@ -666,10 +959,15 @@ class ProgressWindow(val id: Long) : JFrame() {
         } else {
             lblStat1.text = "${snapshot.progressPercent}%"
             lblStat2.text = "Downloaded: $downloadedStr (${snapshot.progressPercent}%)"
-            val downSpeedStr = if (snapshot.downloadRate > 0) formatSize(snapshot.downloadRate.toDouble()) + "/sec" else "0 B/sec"
-            val upSpeedStr = if (snapshot.uploadRate > 0) formatSize(snapshot.uploadRate.toDouble()) + "/sec" else "0 B/sec"
-            lblStat3.text = "Transfer rate: ↓ $downSpeedStr | ↑ $upSpeedStr"
-            lblStat4.text = if (snapshot.etaSeconds > 0) "Time left: " + toLongEta(snapshot.etaSeconds) else "Time left: ---"
+            if (isPaused) {
+                lblStat3.text = "Transfer rate: ---"
+                lblStat4.text = "Time left: ---"
+            } else {
+                val downSpeedStr = if (snapshot.downloadRate > 0) formatSize(snapshot.downloadRate.toDouble()) + "/sec" else "0 B/sec"
+                val upSpeedStr = if (snapshot.uploadRate > 0) formatSize(snapshot.uploadRate.toDouble()) + "/sec" else "0 B/sec"
+                lblStat3.text = "Transfer rate: ↓ $downSpeedStr | ↑ $upSpeedStr"
+                lblStat4.text = if (snapshot.etaSeconds > 0) "Time left: " + toLongEta(snapshot.etaSeconds) else "Time left: ---"
+            }
             progressBar.value = snapshot.progressPercent
             progressBar.string = "${snapshot.progressPercent}%"
             prg.value = snapshot.progressPercent
@@ -689,9 +987,11 @@ class ProgressWindow(val id: Long) : JFrame() {
         if (snapshot.state == TorrentTaskState.PAUSED || snapshot.state == TorrentTaskState.STOPPED) {
             btnPauseResume.text = text("MENU_RESUME")
             btnPauseResume.icon = FontIcon(RemixIcon.PLAY_CIRCLE_LINE, 16.px)
-        } else {
+            btnPauseResume.isEnabled = true
+        } else if (dialogState != DialogState.PAUSING && dialogState != DialogState.RESUMING) {
             btnPauseResume.text = text("MENU_PAUSE")
             btnPauseResume.icon = FontIcon(RemixIcon.PAUSE_CIRCLE_LINE, 16.px)
+            btnPauseResume.isEnabled = true
         }
 
         windowProgressTaskbar?.setWindowProgressValue(this, snapshot.progressPercent)
@@ -713,6 +1013,8 @@ class ProgressWindow(val id: Long) : JFrame() {
 
     fun showError(error: DownloadError) {
         this.isError = true
+        this.dialogState = DialogState.ERROR
+        btnOpenFile.isVisible = false
         lblStat4.text = ""
         lblStat.text = text("MSG_FAILED")
         val message = downloadErrorText(error)
@@ -726,6 +1028,7 @@ class ProgressWindow(val id: Long) : JFrame() {
         btnPauseResume.icon = FontIcon(RemixIcon.CLOSE_CIRCLE_LINE, 16.px)
         btnPauseResume.isEnabled = true
         btnHide.isVisible = false
+        btnCancel.isVisible = false
         validate()
         val needed = preferredSize.height
         if (needed > height) setSize(width, needed)

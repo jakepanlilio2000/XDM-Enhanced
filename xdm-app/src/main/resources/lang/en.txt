@@ -224,6 +224,7 @@ CAT_COMPRESSED=Compressed
 CAT_MUSIC=Music
 CAT_VIDEOS=Video
 CAT_PROGRAMS=Programs
+CAT_IMAGES=Images
 
 CAT_SEC_CATEGORIES=File categories
 CAT_DESC=Browser downloads are put into the category whose rules match; you can always pick another one.
@@ -586,4 +587,14 @@ CD_SOURCE_ADDRESS=Address
 LBL_DESCRIPTION=Description
 ND_START_DOWNLOAD=Start Download
 ND_REMEMBER_PATH=Remember this path for "%s" category
+SETTINGS_SEC_UPDATES=Software Updates
+AUTO_UPDATE_CHECK=Automatically check for updates
+AUTO_UPDATE_CHECK_SUB=Periodically check for new releases when connected to the internet
+UPDATE_CHANNEL=Update channel
+UPDATE_CHANNEL_SUB=Choose between stable releases and early preview beta builds
+UPDATE_NOTIFICATIONS=Show update notifications
+UPDATE_NOTIFICATIONS_SUB=Display a desktop notification when a new update is found
+CHECK_FOR_UPDATES_NOW=Check for updates
+CHECK_FOR_UPDATES_NOW_SUB=Manually check GitHub releases for new versions
+BTN_CHECK_UPDATES_NOW=Check Now
 

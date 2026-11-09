@@ -320,7 +320,7 @@
             <div>
               <h2 style="margin: 0; font-size: 16px;">XDM Enhanced Browser Integration</h2>
               <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
-                Extension Version: <strong>3.5.2 (Enhanced)</strong> • Compatible with Desktop XDM Enhanced <strong>v1.0.0-beta.3</strong>
+                Extension Version: <strong>3.5.3 (Enhanced)</strong> • Compatible with Desktop XDM Enhanced <strong>v1.0.0-beta.4</strong>
               </div>
             </div>
           </div>
@@ -337,6 +337,67 @@
             <div style="display: flex; gap: 16px; margin-top: 14px;">
               <a href="https://github.com/jakepanlilio2000/XDM-Enhanced" target="_blank" rel="noopener" style="color: var(--accent); font-weight: 500; text-decoration: none;">GitHub Repository →</a>
               <a href="https://github.com/jakepanlilio2000/XDM-Enhanced/issues" target="_blank" rel="noopener" style="color: var(--accent); font-weight: 500; text-decoration: none;">Issue Tracker →</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Extension Updates & Diagnostics -->
+        <div class="card" id="updatesCard" style="margin-top: 16px;">
+          <h2 class="card-title">Extension Updates & Diagnostics</h2>
+          <p class="setting-desc" style="margin-bottom: 14px;">
+            Check release status, inspect desktop connection health, and review supported update distribution channels.
+          </p>
+
+          <div class="diag-grid">
+            <div class="diag-item">
+              <span class="diag-label">Extension Version</span>
+              <span class="diag-value" id="diagExtVersion">3.5.3 (1.0.0-beta.4)</span>
+            </div>
+            <div class="diag-item">
+              <span class="diag-label">Manifest Specification</span>
+              <span class="diag-value">Manifest V3</span>
+            </div>
+            <div class="diag-item">
+              <span class="diag-label">Desktop Connection</span>
+              <span class="diag-value" id="diagConnStatus">Checking…</span>
+            </div>
+            <div class="diag-item">
+              <span class="diag-label">Desktop Version</span>
+              <span class="diag-value" id="diagAppVersion">—</span>
+            </div>
+            <div class="diag-item">
+              <span class="diag-label">Protocol Status</span>
+              <span class="diag-value" id="diagProtocol">v1 (Compatible)</span>
+            </div>
+            <div class="diag-item">
+              <span class="diag-label">Update Source</span>
+              <span class="diag-value">GitHub Releases (Fork)</span>
+            </div>
+          </div>
+
+          <div style="margin-top: 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+            <button id="checkUpdatesBtn" class="primary-button btn-small" type="button">Check for Updates</button>
+            <a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases" target="_blank" rel="noopener" class="secondary-button btn-small" style="text-decoration: none; display: inline-flex; align-items: center;">View Releases on GitHub →</a>
+            <span id="updateCheckStatus" style="font-size: 12px; color: var(--text-muted);"></span>
+          </div>
+
+          <div id="updateResultBox" class="notice ok" style="margin-top: 14px;" hidden>
+            <strong id="updateResultTitle"></strong>
+            <div id="updateResultDetails" style="font-size: 12px; margin-top: 3px;"></div>
+          </div>
+
+          <div style="margin-top: 20px; border-top: 1px solid var(--border); padding-top: 14px;">
+            <h3 style="font-size: 13px; font-weight: 600; margin: 0 0 8px;">Browser Update Channels & Procedures</h3>
+            <div style="font-size: 12px; line-height: 1.6; color: var(--text-muted);">
+              <p style="margin: 0 0 6px;">
+                <strong>• Chrome Web Store & Edge Add-ons:</strong> When installed from official browser stores, updates install automatically in the background without user intervention.
+              </p>
+              <p style="margin: 0 0 6px;">
+                <strong>• Developer / Unpacked Installs:</strong> Windows Chrome consumer editions require developer mode for self-hosted extensions. Download the latest <code>XDM-Enhanced-Extension-Chromium-v*.zip</code>, extract to your extension directory, open <code>chrome://extensions</code>, and click <strong>Reload</strong>.
+              </p>
+              <p style="margin: 0;">
+                <strong>• Enterprise Deployments:</strong> Supported in managed environments via Group Policy / Registry using <code>ExtensionInstallForcelist</code> and the published <code>chrome-updates.xml</code> manifest.
+              </p>
             </div>
           </div>
         </div>

@@ -364,11 +364,13 @@ class DownloadManager(
                 synchronized(store) {
                     store.getById(id)?.let { e ->
                         e.status = RecordStatus.PAUSED
+                        e.speed = 0.0f
+                        e.eta = 0
                         store.update(e)
                     }
                 }
                 ui.downloadUpdated(id)
-                ui.hideProgress(id)
+                ui.downloadPaused(id)
                 if (toDelete.remove(id)) {
                     deleteAfterStopped(id, it)
                 }
@@ -642,7 +644,22 @@ class DownloadManager(
         if (removed) {
             store.getById(id)?.let {
                 it.status = RecordStatus.PAUSED
+                it.speed = 0.0f
+                it.eta = 0
+                store.update(it)
                 ui.downloadUpdated(id)
+                ui.downloadPaused(id)
+            }
+        } else {
+            store.getById(id)?.let {
+                if (it.status == RecordStatus.DOWNLOADING || it.status == RecordStatus.READY || it.status == RecordStatus.ASSEMBLING) {
+                    it.status = RecordStatus.PAUSED
+                    it.speed = 0.0f
+                    it.eta = 0
+                    store.update(it)
+                    ui.downloadUpdated(id)
+                    ui.downloadPaused(id)
+                }
             }
         }
     }
@@ -754,8 +771,11 @@ class DownloadManager(
     private fun markNotStarted(id: Long) {
         store.getById(id)?.let {
             it.status = RecordStatus.PAUSED
+            it.speed = 0.0f
+            it.eta = 0
             store.update(it)
             ui.downloadUpdated(id)
+            ui.downloadPaused(id)
         }
     }
 

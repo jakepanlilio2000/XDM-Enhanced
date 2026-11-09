@@ -2,13 +2,16 @@ package xdm.app.ui.components
 
 import java.awt.Color
 import javax.swing.UIManager
+import xdm.app.utils.FontIcon
 import xdm.app.utils.RemixIcon
+import xdm.app.utils.px
+import xdm.core.downloaders.DownloadType
 
 /**
  * Shared palette and file-type glyphs. Vibrant, mid-luminance hues
  * (Tailwind 500-ish) that keep good contrast on both light and dark themes.
- * Used by the sidebar filter list and the main download-list rows so a given
- * category looks identical in both places.
+ * Used by the sidebar filter list, dialogs, and the main download-list rows
+ * so a given category looks consistent everywhere.
  */
 object CategoryStyle {
     val INDIGO = Color(0x63, 0x66, 0xF1)
@@ -41,10 +44,13 @@ object CategoryStyle {
     private val LINE_VARIANTS: Map<RemixIcon, RemixIcon> = linkedMapOf(
         RemixIcon.FILE_FILL to RemixIcon.FILE_LINE,
         RemixIcon.FILE_LIST_2_FILL to RemixIcon.FILE_LIST_2_LINE,
+        RemixIcon.FILE_TEXT_FILL to RemixIcon.FILE_TEXT_LINE,
         RemixIcon.FILE_ZIP_FILL to RemixIcon.FILE_ZIP_LINE,
-        RemixIcon.MV_FILL to RemixIcon.MV_LINE,
+        RemixIcon.IMAGE_FILL to RemixIcon.IMAGE_LINE,
+        RemixIcon.MAGNET_FILL to RemixIcon.MAGNET_LINE,
+        RemixIcon.MV_FILL to RemixIcon.MUSIC_2_LINE,
         RemixIcon.MOVIE_FILL to RemixIcon.MOVIE_LINE,
-        RemixIcon.MICROSOFT_FILL to RemixIcon.MICROSOFT_LINE,
+        RemixIcon.MICROSOFT_FILL to RemixIcon.TERMINAL_BOX_LINE,
         RemixIcon.ARCHIVE_2_FILL to RemixIcon.ARCHIVE_2_LINE,
     )
 
@@ -62,9 +68,82 @@ object CategoryStyle {
         put(RemixIcon.FILE_ZIP_FILL, "zip", "rar", "7z", "gz", "tar", "tgz", "tz", "bz2", "xz", "zst", "cab")
         put(RemixIcon.FILE_LIST_2_FILL, "pdf", "doc", "docx", "ppt", "pptx", "xls", "xlsx", "odt", "odf", "ods", "odp", "rtf", "txt", "epub")
         put(RemixIcon.MICROSOFT_FILL, "exe", "msi", "msix", "deb", "dmg", "rpm", "iso", "pkg", "sh", "py", "apk", "xapk", "appimage", "jar", "img")
+        put(RemixIcon.IMAGE_FILL, "jpg", "jpeg", "png", "gif", "webp", "svg", "bmp", "ico", "tiff", "tif", "avif", "heic")
+        put(RemixIcon.MAGNET_FILL, "torrent")
     }
 
     /** The glyph for a file of this name, from its extension; a plain file glyph when it is unknown. */
     fun glyphForFile(fileName: String): RemixIcon =
         GLYPHS[fileName.substringAfterLast('.', "").lowercase()] ?: RemixIcon.FILE_FILL
+
+    /**
+     * Returns the appropriate line glyph representing the category or file type.
+     */
+    fun glyphForCategory(categoryId: String?, fileName: String? = null, downloadType: DownloadType? = null): RemixIcon {
+        if (downloadType == DownloadType.Torrent) return RemixIcon.MAGNET_LINE
+        return when (categoryId) {
+            "CAT_DOCUMENTS" -> RemixIcon.FILE_TEXT_LINE
+            "CAT_COMPRESSED" -> RemixIcon.FILE_ZIP_LINE
+            "CAT_MUSIC" -> RemixIcon.MUSIC_2_LINE
+            "CAT_VIDEOS" -> RemixIcon.MOVIE_LINE
+            "CAT_PROGRAMS" -> RemixIcon.TERMINAL_BOX_LINE
+            "CAT_IMAGES" -> RemixIcon.IMAGE_LINE
+            else -> {
+                if (!fileName.isNullOrBlank()) {
+                    val glyph = glyphForFile(fileName)
+                    lineVariant(glyph)
+                } else {
+                    RemixIcon.FILE_LINE
+                }
+            }
+        }
+    }
+
+    /**
+     * Returns the theme/category color for the category.
+     */
+    fun colorForCategory(categoryId: String?, downloadType: DownloadType? = null): Color {
+        if (downloadType == DownloadType.Torrent) return EMERALD
+        val themeColor = categoryId?.let { UIManager.getColor("XDM.category.$it") }
+        if (themeColor != null) return themeColor
+        return when (categoryId) {
+            "CAT_DOCUMENTS" -> Color(88, 166, 255)
+            "CAT_COMPRESSED" -> Color(210, 153, 34)
+            "CAT_MUSIC" -> Color(240, 136, 62)
+            "CAT_VIDEOS" -> Color(163, 113, 247)
+            "CAT_PROGRAMS" -> Color(230, 80, 80)
+            "CAT_IMAGES" -> Color(56, 189, 248)
+            else -> neutralIcon()
+        }
+    }
+
+    /**
+     * Resolves a human-readable category name for display.
+     */
+    fun displayNameForCategory(categoryId: String?, downloadType: DownloadType? = null): String {
+        if (downloadType == DownloadType.Torrent) return "Torrents"
+        return when (categoryId) {
+            "CAT_DOCUMENTS" -> "Documents"
+            "CAT_COMPRESSED" -> "Compressed"
+            "CAT_MUSIC" -> "Music"
+            "CAT_VIDEOS" -> "Videos"
+            "CAT_PROGRAMS" -> "Programs"
+            "CAT_IMAGES" -> "Images"
+            else -> "Other"
+        }
+    }
+
+    /**
+     * Creates a DPI-scaled category FontIcon with proper category color.
+     */
+    fun createCategoryIcon(
+        categoryId: String?,
+        fileName: String? = null,
+        downloadType: DownloadType? = null,
+        size: Int = 18
+    ): FontIcon {
+        val glyph = glyphForCategory(categoryId, fileName, downloadType)
+        val color = colorForCategory(categoryId, downloadType)
+        return FontIcon(glyph, size.px, color)
+    }
 }

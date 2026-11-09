@@ -95,6 +95,8 @@ interface IAppInstance {
 
     fun hideProgressWindow(id: Long)
 
+    fun downloadPaused(id: Long)
+
     fun showProgressError(id: Long, error: DownloadError)
 
     /** Drives the progress window through the publish phase, where download events have stopped. */
@@ -272,7 +274,10 @@ open class AppInstance : IAppInstance {
     // Rows are resolved by id on the EDT: an index taken on the calling thread can point at a
     // different row once a delete runs before the EDT gets to it.
     override fun updateDownloadInView(id: Long) {
-        runOnUIThread { db.indexById(id)?.let { appWindow.updateDownloadInView(it) } }
+        runOnUIThread {
+            db.indexById(id)?.let { appWindow.updateDownloadInView(it) }
+            db.getById(id)?.let { rec -> prgWndMap[id]?.onRecordUpdated(rec) }
+        }
     }
 
     override fun deleteDownloadInView(index: Int) {
@@ -425,13 +430,21 @@ open class AppInstance : IAppInstance {
                 prgWnd.isVisible = true
             } else {
                 prgWnd = ProgressWindow(id).apply {
-                    lblFileName.text = fileName
-                    title = "[ 0% ] $fileName"
+                    if (lblFileName.text == "---" && fileName.isNotBlank()) {
+                        lblFileName.text = fileName
+                        title = "[ 0% ] $fileName"
+                    }
                     isVisible = true
                 }
                 prgWndMap[id] = prgWnd
             }
             prgWnd.toFront()
+        }
+    }
+
+    override fun downloadPaused(id: Long) {
+        runOnUIThread {
+            prgWndMap[id]?.showPaused()
         }
     }
 

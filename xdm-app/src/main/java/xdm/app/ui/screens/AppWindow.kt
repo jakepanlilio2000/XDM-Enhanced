@@ -7,6 +7,8 @@ import xdm.app.ListSelectionMode
 import xdm.app.OS
 import xdm.app.XDM_WINDOW_TITLE
 import xdm.app.ui.components.*
+import xdm.app.update.UpdateChannel
+import xdm.app.update.UpdateCheckResult
 import xdm.app.update.UpdateChecker
 import xdm.app.utils.*
 import xdm.core.util.Logger
@@ -90,12 +92,17 @@ class AppWindow(image: Image, startHidden: Boolean = false) : JFrame(), ActionLi
      * not on screen also announces it with a system notification.
      */
     private fun checkForUpdates() {
-        UpdateChecker.checkForUpdate { info ->
-            if (info != null) {
+        if (!AppContext.config.autoUpdateCheck) {
+            return
+        }
+        val channel = UpdateChannel.fromId(AppContext.config.updateChannel)
+        UpdateChecker.checkForUpdates(channel) { result ->
+            if (result is UpdateCheckResult.UpdateAvailable) {
+                val info = result.releaseInfo
                 SwingUtilities.invokeLater {
-                    updatePanel.showUpdate(info.latestVersion, info.downloadUrl, info.isPreRelease)
-                    if (!isVisible) {
-                        notifyUpdate(info.latestVersion)
+                    updatePanel.showUpdate(info.version, info.htmlUrl, info.isPreRelease, info)
+                    if (!isVisible && AppContext.config.updateNotificationsEnabled) {
+                        notifyUpdate(info.version)
                     }
                 }
             }

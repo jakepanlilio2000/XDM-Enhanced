@@ -60,5 +60,18 @@ class BrowserExtensionPanelTest {
             assertTrue(panel.componentCount > 0)
         }
     }
+
+    @Test
+    fun extensionPageUrl_pointsExclusivelyToForkReleases() {
+        val browsers = listOf("chrome", "firefox", "edge", "brave", "chromium")
+        for (b in browsers) {
+            val url = BrowserExtensionPanel.extensionPageUrl(b)
+            assertTrue(url.startsWith("https://github.com/jakepanlilio2000/XDM-Enhanced"), "Browser $b extension URL must point to fork: $url")
+            assertFalse(url.contains("xtremedownloadmanager.com"), "Browser $b extension URL must not point to upstream website")
+        }
+
+        val otherUrl = BrowserExtensionPanel.extensionPageUrl("unknown")
+        assertTrue(otherUrl.startsWith("https://github.com/jakepanlilio2000/XDM-Enhanced"), "Other browser URL must point to fork")
+    }
 }
 

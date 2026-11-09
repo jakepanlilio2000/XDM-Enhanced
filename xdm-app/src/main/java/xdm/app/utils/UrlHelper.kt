@@ -12,8 +12,12 @@ import kotlin.concurrent.thread
 const val WEBSITE_URL = "https://xtremedownloadmanager.com"
 const val WEBSITE_HELP_URL = "$WEBSITE_URL/help/"
 
-/** Compares `?v=<version>` with the latest GitHub release (docs/update-checker.html on GitHub Pages). */
-const val UPDATE_CHECK_PAGE_URL = "https://subhra74.github.io/xdm/update-checker.html"
+/** Repository and releases URLs for XDM Enhanced fork. */
+const val GITHUB_REPO_URL = "https://github.com/jakepanlilio2000/XDM-Enhanced"
+const val GITHUB_RELEASES_URL = "https://github.com/jakepanlilio2000/XDM-Enhanced/releases"
+
+/** Legacy fallback redirecting to GitHub fork releases. */
+const val UPDATE_CHECK_PAGE_URL = GITHUB_RELEASES_URL
 
 /**
  * An http(s) URL, parsed as browsers parse it. `java.net.URI` is stricter than browsers and servers

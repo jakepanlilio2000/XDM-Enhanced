@@ -5,6 +5,52 @@ All notable changes to the XDM Enhanced project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0-beta.4] - 2026-11-10
+
+### Added
+
+- **Fork-Specific GitHub Application Updater:**
+  - Integrated native auto-updater configured exclusively to query GitHub Releases from the repository fork (`https://github.com/jakepanlilio2000/XDM-Enhanced`). Upstream feeds are never queried.
+  - Full support for **Stable** and **Beta (Prerelease)** release channels with accurate Semantic Versioning (`SemVer`) comparison.
+  - Configurable background update checks and manual "Check for Updates" action available in Settings > General and the Application menu.
+  - Dedicated modern **UpdateDialog** featuring real markdown release notes, platform-compatible asset detection, progress-tracked in-app downloads, cancellation, and SHA-256 package checksum verification prior to launching installers.
+- **Browser Extension Update Discovery & Distribution System:**
+  - Implemented update checking and discovery mechanisms adhering to browser security constraints for both Chromium (Manifest V3) and Firefox (Manifest V2).
+  - Hosted update manifests: `browser-extension/chrome-updates.xml` for enterprise-managed Chromium deployments and `browser-extension/updates.json` for self-hosted Firefox distributions.
+  - In-extension notifications in Popup and Options pages when new versions are available, linking directly to verified GitHub Release packages.
+  - Synchronized native messaging version compatibility handshakes between extensions and desktop application without loading remote executable scripts.
+
+### Fixed
+
+- **Persistent Download Progress Dialog on Pause:**
+  - Resolved progress window closing or disappearing when clicking Pause during an active download.
+  - The progress window remains open and accurately reflects transfer states (`Downloading` -> `Pausing...` -> `Paused` -> `Resuming...` -> `Completed`).
+  - Preserves filename, URL, destination folder, progress bar percentage, and confirmed downloaded bytes.
+  - Stops showing stale transfer speeds on pause and switches to paused indicators (`---`).
+  - Swaps Pause control for an enabled Resume button upon confirmed pause.
+  - Close button safely dismisses the progress window without canceling or terminating the background download.
+- **Native Windows Settings Navigation:**
+  - Fixed "Open Windows Settings" button in BitTorrent settings launching the default web browser instead of opening the intended Windows Settings page.
+  - Replaced browser URL delegation with direct Windows shell protocol execution (`start "" "ms-settings:defaultapps"`) to reliably launch Windows Default Apps settings.
+  - Added debounce rate-limiting to prevent multiple setting window spawns on rapid clicks.
+  - Included legacy fallback to `control.exe /name Microsoft.DefaultPrograms` and safe no-op handling for non-Windows platforms.
+
+### Improved
+
+- **Category Icons Across Download Dialogs:**
+  - Expanded `CategoryStyle` to include vector icons, theme-compatible colors, and display names for all supported categories: Documents, Compressed, Music, Videos, Programs, Images, Torrents, and Other/Uncategorized.
+  - Added DPI-scaled category icons to Add Download (`NewDownloadWindow`) and Torrent Add Download (`NewTorrentDownloadWindow`) category combo boxes.
+  - Wired dynamic icon updating when entering download URLs, changing file names, or picking custom categories.
+  - Added prominent 36px category icon badges and category labels to `ProgressWindow` for both HTTP and BitTorrent transfers.
+- **Update Channel Selection & Packaging Safeguards:**
+  - Clearer user feedback and diagnostics in Settings > General for update preferences.
+  - Enhanced installer isolation preventing interference with upstream XDM installations.
+
+### Known Issues
+
+- **Unsigned Firefox Add-on Installation:** Firefox standard release channel requires unlisted AMO signing via `web-ext sign` to install `.xpi` extensions permanently; unsigned packages require Firefox Developer Edition/Nightly with `xpinstall.signatures.required = false` or temporary loading via `about:debugging`.
+- **Consumer Chrome Extension Installation:** Google Chrome consumer builds require Developer Mode to load unpacked `.zip` extension archives outside the Chrome Web Store.
+
 ## [1.0.0-beta.3] - 2026-11-10
 
 ### Added

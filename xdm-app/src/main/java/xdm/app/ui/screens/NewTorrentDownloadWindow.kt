@@ -3,6 +3,7 @@ package xdm.app.ui.screens
 import com.formdev.flatlaf.FlatClientProperties
 import xdm.app.AppContext
 import xdm.app.I8N.text
+import xdm.app.ui.components.CategoryStyle
 import xdm.app.ui.components.MessageBox
 import xdm.app.utils.FontIcon
 import xdm.app.utils.RemixIcon
@@ -28,6 +29,8 @@ import java.awt.Color
 import java.awt.Component
 import java.awt.Dimension
 import java.awt.Font
+import javax.swing.DefaultListCellRenderer
+import javax.swing.JList
 import java.awt.GridBagConstraints
 import java.awt.GridBagLayout
 import java.awt.Insets
@@ -71,6 +74,20 @@ class NewTorrentDownloadWindow(
     private val cmbCategory = JComboBox<String>().apply {
         addItem("None")
         AppContext.config.categories.forEach { addItem(it.name) }
+        renderer = object : DefaultListCellRenderer() {
+            override fun getListCellRendererComponent(
+                list: JList<*>?, value: Any?, index: Int, isSelected: Boolean, cellHasFocus: Boolean
+            ): Component {
+                val c = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus)
+                if (c is JLabel) {
+                    val catName = value as? String
+                    val cat = AppContext.config.categories.firstOrNull { it.name == catName }
+                    c.icon = CategoryStyle.createCategoryIcon(cat?.id, downloadType = if (cat == null) DownloadType.Torrent else null, size = 16)
+                    c.iconTextGap = 6.px
+                }
+                return c
+            }
+        }
     }
 
     private val lblStatus = JLabel().apply {

@@ -7,7 +7,7 @@
     clean release zip archives for both Chromium (Manifest V3) and Firefox (Manifest V2).
 
 .PARAMETER Version
-    The release version tag to package (default: reads from xdm-app/src/main/resources/app-version.json or '1.0.0-beta.3').
+    The release version tag to package (default: reads from xdm-app/src/main/resources/app-version.json or '1.0.0-beta.4').
 
 .PARAMETER OutDir
     Target directory for distribution artifacts (default: build/dist/extensions).
@@ -30,7 +30,7 @@ if (-not $Version) {
         } catch {}
     }
     if (-not $Version) {
-        $Version = "1.0.0-beta.3"
+        $Version = "1.0.0-beta.4"
     }
 }
 
@@ -85,7 +85,9 @@ function Validate-Extension($extDir, [bool]$isChrome) {
         $gecko = $manifest.browser_specific_settings.gecko
         Assert-Condition ($null -ne $gecko -and -not [string]::IsNullOrWhiteSpace($gecko.id)) "Firefox requires browser_specific_settings.gecko.id"
         Assert-Condition ($null -ne $gecko.data_collection_permissions) "Firefox AMO requires gecko.data_collection_permissions"
+        Assert-Condition ($null -ne $gecko.update_url -and $gecko.update_url -match '^https://') "Firefox requires gecko.update_url over HTTPS"
         Write-Host "   Gecko ID:    $($gecko.id)"
+        Write-Host "   Update URL:  $($gecko.update_url)"
     }
     
     # Collect referenced files from manifest
@@ -154,11 +156,11 @@ function Validate-Extension($extDir, [bool]$isChrome) {
     $jsFiles = Get-ChildItem -Path $extDir -Filter *.js -Recurse
     foreach ($j in $jsFiles) {
         $jsContent = Get-Content $j.FullName -Raw -Encoding UTF8
-        Assert-Condition (-not ($jsContent -match '\beval\s*\(')) "$($j.Name) contains eval()"
-        Assert-Condition (-not ($jsContent -match '\bnew\s+Function\s*\(')) "$($j.Name) contains new Function()"
+        Assert-Condition (-not ($jsContent -match '\beval\s*\(')) ($j.Name + ' contains eval()')
+        Assert-Condition (-not ($jsContent -match '\bnew\s+Function\s*\(')) ($j.Name + ' contains new Function()')
         if ($isChrome) {
-            Assert-Condition (-not ($jsContent -match '\bimportScripts\s*\(')) "$($j.Name) contains importScripts()"
-            Assert-Condition (-not ($jsContent -match 'import\s*\(\s*[\x22\x27]https?:')) "$($j.Name) contains dynamic remote import"
+            Assert-Condition (-not ($jsContent -match '\bimportScripts\s*\(')) ($j.Name + ' contains importScripts()')
+            Assert-Condition (-not ($jsContent -match 'import\s*\(\s*[\x22\x27]https?:')) ($j.Name + ' contains dynamic remote import')
         }
     }
     Write-Host "   JavaScript files: $($jsFiles.Count) verified (no eval, no new Function, no remote imports)" -ForegroundColor Green
@@ -207,17 +209,35 @@ Write-Host "   $chromeRelZip"
 Create-CleanZip $chromeDir $chromeRelZip
 Copy-Item $chromeRelZip $chromeBuildZip -Force
 
+# --- Validate Updates Manifests ---
+$updatesJsonPath = Join-Path $ScriptDir "updates.json"
+Assert-Condition (Test-Path $updatesJsonPath) "updates.json not found in $ScriptDir"
+$updatesJson = Get-Content $updatesJsonPath -Raw -Encoding UTF8 | ConvertFrom-Json
+Assert-Condition ($null -ne $updatesJson.addons."xdm-enhanced-browser-monitor@jakepanlilio2000.github.io") "updates.json missing Firefox Gecko ID entry"
+Write-Host "`n>> Validated Firefox updates.json successfully" -ForegroundColor Green
+
+$chromeXmlPath = Join-Path $ScriptDir "chrome-updates.xml"
+Assert-Condition (Test-Path $chromeXmlPath) "chrome-updates.xml not found in $ScriptDir"
+[xml]$chromeXml = Get-Content $chromeXmlPath -Raw -Encoding UTF8
+Assert-Condition ($chromeXml.gupdate.app.appid -eq "xdmenhancedchromebrowserintegration0") "chrome-updates.xml missing valid appid"
+Write-Host ">> Validated Chromium chrome-updates.xml successfully" -ForegroundColor Green
+
 # --- Validate and Package Firefox Extension ---
 $firefoxDir = Join-Path $ScriptDir "firefox-extension"
 $firefoxManifest = Validate-Extension $firefoxDir $false
 
 $firefoxRelZip = Join-Path $OutDir "XDM-Enhanced-Extension-Firefox-v$Version.zip"
+$firefoxRelXpi = Join-Path $OutDir "XDM-Enhanced-Extension-Firefox-v$Version.xpi"
 $firefoxBuildZip = Join-Path $BuildDir "xdm-firefox-$($firefoxManifest.version).zip"
+$firefoxBuildXpi = Join-Path $BuildDir "xdm-firefox-$($firefoxManifest.version).xpi"
 
 Write-Host ">> Packaging Firefox extension to:" -ForegroundColor Cyan
 Write-Host "   $firefoxRelZip"
+Write-Host "   $firefoxRelXpi"
 Create-CleanZip $firefoxDir $firefoxRelZip
+Copy-Item $firefoxRelZip $firefoxRelXpi -Force
 Copy-Item $firefoxRelZip $firefoxBuildZip -Force
+Copy-Item $firefoxRelZip $firefoxBuildXpi -Force
 
 # --- Summary & Checksums ---
 Write-Host "`n==========================================================" -ForegroundColor Green
@@ -225,8 +245,9 @@ Write-Host " Browser Extension Packages Successfully Created!" -ForegroundColor 
 Write-Host "==========================================================" -ForegroundColor Green
 
 $packages = @(
-    @{ Name = "Chromium (MV3)"; File = $chromeRelZip; Version = $chromeManifest.version; VersionName = $chromeManifest.version_name },
-    @{ Name = "Firefox (MV2)";  File = $firefoxRelZip; Version = $firefoxManifest.version; VersionName = "v$Version" }
+    @{ Name = "Chromium (MV3)";    File = $chromeRelZip;  Version = $chromeManifest.version;  VersionName = $chromeManifest.version_name },
+    @{ Name = "Firefox (MV2 Zip)"; File = $firefoxRelZip; Version = $firefoxManifest.version; VersionName = "v$Version" },
+    @{ Name = "Firefox (MV2 XPI)"; File = $firefoxRelXpi; Version = $firefoxManifest.version; VersionName = "v$Version" }
 )
 
 $summary = foreach ($pkg in $packages) {

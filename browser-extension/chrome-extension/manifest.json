@@ -9,8 +9,8 @@
         }
     },
     "manifest_version": 3,
-    "version": "3.5.2",
-    "version_name": "1.0.0-beta.3",
+    "version": "3.5.3",
+    "version_name": "1.0.0-beta.4",
     "description": "Send downloads, web videos and links from Chrome to XDM Enhanced. Fast, modern open-source download manager.",
     "homepage_url": "https://github.com/jakepanlilio2000/XDM-Enhanced",
     "minimum_chrome_version": "103",

@@ -84,6 +84,7 @@ interface UiSink {
 
     fun showProgress(id: Long, fileName: String)
     fun hideProgress(id: Long)
+    fun downloadPaused(id: Long) {}
 
     fun progress(
         id: Long,

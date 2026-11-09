@@ -131,17 +131,44 @@ object WindowsAssociations {
         return ok
     }
 
+    private var lastOpenTime = 0L
+
     /**
-     * Opens Windows 10/11 Default Apps settings so the user can review and configure system-level associations.
+     * Opens Windows Default Apps settings so the user can review and configure system-level associations.
+     * Uses native Windows shell invocation for ms-settings:defaultapps directly, avoiding browser delegation.
      */
-    fun openDefaultAppsSettings(): Boolean = runCatching {
-        if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
-            Desktop.getDesktop().browse(URI("ms-settings:defaultapps"))
-            true
-        } else {
-            ProcessBuilder("cmd.exe", "/c", "start", "ms-settings:defaultapps").start()
-            true
+    fun openDefaultAppsSettings(): Boolean {
+        if (!isWindows) {
+            Logger.info("WindowsAssociations", "openDefaultAppsSettings invoked on non-Windows OS")
+            return false
         }
-    }.getOrDefault(false)
+        val now = System.currentTimeMillis()
+        if (now - lastOpenTime < 1000L) {
+            // Debounce rapid repeated clicks to prevent excessive process spawns
+            return true
+        }
+        lastOpenTime = now
+
+        return runCatching {
+            // "start" requires an explicit empty title "" before the target URI when arguments are quoted
+            val pb = ProcessBuilder("cmd.exe", "/c", "start", "", "ms-settings:defaultapps")
+                .redirectErrorStream(true)
+            val proc = pb.start()
+            val finished = proc.waitFor(3, java.util.concurrent.TimeUnit.SECONDS)
+            if (finished && proc.exitValue() != 0) {
+                throw IllegalStateException("cmd start ms-settings exited with code ${proc.exitValue()}")
+            }
+            Logger.info("WindowsAssociations: opened Windows Default Apps settings via ms-settings:defaultapps")
+            true
+        }.recoverCatching { err ->
+            Logger.info("WindowsAssociations", "ms-settings:defaultapps failed, trying Control Panel fallback: ${err.message}")
+            val proc = ProcessBuilder("control.exe", "/name", "Microsoft.DefaultPrograms").start()
+            proc.waitFor(3, java.util.concurrent.TimeUnit.SECONDS)
+            true
+        }.getOrElse { e ->
+            Logger.error("WindowsAssociations", "Failed to open Windows Default Apps settings", e)
+            false
+        }
+    }
 }
 
