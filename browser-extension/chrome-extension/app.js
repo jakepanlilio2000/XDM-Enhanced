@@ -2,20 +2,20 @@
 import Logger from './logger.js';
 import RequestWatcher from './request-watcher.js';
 import Connector from './connector.js';
-import { isBlockedUrl } from './blocked-sites.js';
+import { isBlockedUrl, isBlockedHost, matchesHostRule, normalizeHost, getUserBlockedSites, saveUserBlockedSites, addUserBlockedSite, removeUserBlockedSite, isHostExcluded } from './blocked-sites.js';
 
 const HOST_ORIGINS = ["*://*/*"];
 /** Opened once, on first install (not on updates): the next steps after adding the extension. */
-const WELCOME_URL = "https://xtremedownloadmanager.com/extension/welcome/?utm_source=extension";
+const WELCOME_URL = "https://github.com/jakepanlilio2000/XDM-Enhanced";
 /** Most links one bulk request may carry; a sanity cap, far beyond any real selection. */
 const MAX_BATCH_ITEMS = 5000;
 /** Registered by the bulk picker for one "Reload & capture" only; see bulk.js. */
 const OBSERVER_SCRIPT_ID = "xdm-rt-observer";
 
-/** Oldest XDM this extension is meant for; older ones get a warning in the popup. */
-const MIN_XDM_VERSION = "9.0.9";
-/** Where the popup's warning sends the user for a newer XDM. */
-const XDM_DOWNLOAD_URL = "https://xtremedownloadmanager.com/download/?utm_source=extension";
+/** Oldest XDM Enhanced this extension is meant for; older ones get a warning in the popup. */
+const MIN_XDM_VERSION = "1.0.0";
+/** Where the popup's warning sends the user for a newer XDM Enhanced release. */
+const XDM_DOWNLOAD_URL = "https://github.com/jakepanlilio2000/XDM-Enhanced/releases";
 
 /**
  * Whether [version] (XDM's `appVersion`) is older than MIN_XDM_VERSION. XDM only sends it since
@@ -42,6 +42,7 @@ export default class App {
         this.logger = new Logger();
         this.videoList = [];
         this.blockedHosts = [];
+        this.userBlockedSites = [];
         this.fileExts = [];
         this.requestWatcher = new RequestWatcher(this.onRequestDataReceived.bind(this));
         this.userDisabled = false;
@@ -80,6 +81,7 @@ export default class App {
         const loaded = Promise.all([
             this.connector.connect(),
             this.restoreUserDisabled(),
+            this.restoreUserBlockedSites(),
             this.refreshHostAccess(),
             this.restoreActiveTab()
         ]);
@@ -109,6 +111,19 @@ export default class App {
         return chrome.storage.session.get("userDisabled").then(stored => {
             this.userDisabled = (stored && stored.userDisabled) === true;
         }, () => { });
+    }
+
+    async restoreUserBlockedSites() {
+        try {
+            this.userBlockedSites = await getUserBlockedSites();
+            this.requestWatcher.setUserBlockedSites(this.userBlockedSites);
+        } catch (e) {
+            this.userBlockedSites = [];
+        }
+    }
+
+    isSiteExcluded(hostnameOrUrl) {
+        return isHostExcluded(hostnameOrUrl, this.userBlockedSites, this.blockedHosts);
     }
 
     // The popup's fallback when it cannot ask for the active tab itself. A restarted worker no
@@ -172,6 +187,9 @@ export default class App {
         //Streaming video data received, send to native messaging application
         this.logger.log("onRequestDataReceived");
         this.logger.log(data);
+        if (data && data.url && this.isSiteExcluded(data.url)) {
+            return;
+        }
         this.isMonitoringEnabled() && this.connector.isConnected() && this.connector.postMessage("/media", data);
     }
 
@@ -308,6 +326,13 @@ export default class App {
             }
         });
         this.requestWatcher.register();
+        chrome.storage.onChanged.addListener((changes, areaName) => {
+            if (areaName === "local" && changes["userBlockedSites"]) {
+                const newVal = changes["userBlockedSites"].newValue;
+                this.userBlockedSites = Array.isArray(newVal) ? newVal : [];
+                this.requestWatcher.setUserBlockedSites(this.userBlockedSites);
+            }
+        });
         chrome.permissions.onAdded.addListener(() => this.refreshHostAccess());
         chrome.permissions.onRemoved.addListener(() => this.refreshHostAccess());
         this.attachContextMenu();
@@ -333,7 +358,7 @@ export default class App {
             return false;
         }
         let hostName = u.host;
-        if (this.blockedHosts.find(item => hostName.indexOf(item) >= 0)) {
+        if (this.isSiteExcluded(hostName)) {
             return false;
         }
         let path = file || u.pathname;
@@ -545,8 +570,18 @@ export default class App {
                 chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
                     let tabId = (tabs && tabs[0]) ? tabs[0].id + "" : this.activeTabId;
                     this.activeTabId = tabId;
+                    let currentUrl = (tabs && tabs[0]) ? tabs[0].url : "";
                     // On YouTube the popup says XDM stays out, and offers no bulk picker.
-                    let blocked = !!(tabs && tabs[0] && isBlockedUrl(tabs[0].url));
+                    let blocked = !!(currentUrl && isBlockedUrl(currentUrl));
+                    let currentHost = "";
+                    try {
+                        if (currentUrl) {
+                            currentHost = new URL(currentUrl).hostname;
+                        }
+                    } catch (e) {
+                        currentHost = normalizeHost(currentUrl);
+                    }
+                    let siteExcluded = currentHost ? this.isSiteExcluded(currentHost) : false;
                     sendResponse({
                         enabled: this.isMonitoringEnabled(),
                         connected: this.connector.isConnected() === true,
@@ -554,7 +589,9 @@ export default class App {
                         xdmVersion: this.xdmVersion,
                         updateUrl: XDM_DOWNLOAD_URL,
                         blockedSite: blocked,
-                        list: blocked ? [] : this.videosForTab(tabId)
+                        siteExcluded: siteExcluded,
+                        siteHost: normalizeHost(currentHost),
+                        list: (blocked || siteExcluded) ? [] : this.videosForTab(tabId)
                     });
                 });
             });
@@ -590,6 +627,43 @@ export default class App {
         }
         else if (request.type === "batch") {
             this.sendBatch(request).then(sendResponse, err => sendResponse({ ok: false, error: err.message }));
+            return true;
+        }
+        else if (request.type === "block-site") {
+            addUserBlockedSite(request.host).then(res => {
+                if (res.ok) {
+                    this.userBlockedSites = res.sites;
+                    this.requestWatcher.setUserBlockedSites(this.userBlockedSites);
+                }
+                sendResponse(res);
+            });
+            return true;
+        }
+        else if (request.type === "unblock-site") {
+            removeUserBlockedSite(request.host).then(res => {
+                if (res.ok) {
+                    this.userBlockedSites = res.sites;
+                    this.requestWatcher.setUserBlockedSites(this.userBlockedSites);
+                }
+                sendResponse(res);
+            });
+            return true;
+        }
+        else if (request.type === "get-blocked-sites") {
+            sendResponse({
+                userBlockedSites: this.userBlockedSites,
+                desktopBlockedHosts: this.blockedHosts
+            });
+            return true;
+        }
+        else if (request.type === "save-blocked-sites") {
+            saveUserBlockedSites(request.sites).then(updated => {
+                this.userBlockedSites = updated;
+                this.requestWatcher.setUserBlockedSites(this.userBlockedSites);
+                sendResponse({ ok: true, sites: updated });
+            }).catch(err => {
+                sendResponse({ ok: false, error: (err && err.message) || String(err) });
+            });
             return true;
         }
     }
@@ -642,25 +716,25 @@ export default class App {
         chrome.contextMenus.removeAll(() => {
             chrome.contextMenus.create({
                 id: 'download-any-link',
-                title: "Download with XDM",
+                title: "Download with XDM Enhanced",
                 contexts: ["link", "video", "audio", "all"]
             });
 
             chrome.contextMenus.create({
                 id: 'download-image-link',
-                title: "Download Image with XDM",
+                title: "Download Image with XDM Enhanced",
                 contexts: ["image"]
             });
 
             chrome.contextMenus.create({
                 id: 'bulk-page',
-                title: "Download all with XDM…",
+                title: "Download all with XDM Enhanced…",
                 contexts: ["page"]
             });
 
             chrome.contextMenus.create({
                 id: 'bulk-selection',
-                title: "Download selected links with XDM…",
+                title: "Download selected links with XDM Enhanced…",
                 contexts: ["selection"]
             });
         });
@@ -717,7 +791,7 @@ export default class App {
             return { ok: false, notRunning: true, error: "XDM isn't running" };
         }
         let items = Array.isArray(request.items) ? request.items : [];
-        items = items.filter(item => item && this.isSupportedProtocol(item.url)).slice(0, MAX_BATCH_ITEMS);
+        items = items.filter(item => item && this.isSupportedProtocol(item.url) && !this.isSiteExcluded(item.url)).slice(0, MAX_BATCH_ITEMS);
         if (items.length === 0) {
             return { ok: false, error: "nothing to send" };
         }

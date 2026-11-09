@@ -42,11 +42,13 @@ data class ClearCriteria(val statuses: Set<RecordStatus>, val age: ClearAge) {
  * window, the browser's new-download windows included. One open at a time ([xdm.app.utils.SingleWindows]).
  */
 class ClearDownloadsDialog(owner: Window?) : JDialog(owner, text("CLR_TITLE"), ModalityType.MODELESS) {
-    private val chkFinished = JCheckBox(text("CLR_FINISHED"), true)
-    private val chkPaused = JCheckBox(text("CLR_PAUSED"), true)
-    private val chkFailed = JCheckBox(text("CLR_FAILED"), true)
-    private val cmbAge = JComboBox(ClearAge.entries.map { text(it.labelKey) }.toTypedArray())
-    private val chkDeleteFiles = JCheckBox(text("CLR_DELETE_FILES"))
+    private val chkFinished = JCheckBox(text("CLR_FINISHED"), AppContext.config.clearFinished)
+    private val chkPaused = JCheckBox(text("CLR_PAUSED"), AppContext.config.clearPaused)
+    private val chkFailed = JCheckBox(text("CLR_FAILED"), AppContext.config.clearFailed)
+    private val cmbAge = JComboBox(ClearAge.entries.map { text(it.labelKey) }.toTypedArray()).apply {
+        selectedIndex = AppContext.config.clearAge.coerceIn(0, ClearAge.entries.size - 1)
+    }
+    private val chkDeleteFiles = JCheckBox(text("CLR_DELETE_FILES"), AppContext.config.clearDeleteFiles)
     private val lblCount = JLabel(" ")
     private val btnClear = JButton(text("TOOL_CLEAR"))
     private val btnCancel = JButton(text("ND_CANCEL"))
@@ -88,13 +90,28 @@ class ClearDownloadsDialog(owner: Window?) : JDialog(owner, text("CLR_TITLE"), M
 
         listOf(chkFinished, chkPaused, chkFailed).forEach { it.addActionListener { updateCount() } }
         cmbAge.addActionListener { updateCount() }
+        chkDeleteFiles.addActionListener {
+            updateDeleteFilesStyle()
+            updateCount()
+        }
         btnCancel.addActionListener { dispose() }
         btnClear.addActionListener { clear() }
 
+        updateDeleteFilesStyle()
         updateCount()
         pack()
         minimumSize = Dimension(420.px, height)
         setLocationRelativeTo(owner)
+    }
+
+    private fun updateDeleteFilesStyle() {
+        if (chkDeleteFiles.isSelected) {
+            chkDeleteFiles.foreground = UIManager.getColor("Actions.Red") ?: java.awt.Color(220, 38, 38)
+            chkDeleteFiles.font = chkDeleteFiles.font.deriveFont(java.awt.Font.BOLD)
+        } else {
+            chkDeleteFiles.foreground = UIManager.getColor("CheckBox.foreground")
+            chkDeleteFiles.font = chkDeleteFiles.font.deriveFont(java.awt.Font.PLAIN)
+        }
     }
 
     private fun criteria() = ClearCriteria(
@@ -118,8 +135,17 @@ class ClearDownloadsDialog(owner: Window?) : JDialog(owner, text("CLR_TITLE"), M
         val c = criteria()
         val fromDisk = chkDeleteFiles.isSelected
         val now = System.currentTimeMillis()
-        if (fromDisk && c.statuses.contains(RecordStatus.FINISHED)) {
-            val files = AppContext.db.count { it.status == RecordStatus.FINISHED && c.matches(it, now) }
+
+        // Persist preferences across runs
+        AppContext.config.clearFinished = chkFinished.isSelected
+        AppContext.config.clearPaused = chkPaused.isSelected
+        AppContext.config.clearFailed = chkFailed.isSelected
+        AppContext.config.clearAge = cmbAge.selectedIndex
+        AppContext.config.clearDeleteFiles = chkDeleteFiles.isSelected
+        AppContext.config.save()
+
+        if (fromDisk) {
+            val files = AppContext.db.count { c.matches(it, now) }
             if (files > 0 && JOptionPane.showConfirmDialog(
                     this, text("CLR_CONFIRM_FILES").replace("%d", files.toString()), text("CLR_TITLE"),
                     JOptionPane.OK_CANCEL_OPTION, JOptionPane.WARNING_MESSAGE

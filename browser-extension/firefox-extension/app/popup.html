@@ -10,21 +10,58 @@
 
 <body>
   <header class="app-header">
-    <h1>XDM Integration Module</h1>
+    <div class="header-brand">
+      <img src="icon16.png" class="brand-icon" alt="XDM Enhanced">
+      <span class="brand-text">XDM Enhanced</span>
+      <span class="media-badge" id="mediaCountBadge">0 Detected</span>
+    </div>
     <label class="toggle header-toggle" title="Browser monitoring">
       <input type="checkbox" id="chk" aria-label="Browser monitoring">
       <span class="track"></span>
     </label>
   </header>
 
+  <div class="disconnected-banner" id="disconnectedNotice" hidden>
+    <svg class="warn-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="10" />
+      <line x1="12" y1="8" x2="12" y2="12" />
+      <line x1="12" y1="16" x2="12.01" y2="16" />
+    </svg>
+    <div>
+      <strong>XDM Enhanced Disconnected</strong>
+      <div style="font-size: 11.5px; opacity: 0.9; margin-top: 2px;">
+        Desktop application is not running. Launch XDM Enhanced to enable browser monitoring and downloads.
+      </div>
+    </div>
+  </div>
+
   <div class="update-banner" id="outdated" hidden>
     <div class="notice warn">
-      <h2>Please update XDM</h2>
-      <p><span id="outdatedVersion">This version of XDM</span> is older than this extension needs (XDM 9.0.9
-        or newer). Some downloads and videos may not work.
-        <a id="outdatedLink" href="https://xtremedownloadmanager.com/download/" target="_blank" rel="noopener">Update
-          XDM</a></p>
+      <h2>Please update XDM Enhanced</h2>
+      <p><span id="outdatedVersion">This version of XDM Enhanced</span> is older than this extension needs (v1.0.0 or newer). Some downloads and videos may not work.
+        <a id="outdatedLink" href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases" target="_blank" rel="noopener">Update
+          XDM Enhanced</a></p>
     </div>
+  </div>
+
+  <div class="popup-quick-actions">
+    <button class="quick-action-btn" id="downloadCurrentMediaBtn" type="button" title="Download latest detected media on this page">
+      <svg class="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <polygon points="5 3 19 12 5 21 5 3" fill="currentColor" stroke="none" />
+      </svg>
+      <span>Download Media</span>
+    </button>
+    <button class="quick-action-btn" id="bulk" type="button" title="Grab all links and media on this page">
+      <svg class="btn-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+      </svg>
+      <span>Grab Links</span>
+      <span class="shortcut-hint" id="bulkShortcutHint" hidden>Alt+Shift+D</span>
+    </button>
   </div>
 
   <ul class="video-list" id="list"></ul>
@@ -39,26 +76,62 @@
     <p class="hint">Start playing a video and it will show up here.</p>
   </div>
 
+  <div class="page-body" id="blockedSite" hidden>
+    <div class="notice">
+      <h2>XDM Enhanced stays off YouTube</h2>
+      <p>Videos and links on this site are not captured. Downloads here are left to the browser.</p>
+    </div>
+  </div>
+
+  <div class="page-body" id="siteExcludedNotice" hidden>
+    <div class="notice">
+      <h2 id="siteExcludedTitle">Monitoring paused for this site</h2>
+      <p id="siteExcludedDesc">Downloads and videos on this website are not monitored or captured.</p>
+      <div class="button-row" style="margin-top: 10px;">
+        <button class="primary-button" id="unblockSiteBtn" type="button" style="padding: 5px 12px; font-size: 13px;">Unblock this site</button>
+      </div>
+    </div>
+  </div>
+
   <div class="actions" id="actions" hidden>
     <button class="text-button" id="format" type="button" aria-expanded="false">More formats</button>
     <div class="separator"></div>
     <button class="text-button" id="clear" type="button">Clear list</button>
   </div>
   <p class="hint-text" id="formatHint" hidden>
-    XDM captures the quality the page is playing. Pick another quality in the player and it will
+    XDM Enhanced captures the quality the page is playing. Pick another quality in the player and it will
     appear here as a separate item.
   </p>
 
   <footer class="app-footer">
-    <button class="text-button footer-action" id="bulk" type="button">Grab all links for this page…</button>
-    <label class="toggle small" id="previewsToggle">
-      <span>Video previews</span>
-      <input type="checkbox" id="previews">
-      <span class="track"></span>
-    </label>
+    <div class="site-actions-row" id="siteActionsRow">
+      <button class="text-button" id="blockSiteBtn" type="button">Block this site</button>
+      <span class="action-bullet">•</span>
+      <button class="text-button" id="manageBlockedBtn" type="button">Excluded sites…</button>
+      <span class="action-bullet">•</span>
+      <label class="toggle small" id="previewsToggle" style="margin-left: auto;">
+        <span>Previews</span>
+        <input type="checkbox" id="previews">
+        <span class="track"></span>
+      </label>
+    </div>
+
+    <div class="footer-nav">
+      <div class="status-pill connected" id="connectionStatus">
+        <span class="status-dot"></span>
+        <span id="connectionText">Connected</span>
+      </div>
+      <button class="footer-link-btn" id="openSettingsBtn" type="button">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="3" />
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+        </svg>
+        <span>Settings</span>
+      </button>
+    </div>
   </footer>
 
-  <!-- One row of the list. Filled in by popup.js with textContent - titles come from web pages. -->
   <template id="rowTemplate">
     <li class="video-row">
       <button class="video-item" type="button">
@@ -68,7 +141,6 @@
               <path d="M1 0.8v7.4c0 .5.5.8.9.5l5.6-3.7a.6.6 0 0 0 0-1L1.9.3C1.5 0 1 .3 1 .8z" fill="currentColor" />
             </svg>
           </span>
-          <!-- Shown instead of the play badge for a subtitle file: a caption box with two lines of text. -->
           <span class="cc-badge">
             <svg width="16" height="12" viewBox="0 0 16 12" fill="none" stroke="currentColor"
               stroke-width="1.5" stroke-linecap="round" aria-hidden="true">

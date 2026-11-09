@@ -2,18 +2,24 @@ package xdm.app.ui.screens.settings
 
 import xdm.app.AppContext
 import xdm.app.I8N
-import xdm.app.utils.AutoStart
 import xdm.app.OS
+import xdm.app.power.CompletionAction
+import xdm.app.power.CompletionCoordinator
+import xdm.app.power.PowerManager
+import xdm.app.utils.AutoStart
 import xdm.app.utils.WaylandToolkit
 import xdm.app.utils.chooseFile
 import xdm.app.utils.detectOS
+import xdm.app.utils.px
 import xdm.app.utils.scaledInsets
 import xdm.app.utils.scaledSize
 import java.awt.Dimension
 import java.awt.Insets
 import javax.swing.Box
 import javax.swing.BoxLayout
+import javax.swing.DefaultComboBoxModel
 import javax.swing.JButton
+import javax.swing.JComboBox
 import javax.swing.JComponent
 import javax.swing.JTextField
 
@@ -21,18 +27,36 @@ import javax.swing.JTextField
 class AdvancedConfigPanel : SettingsPanel() {
     private val placeholder = "JTextField.placeholderText"
 
-    private val tglHalt = SettingsToggle()
+    data class CompletionActionOption(val action: CompletionAction, val label: String) {
+        override fun toString(): String = label
+    }
+
+    private val completionOptions: List<CompletionActionOption> by lazy {
+        val list = mutableListOf(
+            CompletionActionOption(CompletionAction.DO_NOTHING, I8N.text("ACTION_DO_NOTHING") ?: "Do nothing")
+        )
+        if (PowerManager.isSleepSupported()) {
+            list.add(CompletionActionOption(CompletionAction.SLEEP, I8N.text("ACTION_SLEEP") ?: "Sleep / Suspend"))
+        }
+        list.add(CompletionActionOption(CompletionAction.SHUTDOWN, I8N.text("ACTION_SHUTDOWN") ?: "Shut down"))
+        if (PowerManager.isHibernateSupported()) {
+            list.add(CompletionActionOption(CompletionAction.HIBERNATE, I8N.text("ACTION_HIBERNATE") ?: "Hibernate"))
+        }
+        list
+    }
+
+    private val cmbCompletionAction = rounded(JComboBox<CompletionActionOption>()).apply {
+        preferredSize = Dimension(190.px, preferredSize.height)
+        maximumSize = preferredSize
+    }
+
     private val tglNoSleep = SettingsToggle()
     private val tglRunOnStartup = SettingsToggle()
     private val tglWayland = SettingsToggle()
     private val tglSwingChooser = SettingsToggle()
     private val tglSkipDupManifests = SettingsToggle()
 
-    private val tglRunCmd = SettingsToggle()
-    private val txtCmd = rounded(JTextField()).apply {
-        putClientProperty(placeholder, I8N.text("MSG_CUSTOM_CMD"))
-        columns = 10
-    }
+    private val postDownloadSection = PostDownloadRulesSection()
 
     private val tglMarkDownloads = SettingsToggle()
     private val tglVirusScan = SettingsToggle()
@@ -49,6 +73,10 @@ class AdvancedConfigPanel : SettingsPanel() {
     init {
         layout = BoxLayout(this, BoxLayout.Y_AXIS)
 
+        val completionModel = DefaultComboBoxModel<CompletionActionOption>()
+        completionOptions.forEach { completionModel.addElement(it) }
+        cmbCompletionAction.model = completionModel
+
         add(settingsTitle(I8N.text("MSG_ADV_TITLE")))
 
         add(
@@ -56,7 +84,7 @@ class AdvancedConfigPanel : SettingsPanel() {
                 I8N.text("SETTINGS_SEC_ADV_GENERAL"),
                 settingsRow(I8N.text("MSG_AUTOSTART"), I8N.text("MSG_AUTOSTART_SUB"), tglRunOnStartup),
                 settingsRow(I8N.text("MSG_AWAKE"), I8N.text("MSG_AWAKE_SUB"), tglNoSleep),
-                settingsRow(I8N.text("MSG_HALT"), I8N.text("MSG_HALT_SUB"), tglHalt),
+                settingsRow(I8N.text("MSG_COMPLETION_ACTION"), I8N.text("MSG_COMPLETION_ACTION_SUB"), cmbCompletionAction),
                 settingsRow(I8N.text("MSG_WAYLAND"), I8N.text("MSG_WAYLAND_SUB"), tglWayland),
                 settingsRow(I8N.text("MSG_SWING_CHOOSER"), I8N.text("MSG_SWING_CHOOSER_SUB"), tglSwingChooser),
             )
@@ -75,13 +103,7 @@ class AdvancedConfigPanel : SettingsPanel() {
         )
         add(settingsGap())
 
-        add(
-            settingsSection(
-                I8N.text("SETTINGS_SEC_COMMAND"),
-                settingsRow(I8N.text("MSG_RUN_CMD"), I8N.text("MSG_RUN_CMD_SUB"), tglRunCmd),
-                settingsFullRow(null, null, fullWidth(txtCmd)),
-            )
-        )
+        add(postDownloadSection.component)
         add(settingsGap())
 
         add(
@@ -105,7 +127,6 @@ class AdvancedConfigPanel : SettingsPanel() {
 
         add(Box.createVerticalGlue())
 
-        tglRunCmd.addActionListener { updateEnabledState() }
         tglVirusScan.addActionListener { updateEnabledState() }
     }
 
@@ -123,7 +144,6 @@ class AdvancedConfigPanel : SettingsPanel() {
     }
 
     private fun updateEnabledState() {
-        txtCmd.isEnabled = tglRunCmd.isSelected
         txtVirusScan.isEnabled = tglVirusScan.isSelected
         txtArgs.isEnabled = tglVirusScan.isSelected
         btnBrowse.isEnabled = tglVirusScan.isSelected
@@ -131,7 +151,9 @@ class AdvancedConfigPanel : SettingsPanel() {
 
     fun load() {
         val config = AppContext.config
-        tglHalt.isSelected = config.haltAfterDownload
+        val currentAction = config.completionAction
+        val selected = completionOptions.firstOrNull { it.action == currentAction } ?: completionOptions.first()
+        cmbCompletionAction.selectedItem = selected
         tglNoSleep.isSelected = config.keepAwake
         // The OS entry, not the config, is the truth: it can be removed behind XDM's back.
         tglRunOnStartup.isSelected = AutoStart.isEnabled()
@@ -143,8 +165,7 @@ class AdvancedConfigPanel : SettingsPanel() {
         tglSwingChooser.isSelected = linux && config.swingFileChooser
         tglSwingChooser.isEnabled = linux
         tglSkipDupManifests.isSelected = config.skipDuplicateManifests
-        tglRunCmd.isSelected = config.runCommand
-        txtCmd.text = config.customCommand
+        postDownloadSection.load()
         tglMarkDownloads.isSelected = config.markDownloadedFiles
         tglVirusScan.isSelected = config.runVirusScan
         txtVirusScan.text = config.virusScannerPath
@@ -154,7 +175,9 @@ class AdvancedConfigPanel : SettingsPanel() {
 
     fun save() {
         val config = AppContext.config
-        config.haltAfterDownload = tglHalt.isSelected
+        val selected = (cmbCompletionAction.selectedItem as? CompletionActionOption)?.action ?: CompletionAction.DO_NOTHING
+        config.completionAction = selected
+        CompletionCoordinator.rearm()
         config.keepAwake = tglNoSleep.isSelected
         if (AutoStart.isEnabled() != tglRunOnStartup.isSelected) {
             AutoStart.setEnabled(tglRunOnStartup.isSelected)
@@ -168,8 +191,7 @@ class AdvancedConfigPanel : SettingsPanel() {
             config.swingFileChooser = tglSwingChooser.isSelected
         }
         config.skipDuplicateManifests = tglSkipDupManifests.isSelected
-        config.runCommand = tglRunCmd.isSelected
-        config.customCommand = txtCmd.text
+        postDownloadSection.save()
         config.markDownloadedFiles = tglMarkDownloads.isSelected
         config.runVirusScan = tglVirusScan.isSelected
         config.virusScannerPath = txtVirusScan.text

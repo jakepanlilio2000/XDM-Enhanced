@@ -309,6 +309,142 @@ button:disabled {
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);
 }
 
+/* ---- keyword filter bar ------------------------------------------------ */
+
+.keyword-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 16px;
+    margin-top: 4px;
+}
+
+.keyword-input-wrap {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    min-height: 32px;
+    padding: 3px 8px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg);
+    cursor: text;
+    transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.keyword-input-wrap:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+.keyword-tokens {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 5px;
+}
+
+.kw-token {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 2px 7px;
+    border-radius: 5px;
+    background: var(--bg-hover);
+    border: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--text);
+    line-height: 1.35;
+    user-select: none;
+    transition: background 0.1s ease;
+}
+
+.kw-token:hover {
+    background: var(--bg-active);
+}
+
+.kw-token.regex {
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    border-color: color-mix(in srgb, var(--cat-video) 40%, transparent);
+    color: var(--cat-video);
+}
+
+.kw-token.wildcard {
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    border-color: color-mix(in srgb, var(--cat-document) 40%, transparent);
+    color: var(--cat-document);
+}
+
+.kw-text {
+    cursor: pointer;
+}
+
+.kw-remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 13px;
+    line-height: 1;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.kw-remove:hover {
+    color: var(--text);
+    background: color-mix(in srgb, var(--text) 15%, transparent);
+}
+
+#keywordInput {
+    flex: 1;
+    min-width: 110px;
+    border: none;
+    background: transparent;
+    color: var(--text);
+    font-size: 12.5px;
+    padding: 2px 0;
+    outline: none;
+}
+
+.keyword-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.mode-selector {
+    padding: 2px;
+    border-radius: 7px;
+}
+
+.mode-btn {
+    height: 24px;
+    padding: 0 8px;
+    font-size: 11px;
+    font-weight: 600;
+    border: none;
+    border-radius: 5px;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: background 0.12s ease, color 0.12s ease;
+}
+
+.mode-btn.active {
+    background: var(--accent);
+    color: var(--accent-contrast);
+    box-shadow: var(--shadow-sm);
+}
+
 .search.invalid {
     border-color: var(--warn-border);
     box-shadow: 0 0 0 3px color-mix(in srgb, var(--warn-border) 20%, transparent);

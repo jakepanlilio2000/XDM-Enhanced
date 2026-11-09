@@ -5,6 +5,7 @@ import xdm.app.I8N
 import xdm.app.displayName
 import xdm.app.ui.components.AppTheme
 import xdm.app.ui.components.CategoryDotIcon
+import xdm.app.ui.components.MessageBox
 import xdm.app.utils.RemixIcon
 import xdm.app.utils.ScaledEmptyBorder
 import xdm.app.utils.px
@@ -133,13 +134,7 @@ class CategorySection {
 
     private fun deleteAt(index: Int) {
         if (index !in categories.indices) return
-        val confirm = JOptionPane.showConfirmDialog(
-            rows,
-            I8N.text("MSG_CAT_DELETE_CONFIRM"),
-            I8N.text("CAT_DELETE"),
-            JOptionPane.YES_NO_OPTION
-        )
-        if (confirm == JOptionPane.YES_OPTION) {
+        if (MessageBox.confirm(rows, I8N.text("CAT_DELETE"), I8N.text("MSG_CAT_DELETE_CONFIRM"))) {
             categories.removeAt(index)
             rebuild()
         }
@@ -151,6 +146,20 @@ class CategorySection {
         AppContext.config.defaultCategories
             .filterNot { present.contains(it.id) }
             .forEach { categories.add(it); seenIds.add(it.id) }
+        rebuild()
+    }
+
+    fun updateDefaultBaseFolder(oldBase: String, newBase: String) {
+        val oldFile = java.io.File(oldBase).absoluteFile
+        val newFile = java.io.File(newBase).absoluteFile
+        categories.forEachIndexed { index, cat ->
+            val catFile = java.io.File(cat.folder).absoluteFile
+            if (cat.predefined && (catFile == java.io.File(oldFile, cat.name) || catFile == oldFile)) {
+                categories[index] = cat.copy(folder = java.io.File(newFile, cat.name).absolutePath)
+            } else if (catFile == oldFile) {
+                categories[index] = cat.copy(folder = newFile.absolutePath)
+            }
+        }
         rebuild()
     }
 

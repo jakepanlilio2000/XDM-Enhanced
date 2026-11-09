@@ -19,6 +19,35 @@ internal object ExtensionVersionCheck {
     private const val MIN_FIREFOX_VERSION = "1.1"
 
     /**
+     * Identifies which browser family an extension request is coming from based on headers,
+     * regardless of whether the extension is outdated.
+     */
+    fun detectBrowser(header: String?, origin: String?, userAgent: String?): Browser? {
+        val firefox: Boolean
+        if (!header.isNullOrBlank()) {
+            val family = header.substringBefore('/').trim().lowercase()
+            firefox = when (family) {
+                "firefox" -> true
+                "chrome" -> false
+                else -> return null
+            }
+        } else {
+            val scheme = origin?.substringBefore("://")?.lowercase() ?: return null
+            firefox = when (scheme) {
+                "moz-extension" -> true
+                "chrome-extension" -> false
+                else -> return null
+            }
+        }
+        return when {
+            firefox -> Browser.FIREFOX
+            userAgent?.contains("Edg/") == true -> Browser.EDGE
+            userAgent?.contains("Brave") == true -> Browser.BRAVE
+            else -> Browser.CHROME
+        }
+    }
+
+    /**
      * The browser running an outdated extension, or null when the extension is current or the
      * request did not come from one. Chromium-based browsers share the Chrome extension; Edge is
      * told apart by its user agent so the update opens Edge's own page.

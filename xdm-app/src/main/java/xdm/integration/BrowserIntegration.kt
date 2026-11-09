@@ -58,6 +58,18 @@ object BrowserIntegration {
     /** Browsers whose outdated extension this run has already told the user about. */
     private val reportedOutdatedExtensions: MutableSet<Browser> = Collections.newSetFromMap(ConcurrentHashMap())
 
+    /** Last check-in timestamp per browser to provide live integration status. */
+    private val connectedBrowsers = ConcurrentHashMap<Browser, Long>()
+
+    fun markConnected(browser: Browser) {
+        connectedBrowsers[browser] = System.currentTimeMillis()
+    }
+
+    fun isConnected(browser: Browser): Boolean {
+        val last = connectedBrowsers[browser] ?: return false
+        return System.currentTimeMillis() - last < 60_000L
+    }
+
     private val extensionOriginSchemes = listOf(
         "chrome-extension://",
         "moz-extension://",
@@ -217,13 +229,17 @@ object BrowserIntegration {
     /** Asks the user, once per browser and run, to update an extension older than XDM expects. */
     private fun checkExtensionVersion(context: RequestContext) {
         val headers = context.requestHeaders
-        val browser = ExtensionVersionCheck.outdatedBrowser(
-            headers[ExtensionVersionCheck.HEADER]?.firstOrNull(),
-            headers["Origin"]?.firstOrNull(),
-            headers["User-Agent"]?.firstOrNull(),
-        ) ?: return
+        val headerVal = headers[ExtensionVersionCheck.HEADER]?.firstOrNull()
+        val originVal = headers["Origin"]?.firstOrNull()
+        val uaVal = headers["User-Agent"]?.firstOrNull()
+
+        ExtensionVersionCheck.detectBrowser(headerVal, originVal, uaVal)?.let {
+            markConnected(it)
+        }
+
+        val browser = ExtensionVersionCheck.outdatedBrowser(headerVal, originVal, uaVal) ?: return
         if (reportedOutdatedExtensions.add(browser)) {
-            Logger.info("INTEGRATION", "Outdated ${browser.displayName} extension: ${headers[ExtensionVersionCheck.HEADER]?.firstOrNull() ?: "no version"}")
+            Logger.info("INTEGRATION", "Outdated ${browser.displayName} extension: ${headerVal ?: "no version"}")
             AppContext.app.showExtensionUpdate(browser)
         }
     }

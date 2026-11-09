@@ -1,5 +1,6 @@
 package xdm.app
 
+import xdm.app.power.CompletionCoordinator
 import xdm.app.utils.KeepAwake
 import xdm.app.utils.SoundPlayer
 import xdm.app.utils.WorkingSetTrim
@@ -80,7 +81,8 @@ object DesktopPlatformHooks : PlatformHooks {
     override fun markDownloadedFile(file: File, source: DownloadSource): Boolean =
         AppContext.platform.markDownloadedFile(file, source)
 
-    override fun downloadFinished(filePath: String) {
+    override fun downloadFinished(filePath: String, id: Long) {
+        CompletionCoordinator.markDownloadFinished()
         SoundPlayer.playIfEnabled(SoundPlayer.Sound.COMPLETE)
         if (AppContext.config.runVirusScan) {
             AppContext.platform.runVirusScan(filePath)
@@ -90,14 +92,17 @@ object DesktopPlatformHooks : PlatformHooks {
         }
     }
 
-    override fun downloadFailed(id: Long) = SoundPlayer.playIfEnabled(SoundPlayer.Sound.FAILED)
+    override fun downloadFinished(filePath: String) {
+        downloadFinished(filePath, -1L)
+    }
+
+    override fun downloadFailed(id: Long) {
+        CompletionCoordinator.markDownloadFailed()
+        SoundPlayer.playIfEnabled(SoundPlayer.Sound.FAILED)
+    }
 
     override fun allDownloadsDone() {
-        WorkingSetTrim.request("all downloads finished")
-        if (AppContext.config.haltAfterDownload) {
-            Logger.info("Attempting shutdown after all downloads")
-            AppContext.platform.shutdownPC()
-        }
+        CompletionCoordinator.onAllDownloadsDone()
     }
 
     override fun downloadDeleted(id: Long) {

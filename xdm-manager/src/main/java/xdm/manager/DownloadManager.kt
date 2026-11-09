@@ -1416,7 +1416,7 @@ class DownloadManager(
     private fun runPostDownloadActions(event: DownloadStatusInfo.FinalInfo) {
         val filePath = File(event.finalOutputFolder, event.finalFileName).absolutePath
         try {
-            hooks.downloadFinished(filePath)
+            hooks.downloadFinished(filePath, event.id)
         } catch (error: Exception) {
             Logger.error("XDM", "Error running post-download actions", error)
         }

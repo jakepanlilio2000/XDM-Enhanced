@@ -3,6 +3,7 @@ package xdm.app.utils
 import xdm.app.MINIMIZED_FLAG
 import xdm.app.OS
 import xdm.app.recording.RecordingSession
+import xdm.app.utils.linux.LinuxDesktopUtils
 import xdm.app.utils.win.Win32Registry
 import xdm.core.util.Logger
 import java.io.File
@@ -49,7 +50,7 @@ object AutoStart {
     fun isEnabled(): Boolean = runCatching {
         when (os) {
             OS.MacOS -> macPlist().isFile
-            OS.Linux -> linuxDesktopFile().isFile
+            OS.Linux -> linuxDesktopFile().isFile || legacyLinuxDesktopFile().isFile
             OS.Windows -> Win32Registry.getString(WIN_RUN_KEY, WIN_VALUE_NAME) != null &&
                 isApproved(Win32Registry.getBinary(WIN_APPROVED_KEY, WIN_VALUE_NAME))
         }
@@ -92,7 +93,9 @@ object AutoStart {
         val cmd = launchCommand() ?: return true
         return when (os) {
             OS.MacOS -> macPlist().readText() == macPlistContent(cmd)
-            OS.Linux -> linuxDesktopFile().readText() == linuxDesktopContent(cmd)
+            OS.Linux -> linuxDesktopFile().isFile &&
+                linuxDesktopFile().readText() == linuxDesktopContent(cmd) &&
+                !legacyLinuxDesktopFile().exists()
             OS.Windows -> true
         }
     }
@@ -109,10 +112,14 @@ object AutoStart {
                 f.writeText(macPlistContent(cmd))
             }
             OS.Linux -> {
+                LinuxDesktopUtils.ensureUserIconInstalled()
                 val f = linuxDesktopFile()
                 f.parentFile?.mkdirs()
                 f.writeText(linuxDesktopContent(cmd))
                 f.setExecutable(true)
+                if (legacyLinuxDesktopFile().exists()) {
+                    deleteFile(legacyLinuxDesktopFile())
+                }
             }
             OS.Windows -> writeWindowsRunValue(cmd)
         }
@@ -122,7 +129,10 @@ object AutoStart {
     private fun disable() {
         when (os) {
             OS.MacOS -> deleteFile(macPlist())
-            OS.Linux -> deleteFile(linuxDesktopFile())
+            OS.Linux -> {
+                deleteFile(linuxDesktopFile())
+                deleteFile(legacyLinuxDesktopFile())
+            }
             OS.Windows -> disableWindows()
         }
         Logger.info("AutoStart: disabled ($os)")
@@ -165,18 +175,14 @@ $args
 
     // --- Linux -------------------------------------------------------------------------------
 
-    private fun linuxDesktopFile() =
+    internal fun linuxDesktopFile() =
+        File(System.getProperty("user.home"), ".config/autostart/xdm-enhanced.desktop")
+
+    internal fun legacyLinuxDesktopFile() =
         File(System.getProperty("user.home"), ".config/autostart/xdm-app.desktop")
 
-    private fun linuxDesktopContent(cmd: List<String>): String {
-        return """[Desktop Entry]
-Type=Application
-Name=$APP_NAME
-Exec=${AppLauncher.desktopExec(cmd)}
-Terminal=false
-X-GNOME-Autostart-enabled=true
-"""
-    }
+    internal fun linuxDesktopContent(cmd: List<String>): String =
+        LinuxDesktopUtils.generateDesktopContent(cmd)
 
     // --- Windows -----------------------------------------------------------------------------
 

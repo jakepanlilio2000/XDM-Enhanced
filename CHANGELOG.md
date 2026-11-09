@@ -5,6 +5,89 @@ All notable changes to the XDM Enhanced project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0-beta.2] - 2026-11-09
+
+### Added
+
+- **Post-Download Action Rules Engine:**
+  - Configurable action rules executed automatically upon download completion based on file extension matching.
+  - Contextual variable placeholders: `%file%`, `%file_name%`, `%file_extension%`, `%file_directory%`, `%absolute_file_path%`, `%absolute_directory_path%`.
+  - Settings UI for rule ordering, toggling, editing, deletion, and manual dry-run testing with real-time output and failure reporting.
+  - *Addresses upstream report: [subhra74/xdm#1409](https://github.com/subhra74/xdm/issues/1409).*
+- **Download Completion Power Actions:**
+  - Selectable action when all active downloads finish: *Do nothing*, *Sleep / Suspend*, *Shutdown*, *Hibernate*.
+  - Platform support checks verifying system capability before offering sleep or hibernation.
+  - Cancellable 30-second countdown warning dialog allowing users to abort disruptive power actions.
+  - *Addresses upstream report: [subhra74/xdm#1430](https://github.com/subhra74/xdm/issues/1430).*
+- **Drag-and-Drop Completed Downloads:**
+  - Direct file drag-and-drop (`DnD`) from completed download rows into Windows Explorer, desktop folders, email clients, and media players via `DownloadListTransferHandler`.
+  - Incomplete, paused, or missing files are safeguarded from drag initiation.
+  - *Addresses upstream report: [subhra74/xdm#1383](https://github.com/subhra74/xdm/issues/1383).*
+- **Browser Extension Exclusions & Multi-Keyword Filters:**
+  - "Block this site" website exclusion manager with hostname normalization, wildcard subdomain support (`*.example.com`), and dedicated management UI.
+  - Multi-keyword filter bar in bulk link grabber supporting tokenized keyword chips, case-insensitivity, regex, and configurable AND/OR evaluation.
+  - *Addresses upstream report: [subhra74/xdm#1406](https://github.com/subhra74/xdm/issues/1406).*
+- **Desktop Browser Settings Tiles:**
+  - Modernized compact browser settings view featuring clickable browser status cards for Chrome, Firefox, Edge, Brave, Opera, and Vivaldi.
+  - Real-time detection of installed browsers and one-click extension installation and repair actions.
+  - *Addresses upstream reports: [subhra74/xdm#1391](https://github.com/subhra74/xdm/issues/1391) and [subhra74/xdm#1372](https://github.com/subhra74/xdm/issues/1372) (browser UI refresh concept inspired by contributor Abhishek Mallav, @abhishekmallav).*
+- **NSIS Windows Installer:**
+  - Modern UI 2 installer (`XDM-Enhanced-Setup-v1.0.0-beta.2-win-x64.exe`) with dual installation scope (`perMachineOrUser`).
+  - Bundled trimmed Liberica JDK 25 runtime, AppCDS metadata cache (`xdm.jsa` / `xdm-zgc.jsa`), Conscrypt TLS accelerator, and FlatLaf native integration.
+  - Clean uninstaller with optional user configuration retention and complete registry cleanup.
+- **Browser Extension Release Packaging:**
+  - Dedicated packaging automation pipeline (`browser-extension/package-extensions.ps1`) producing clean, validated release zip archives for Chromium (MV3) and Firefox (MV2).
+- **Linux Desktop Integration:**
+  - Standard FreeDesktop `.desktop` application launcher generation, MIME associations (`x-scheme-handler/xdm`, `application/x-bittorrent`), and autostart registration.
+  - *Addresses upstream report: [subhra74/xdm#1412](https://github.com/subhra74/xdm/issues/1412).*
+
+### Changed
+
+- **Browser Integration Settings:** Replaced legacy plain text link list with compact, interactive card tiles showing browser branding, connection status, and direct store links.
+- **Companion Extension Version Handshake:** Updated `MIN_XDM_VERSION = "1.0.0"` in companion extensions to recognize desktop `v1.0.0-beta.2` as modern and current.
+
+### Improved
+
+- **Accent Customization & Theming:**
+  - Eight curated FlatLaf accent presets (Indigo, Blue, Cyan, Emerald, Amber, Rose, Purple, Orange) with custom hex color picker and WCAG 2.1 contrast enforcement.
+  - Live updating across all open windows and dialogs without requiring application restart.
+  - *Addresses upstream report: [subhra74/xdm#1395](https://github.com/subhra74/xdm/issues/1395).*
+- **System Theme Auto-Switching:**
+  - Dynamic `System` theme follow mode tracking OS light/dark changes in real time.
+  - *Addresses upstream report: [subhra74/xdm#1349](https://github.com/subhra74/xdm/issues/1349).*
+- **Application Startup Performance:**
+  - Sub-500ms startup achieved via AppCDS class metadata archives on Liberica JDK 25.
+
+### Fixed
+
+- **Download Folder Persistence:** Resolved issue where user-selected default download folders failed to persist across application restarts and browser-triggered downloads (*Addresses upstream report: [subhra74/xdm#1426](https://github.com/subhra74/xdm/issues/1426)*).
+- **Clear Dialog Preferences:** Implemented preference persistence in Clear Downloads dialog with explicit confirmation guards for file deletion (*Addresses upstream report: [subhra74/xdm#1417](https://github.com/subhra74/xdm/issues/1417)*).
+- **Dialog Centering:** Fixed `MessageBox` and custom dialogs centering relative to parent frames across multi-monitor setups.
+
+### Security
+
+- **Loopback Origin & DNS Rebinding Protection:** Hardened loopback IPC server with strict `Origin` header checking (`chrome-extension://`, `moz-extension://`) and DNS rebinding `Host` header enforcement (`127.0.0.1` / `localhost`).
+- **Post-Download Rule Execution Safeguards:** Execution of external system commands is disabled by default; parameter substitution strictly quotes and tokenizes all placeholders (`%file%`, `%file_directory%`, etc.) to prevent command injection.
+- **Path Traversal Sanitization:** Downloaded filenames and destination directories undergo canonicalization and traversal token stripping (`..`, null bytes, Windows reserved device names).
+- **Extension Content Security Policy:** Extensions enforce strict `script-src 'self'` CSP with zero inline scripts, remote code loading, or `eval()` execution.
+
+### Known Issues
+
+- Browser extensions must be loaded in Developer Mode (`Load unpacked`) or via local add-on installation until published on the Chrome Web Store and Mozilla Add-ons (AMO).
+- 32-bit Windows (x86) is deprecated upstream by libtorrent4j and is not supported.
+- Linux distribution packages (.deb / .rpm) require system JRE 21+ or standalone runtime bundle.
+
+### Acknowledgments
+
+- Upstream issue reporters:
+  - Subhra Das Gupta ([@subhra74](https://github.com/subhra74)) and community reporters for issues [#1430](https://github.com/subhra74/xdm/issues/1430), [#1426](https://github.com/subhra74/xdm/issues/1426), [#1417](https://github.com/subhra74/xdm/issues/1417), [#1412](https://github.com/subhra74/xdm/issues/1412), [#1409](https://github.com/subhra74/xdm/issues/1409), [#1406](https://github.com/subhra74/xdm/issues/1406), [#1383](https://github.com/subhra74/xdm/issues/1383), [#1395](https://github.com/subhra74/xdm/issues/1395), [#1349](https://github.com/subhra74/xdm/issues/1349), [#1372](https://github.com/subhra74/xdm/issues/1372), [#1391](https://github.com/subhra74/xdm/issues/1391).
+- Contributor Abhishek Mallav ([@abhishekmallav](https://github.com/abhishekmallav)) for the browser extension UI refresh concept inspiration (PR reference for #1372).
+- Nullsoft Scriptable Install System (NSIS) project team for the Windows installer framework.
+- FormDev Software GmbH for the FlatLaf theme engine.
+- BellSoft for the Liberica JDK 25 runtime.
+
+---
+
 ## [1.0.0-beta.1] - 2026-11-08
 
 This is the first independent beta release of XDM Enhanced, forked from Xtreme Download Manager (XDM) 9.

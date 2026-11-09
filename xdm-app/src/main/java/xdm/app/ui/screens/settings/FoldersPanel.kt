@@ -98,10 +98,20 @@ class FoldersPanel : SettingsPanel() {
 
     fun save() {
         val config = AppContext.config
-        config.tempFolder = txtTmpDir.text
-        config.defaultDownloadFolder = txtDwnDir.text
-        config.rememberNone = !tglAutoCategorize.isSelected
+        val oldDefault = config.defaultDownloadFolder
+        val newDefault = txtDwnDir.text.trim()
+        val newTemp = txtTmpDir.text.trim()
+        if (newDefault.isNotBlank() && oldDefault != newDefault) {
+            categorySection.updateDefaultBaseFolder(oldDefault, newDefault)
+        }
         categorySection.save()
+        if (newDefault.isNotBlank()) {
+            config.defaultDownloadFolder = newDefault
+        }
+        if (newTemp.isNotBlank()) {
+            config.tempFolder = newTemp
+        }
+        config.rememberNone = !tglAutoCategorize.isSelected
     }
 
     /** Releases the category list's config listener when the settings window goes away. */

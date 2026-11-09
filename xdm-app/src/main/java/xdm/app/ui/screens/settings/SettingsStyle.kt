@@ -1,6 +1,7 @@
 package xdm.app.ui.screens.settings
 
 import com.formdev.flatlaf.FlatClientProperties
+import xdm.app.ui.components.ThemeManager
 import xdm.app.utils.RemixIcon
 import xdm.app.utils.ScaledEmptyBorder
 import xdm.app.utils.createIcon
@@ -45,7 +46,9 @@ import javax.swing.UIManager
  */
 
 internal fun settingsAccentColor(): Color =
-    UIManager.getColor("Component.accentColor")
+    ThemeManager.currentAccent
+        ?: UIManager.getColor("Component.accentColor")
+        ?: UIManager.getColor("XDM.accent")
         ?: UIManager.getColor("Component.focusColor")
         ?: UIManager.getColor("Label.foreground")
         ?: Color(0x4F, 0x9E, 0xEE)

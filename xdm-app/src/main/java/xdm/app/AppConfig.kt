@@ -1,5 +1,7 @@
 package xdm.app
 
+import xdm.app.power.CompletionAction
+import xdm.app.rules.PostDownloadRule
 import xdm.app.ui.components.SortKey
 import xdm.capture.MediaFilter
 import xdm.core.CoreConfig
@@ -106,10 +108,12 @@ interface IAppConfig : EngineConfig {
     override var proxyPort: Int
     override var proxyUser: String
     override var proxyPass: String
+    var completionAction: CompletionAction
     var haltAfterDownload: Boolean
     override var keepAwake: Boolean
     var runOnStartup: Boolean
     var customCommand: String
+    var postDownloadRules: List<PostDownloadRule>
     var virusScannerPath: String
     var virusScannerArgs: String
     /** When true, TLS certificate and hostname checks are skipped for downloads (insecure). */
@@ -168,6 +172,13 @@ interface IAppConfig : EngineConfig {
     var torrentSeedingTimeLimitMinutes: Int
     var torrentEnableUpnp: Boolean
     var torrentEnableNatPmp: Boolean
+
+    // --- Clear Downloads Preferences ---
+    var clearFinished: Boolean
+    var clearPaused: Boolean
+    var clearFailed: Boolean
+    var clearAge: Int
+    var clearDeleteFiles: Boolean
 
     fun applyAuthConfig()
 
@@ -257,6 +268,21 @@ private const val F_TORRENT_SEEDING_TIME_LIMIT_MINUTES = 70
 private const val F_TORRENT_ENABLE_UPNP = 71
 private const val F_TORRENT_ENABLE_NATPMP = 72
 private const val F_ACCENT_COLOR = 73
+private const val F_CLEAR_FINISHED = 74
+private const val F_CLEAR_PAUSED = 75
+private const val F_CLEAR_FAILED = 76
+private const val F_CLEAR_AGE = 77
+private const val F_CLEAR_DELETE_FILES = 78
+private const val F_POST_DOWNLOAD_RULES = 79
+private const val F_COMPLETION_ACTION = 80
+
+// Inside F_POST_DOWNLOAD_RULES: one F_RULE record per rule, in order.
+private const val F_RULE = 1
+private const val RULE_ID = 1
+private const val RULE_NAME = 2
+private const val RULE_EXTENSIONS = 3
+private const val RULE_COMMAND = 4
+private const val RULE_ENABLED = 5
 
 // Inside F_CATEGORIES: one F_CATEGORY record per category, in order.
 private const val F_CATEGORY = 1
@@ -339,6 +365,24 @@ class AppConfig(private val configDir: String) : IAppConfig {
             noneFolder = null
             fireChanged()
         }
+
+    fun updateCategoriesForNewBase(oldBase: String, newBase: String) {
+        val oldFile = File(oldBase).absoluteFile
+        val newFile = File(newBase).absoluteFile
+        val updated = categories.map { cat ->
+            val catFile = File(cat.folder).absoluteFile
+            if (cat.predefined && (catFile == File(oldFile, cat.name) || catFile == oldFile)) {
+                cat.copy(folder = File(newFile, cat.name).absolutePath)
+            } else if (catFile == oldFile) {
+                cat.copy(folder = newFile.absolutePath)
+            } else {
+                cat
+            }
+        }
+        if (updated != categories) {
+            categories = updated
+        }
+    }
     // Under the config dir on purpose, not java.io.tmpdir: on most Linux distributions /tmp is
     // tmpfs and RAM-backed, and OS temp cleaners delete stale files, which would purge a download
     // left paused for a week. See FILE_PLACEMENT.md.
@@ -383,10 +427,16 @@ class AppConfig(private val configDir: String) : IAppConfig {
     override var proxyUser: String = ""
     /** Kept in memory only: [save] never writes it. */
     override var proxyPass: String = ""
-    override var haltAfterDownload: Boolean = false
+    override var completionAction: CompletionAction = CompletionAction.DO_NOTHING
+    override var haltAfterDownload: Boolean
+        get() = completionAction == CompletionAction.SHUTDOWN
+        set(value) {
+            completionAction = if (value) CompletionAction.SHUTDOWN else CompletionAction.DO_NOTHING
+        }
     override var keepAwake: Boolean = true
     override var runOnStartup: Boolean = false
     override var customCommand: String = ""
+    override var postDownloadRules: List<PostDownloadRule> = emptyList()
     override var virusScannerPath: String = ""
     override var virusScannerArgs: String = ""
     override var ignoreCertErrors: Boolean = false
@@ -416,6 +466,12 @@ class AppConfig(private val configDir: String) : IAppConfig {
     override var torrentSeedingTimeLimitMinutes: Int = 60
     override var torrentEnableUpnp: Boolean = false
     override var torrentEnableNatPmp: Boolean = false
+
+    override var clearFinished: Boolean = true
+    override var clearPaused: Boolean = true
+    override var clearFailed: Boolean = true
+    override var clearAge: Int = 0
+    override var clearDeleteFiles: Boolean = false
 
     override fun applyAuthConfig() {
         Authenticator.setDefault(DefaultAuthenticator())
@@ -529,6 +585,13 @@ class AppConfig(private val configDir: String) : IAppConfig {
         w.bool(F_TORRENT_ENABLE_UPNP, torrentEnableUpnp)
         w.bool(F_TORRENT_ENABLE_NATPMP, torrentEnableNatPmp)
         accentColor?.let { w.string(F_ACCENT_COLOR, it) }
+        w.bool(F_CLEAR_FINISHED, clearFinished)
+        w.bool(F_CLEAR_PAUSED, clearPaused)
+        w.bool(F_CLEAR_FAILED, clearFailed)
+        w.int(F_CLEAR_AGE, clearAge)
+        w.bool(F_CLEAR_DELETE_FILES, clearDeleteFiles)
+        w.message(F_POST_DOWNLOAD_RULES) { postDownloadRules.forEach { writeRule(this, it) } }
+        w.int(F_COMPLETION_ACTION, completionAction.id)
         w.raw(unknownFields)
     }
 
@@ -571,7 +634,12 @@ class AppConfig(private val configDir: String) : IAppConfig {
                 F_PROXY_HOST -> proxyHost = r.string()
                 F_PROXY_PORT -> proxyPort = r.int()
                 F_PROXY_USER -> proxyUser = r.string()
-                F_HALT_AFTER_DOWNLOAD -> haltAfterDownload = r.bool()
+                F_HALT_AFTER_DOWNLOAD -> {
+                    val halt = r.bool()
+                    if (halt && completionAction == CompletionAction.DO_NOTHING) {
+                        completionAction = CompletionAction.SHUTDOWN
+                    }
+                }
                 F_KEEP_AWAKE -> keepAwake = r.bool()
                 F_CUSTOM_COMMAND -> customCommand = r.string()
                 F_VIRUS_SCANNER_PATH -> virusScannerPath = r.string()
@@ -617,6 +685,13 @@ class AppConfig(private val configDir: String) : IAppConfig {
                 F_TORRENT_ENABLE_UPNP -> torrentEnableUpnp = r.bool()
                 F_TORRENT_ENABLE_NATPMP -> torrentEnableNatPmp = r.bool()
                 F_ACCENT_COLOR -> accentColor = r.string().takeIf { it.isNotBlank() }
+                F_CLEAR_FINISHED -> clearFinished = r.bool()
+                F_CLEAR_PAUSED -> clearPaused = r.bool()
+                F_CLEAR_FAILED -> clearFailed = r.bool()
+                F_CLEAR_AGE -> clearAge = r.int()
+                F_CLEAR_DELETE_FILES -> clearDeleteFiles = r.bool()
+                F_POST_DOWNLOAD_RULES -> postDownloadRules = readRules(r.message())
+                F_COMPLETION_ACTION -> completionAction = CompletionAction.fromId(r.int())
                 else -> unknown.raw(r.rawField())
             }
         }
@@ -691,6 +766,56 @@ class AppConfig(private val configDir: String) : IAppConfig {
             folder = folder ?: return null,
             predefined = predefined,
             color = color,
+        )
+    }
+
+    private fun writeRule(w: TagWriter, rule: PostDownloadRule) = w.message(F_RULE) {
+        string(RULE_ID, rule.id)
+        string(RULE_NAME, rule.name)
+        strings(RULE_EXTENSIONS, rule.extensions)
+        string(RULE_COMMAND, rule.command)
+        bool(RULE_ENABLED, rule.enabled)
+    }
+
+    private fun readRules(r: TagReader): List<PostDownloadRule> {
+        val list = mutableListOf<PostDownloadRule>()
+        while (true) {
+            when (r.next()) {
+                -1 -> return list
+                F_RULE -> {
+                    val sub = r.message()
+                    runCatching { readRule(sub) }
+                        .onSuccess { it?.let(list::add) }
+                        .onFailure { Logger.error("Unable to read a post-download rule: $it") }
+                }
+                else -> r.skip()
+            }
+        }
+    }
+
+    private fun readRule(r: TagReader): PostDownloadRule? {
+        var id: String? = null
+        var name = ""
+        var extensions = emptyList<String>()
+        var command = ""
+        var enabled = true
+        while (true) {
+            when (r.next()) {
+                -1 -> break
+                RULE_ID -> id = r.string()
+                RULE_NAME -> name = r.string()
+                RULE_EXTENSIONS -> extensions = r.strings()
+                RULE_COMMAND -> command = r.string()
+                RULE_ENABLED -> enabled = r.bool()
+                else -> r.skip()
+            }
+        }
+        return PostDownloadRule(
+            id = id ?: java.util.UUID.randomUUID().toString(),
+            name = name,
+            extensions = extensions,
+            command = command,
+            enabled = enabled
         )
     }
 

@@ -1,6 +1,6 @@
 "use strict";
 import { collectPage } from './collector.js';
-import { CATEGORIES, classify, compileFilter } from './classify.js';
+import { CATEGORIES, classify, compileFilter, compileKeywordFilter, createKeywordMatcher } from './classify.js';
 import { isBlockedUrl } from './blocked-sites.js';
 
 /**
@@ -44,6 +44,9 @@ const state = {
     chips: { links: new Set(DEFAULT_CHIPS.links), resources: new Set(DEFAULT_CHIPS.resources) },
     filterText: "",
     filter: () => true,
+    keywords: [],
+    keywordMatchMode: "AND",
+    keywordFilter: () => true,
     minSize: 0,
     noise: false,
     previews: false,
@@ -69,6 +72,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     bindControls();
     renderTabs();
     renderChips();
+    renderKeywordTokens();
     refreshXdmStatus();
     scan();
 });
@@ -93,6 +97,13 @@ async function loadPrefs() {
         state.minSize = Math.max(0, parseInt(prefs.minSize, 10) || 0);
         state.noise = prefs.noise === true;
         state.previews = prefs.previews === true;
+        if (Array.isArray(prefs.keywords)) {
+            state.keywords = prefs.keywords.filter(k => typeof k === "string" && k.trim());
+        }
+        if (prefs.keywordMatchMode === "OR" || prefs.keywordMatchMode === "AND") {
+            state.keywordMatchMode = prefs.keywordMatchMode;
+        }
+        state.keywordFilter = compileKeywordFilter(state.keywords, state.keywordMatchMode);
     } catch (e) {
         // Preferences are a convenience; the defaults are fine.
     }
@@ -109,7 +120,9 @@ function savePrefs() {
             chips: { links: [...state.chips.links], resources: [...state.chips.resources] },
             minSize: state.minSize,
             noise: state.noise,
-            previews: state.previews
+            previews: state.previews,
+            keywords: state.keywords,
+            keywordMatchMode: state.keywordMatchMode
         };
         try {
             chrome.storage.local.set({ [PREFS_KEY]: prefs });
@@ -142,6 +155,85 @@ function bindControls() {
         state.filter = compiled;
         applyFilters();
     });
+
+    const kwInput = $("keywordInput");
+    const kwWrap = $("keywordWrap");
+    if (kwWrap && kwInput) {
+        kwWrap.addEventListener("click", e => {
+            if (e.target === kwWrap || e.target.id === "keywordTokens") {
+                kwInput.focus();
+            }
+        });
+
+        kwInput.addEventListener("keydown", e => {
+            if (e.key === "Enter" || e.key === ",") {
+                e.preventDefault();
+                const raw = kwInput.value.trim().replace(/^,+|,+$/g, "");
+                if (raw) {
+                    const matcher = createKeywordMatcher(raw);
+                    if (!matcher) {
+                        kwWrap.classList.add("invalid");
+                        return;
+                    }
+                    kwWrap.classList.remove("invalid");
+                    if (!state.keywords.includes(raw)) {
+                        state.keywords.push(raw);
+                        state.keywordFilter = compileKeywordFilter(state.keywords, state.keywordMatchMode);
+                        renderKeywordTokens();
+                        applyFilters();
+                        savePrefs();
+                    }
+                    kwInput.value = "";
+                }
+            } else if (e.key === "Backspace" && kwInput.value === "" && state.keywords.length > 0) {
+                e.preventDefault();
+                const last = state.keywords.pop();
+                kwInput.value = last;
+                state.keywordFilter = compileKeywordFilter(state.keywords, state.keywordMatchMode);
+                renderKeywordTokens();
+                applyFilters();
+                savePrefs();
+            } else {
+                kwWrap.classList.remove("invalid");
+            }
+        });
+    }
+
+    const modeAnd = $("modeAnd");
+    const modeOr = $("modeOr");
+    if (modeAnd && modeOr) {
+        modeAnd.addEventListener("click", () => {
+            if (state.keywordMatchMode !== "AND") {
+                state.keywordMatchMode = "AND";
+                state.keywordFilter = compileKeywordFilter(state.keywords, state.keywordMatchMode);
+                renderKeywordTokens();
+                applyFilters();
+                savePrefs();
+            }
+        });
+        modeOr.addEventListener("click", () => {
+            if (state.keywordMatchMode !== "OR") {
+                state.keywordMatchMode = "OR";
+                state.keywordFilter = compileKeywordFilter(state.keywords, state.keywordMatchMode);
+                renderKeywordTokens();
+                applyFilters();
+                savePrefs();
+            }
+        });
+    }
+
+    const clearKeywords = $("clearKeywords");
+    if (clearKeywords) {
+        clearKeywords.addEventListener("click", () => {
+            if (state.keywords.length > 0) {
+                state.keywords = [];
+                state.keywordFilter = compileKeywordFilter(state.keywords, state.keywordMatchMode);
+                renderKeywordTokens();
+                applyFilters();
+                savePrefs();
+            }
+        });
+    }
 
     const minSize = $("minSize");
     minSize.value = state.minSize;
@@ -212,10 +304,15 @@ function bindControls() {
         } else if (e.key === "/" && !inField) {
             e.preventDefault();
             filter.focus();
-        } else if (e.key === "Escape" && e.target === filter && filter.value) {
-            e.preventDefault();
-            filter.value = "";
-            filter.dispatchEvent(new Event("input"));
+        } else if (e.key === "Escape") {
+            if (e.target === filter && filter.value) {
+                e.preventDefault();
+                filter.value = "";
+                filter.dispatchEvent(new Event("input"));
+            } else {
+                e.preventDefault();
+                window.close();
+            }
         }
     });
 }
@@ -261,7 +358,7 @@ async function scan() {
             return;
         }
         if (!result) {
-            showFatal("XDM couldn't read this page.");
+            showFatal("XDM Enhanced couldn't read this page.");
             return;
         }
         showPage(result.title || tab.title, result.pageUrl || tab.url);
@@ -290,7 +387,7 @@ async function explainScanFailure(error, tab) {
     const url = (tab && tab.url) || "";
     if (!/^https?:/i.test(url) || /^https:\/\/chromewebstore\.google\.com\//i.test(url)
         || /^https:\/\/chrome\.google\.com\/webstore/i.test(url)) {
-        showFatal("XDM can't read this kind of page. Browser pages, the Chrome Web Store and the "
+        showFatal("XDM Enhanced can't read this kind of page. Browser pages, the Chrome Web Store and the "
             + "built-in PDF viewer are off limits to extensions.");
         return;
     }
@@ -301,11 +398,11 @@ async function explainScanFailure(error, tab) {
         // assume it is there
     }
     if (!hostAccess) {
-        showFatal("XDM doesn't have access to this site. Open the extension's menu in the toolbar "
+        showFatal("XDM Enhanced doesn't have access to this site. Open the extension's menu in the toolbar "
             + "and allow it on all sites, then press Rescan.");
         return;
     }
-    showFatal("XDM couldn't read this page: " + ((error && error.message) || error));
+    showFatal("XDM Enhanced couldn't read this page: " + ((error && error.message) || error));
 }
 
 /**
@@ -410,7 +507,8 @@ function shownIn(item, tab) {
         && (state.noise || !item.noise)
         && state.chips[tab].has(item.category)
         && passesMinSize(item)
-        && state.filter(item);
+        && state.filter(item)
+        && state.keywordFilter(item);
 }
 
 function applyFilters() {
@@ -430,6 +528,74 @@ function renderTabs() {
     document.querySelectorAll(".segment").forEach(btn => {
         btn.setAttribute("aria-selected", btn.dataset.tab === state.tab ? "true" : "false");
     });
+}
+
+function renderKeywordTokens() {
+    const container = $("keywordTokens");
+    if (!container) return;
+    container.replaceChildren();
+
+    const modeAnd = $("modeAnd");
+    const modeOr = $("modeOr");
+    if (modeAnd && modeOr) {
+        modeAnd.classList.toggle("active", state.keywordMatchMode === "AND");
+        modeAnd.setAttribute("aria-pressed", state.keywordMatchMode === "AND" ? "true" : "false");
+        modeOr.classList.toggle("active", state.keywordMatchMode === "OR");
+        modeOr.setAttribute("aria-pressed", state.keywordMatchMode === "OR" ? "true" : "false");
+    }
+
+    const clearBtn = $("clearKeywords");
+    if (clearBtn) {
+        clearBtn.hidden = state.keywords.length === 0;
+    }
+
+    for (let i = 0; i < state.keywords.length; i++) {
+        const kw = state.keywords[i];
+        const token = document.createElement("span");
+        token.className = "kw-token";
+
+        if (/^\/.+\/[a-z]*$/i.test(kw)) {
+            token.classList.add("regex");
+        } else if (/[*?]/.test(kw)) {
+            token.classList.add("wildcard");
+        }
+
+        const textSpan = document.createElement("span");
+        textSpan.className = "kw-text";
+        textSpan.textContent = kw;
+        textSpan.title = "Click to edit";
+        textSpan.addEventListener("click", () => {
+            state.keywords.splice(i, 1);
+            state.keywordFilter = compileKeywordFilter(state.keywords, state.keywordMatchMode);
+            const input = $("keywordInput");
+            if (input) {
+                input.value = kw;
+                input.focus();
+            }
+            renderKeywordTokens();
+            applyFilters();
+            savePrefs();
+        });
+
+        const removeBtn = document.createElement("button");
+        removeBtn.type = "button";
+        removeBtn.className = "kw-remove";
+        removeBtn.textContent = "×";
+        removeBtn.title = "Remove";
+        removeBtn.setAttribute("aria-label", "Remove " + kw);
+        removeBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            state.keywords.splice(i, 1);
+            state.keywordFilter = compileKeywordFilter(state.keywords, state.keywordMatchMode);
+            renderKeywordTokens();
+            applyFilters();
+            savePrefs();
+        });
+
+        token.appendChild(textSpan);
+        token.appendChild(removeBtn);
+        container.appendChild(token);
+    }
 }
 
 function renderChips() {
@@ -678,7 +844,7 @@ function renderSummary() {
 
 /** The page is named in the window title only; the picker itself has no room to spare. */
 function showPage(title, url) {
-    document.title = "Download with XDM — " + (mode === "selection" ? "selected links on " : "") + (title || url || "");
+    document.title = "Download with XDM Enhanced — " + (mode === "selection" ? "selected links on " : "") + (title || url || "");
 }
 
 function setBusy(text) {
@@ -708,7 +874,7 @@ function hideBanner() {
 /** The page is one the extension never reads (blocked-sites.js). Rescanning won't change that. */
 function showBlockedSite() {
     state.blocked = true;
-    showFatal("XDM doesn't download from YouTube. Links and videos on this site are left to the browser.");
+    showFatal("XDM Enhanced doesn't download from YouTube. Links and videos on this site are left to the browser.");
 }
 
 function showFatal(text) {
@@ -770,7 +936,7 @@ async function copyUrls() {
     try {
         await navigator.clipboard.writeText(urls.join("\n"));
         toast("Copied " + formatCount(urls.length) + (urls.length === 1 ? " URL" : " URLs")
-            + ". In XDM, choose “Add from clipboard”.");
+            + ". In XDM Enhanced, choose “Add from clipboard”.");
     } catch (e) {
         toast("Couldn't copy to the clipboard: " + ((e && e.message) || e));
     }
@@ -802,11 +968,11 @@ function sendToXdm() {
                 return;
             }
             const reason = (response && response.error) || (chrome.runtime.lastError && chrome.runtime.lastError.message);
-            toast("Couldn't send to XDM" + (reason ? ": " + reason : "."));
+            toast("Couldn't send to XDM Enhanced" + (reason ? ": " + reason : "."));
             renderSummary();
             return;
         }
-        toast("Sent " + formatCount(response.count) + " to XDM.");
+        toast("Sent " + formatCount(response.count) + " to XDM Enhanced.");
         setTimeout(() => window.close(), 900);
     });
 }

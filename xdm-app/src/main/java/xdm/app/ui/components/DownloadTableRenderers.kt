@@ -171,6 +171,11 @@ object DownloadTableRenderers {
             add(progressBar, java.awt.BorderLayout.CENTER)
         }
 
+        fun updateUI() {
+            SwingUtilities.updateComponentTreeUI(panel)
+            progressBar.font = progressBar.font.deriveFont(Font.BOLD, 10f.px)
+        }
+
         override fun getTableCellRendererComponent(
             table: JTable,
             value: Any?,
@@ -181,7 +186,11 @@ object DownloadTableRenderers {
         ): Component {
             val progress = (value as? Number)?.toInt() ?: 0
             progressBar.value = progress
-            progressBar.foreground = AppTheme.accent
+            val accent = AppTheme.accent
+            progressBar.foreground = accent
+            val accentFg = ThemeManager.contrastForeground(accent)
+            progressBar.putClientProperty("ProgressBar.selectionForeground", accentFg)
+            progressBar.putClientProperty("ProgressBar.selectionBackground", table.foreground)
 
             val modelRow = table.convertRowIndexToModel(row)
             val model = table.model as? DownloadTableModel

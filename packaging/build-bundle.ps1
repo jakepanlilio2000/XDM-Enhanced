@@ -47,7 +47,7 @@
 #>
 [CmdletBinding()]
 param(
-  [ValidateSet('app-image','msi')] [string]$Type = 'app-image',
+  [ValidateSet('app-image','msi','nsis')] [string]$Type = 'app-image',
   [ValidateSet('x64','arm64')] [string]$Arch,
   [string]$JavaHome,
   [switch]$SkipBuild,
@@ -644,6 +644,27 @@ if ($Type -eq 'msi') {
       -o $Msi
   if ($LASTEXITCODE -ne 0) {
     throw 'wix build failed - see the errors above (on first WiX 7 use: "wix eula accept wix7")'
+  }
+}
+
+# ---- NSIS Installer -----------------------------------------------------------------
+if ($Type -eq 'nsis') {
+  if ($Arch -ne 'x64') { throw 'NSIS installer is currently supported for x64' }
+  $makensisCandidates = @(
+    'C:\Program Files (x86)\NSIS\makensis.exe',
+    'C:\Program Files\NSIS\makensis.exe'
+  )
+  $makensisCmd = Get-Command makensis.exe -ErrorAction SilentlyContinue
+  if ($makensisCmd) { $makensisCandidates = @($makensisCmd.Source) + $makensisCandidates }
+  $makensis = $makensisCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+  if (-not $makensis) { throw 'makensis.exe not found on PATH or standard Program Files locations' }
+
+  $NsiScript = Join-Path $PSScriptRoot 'windows\xdm-installer.nsi'
+  $OutExe = Join-Path $DestDir "XDM-Enhanced-Setup-v$AppVersion-win-$Arch.exe"
+  Write-Host ">> makensis -> $OutExe"
+  & $makensis "/DOUT_FILE=$OutExe" "/DAPP_IMAGE_DIR=$ImageDir" $NsiScript
+  if ($LASTEXITCODE -ne 0) {
+    throw 'makensis failed'
   }
 }
 

@@ -1,7 +1,7 @@
 {
-    "name": "XDM Browser Monitor v9+",
+    "name": "XDM Enhanced - Browser Integration",
     "browser_action": {
-        "default_title": "XDM Browser Monitor v9+",
+        "default_title": "XDM Enhanced",
         "default_icon": {
             "16": "icon16-mono.png",
             "48": "icon48-mono.png",
@@ -9,9 +9,9 @@
         }
     },
     "manifest_version": 2,
-    "version": "1.1",
-    "description": "Send downloads, videos and page links from Firefox to Xtreme Download Manager (XDM). Works with XDM 9.0 and higher.",
-    "homepage_url": "https://github.com/subhra74/xdm",
+    "version": "1.1.2",
+    "description": "Send downloads, web videos and links from Firefox to XDM Enhanced. Fast, modern open-source download manager.",
+    "homepage_url": "https://github.com/jakepanlilio2000/XDM-Enhanced",
     "permissions": [
         "tabs",
         "cookies",
@@ -26,8 +26,12 @@
             "suggested_key": {
                 "default": "Alt+Shift+D"
             },
-            "description": "Grab all links for this page with XDM"
+            "description": "Grab all links for this page with XDM Enhanced"
         }
+    },
+    "options_ui": {
+        "page": "app/options.html",
+        "open_in_tab": true
     },
     "background": {
         "page": "main.html"
@@ -39,8 +43,8 @@
     },
     "browser_specific_settings": {
         "gecko": {
-            "id": "xdm-v9-browser-monitor@subhra74.github.io",
-            "strict_min_version": "142.0",
+            "id": "xdm-enhanced-browser-monitor@jakepanlilio2000.github.io",
+            "strict_min_version": "109.0",
             "data_collection_permissions": {
                 "required": [
                     "none"

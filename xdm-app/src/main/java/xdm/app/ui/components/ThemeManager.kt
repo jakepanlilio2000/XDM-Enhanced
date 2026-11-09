@@ -73,6 +73,51 @@ object ThemeManager {
     val isDark: Boolean
         get() = FlatLaf.isLafDark()
 
+    /**
+     * Default accent color for the active Look and Feel:
+     * light blue (#6E9BFF) in dark theme, royal blue (#3B6FE0) in light theme.
+     */
+    val defaultAccentColor: Color
+        get() = if (isDark) Color(0x6E, 0x9B, 0xFF) else Color(0x3B, 0x6F, 0xE0)
+
+    /**
+     * Relative luminance and contrast foreground calculation.
+     * Returns dark text (#18181B) for bright backgrounds (luminance > 0.58, e.g. Amber, Yellow, Light Cyan, White)
+     * and white text (#FFFFFF) for dark and saturated backgrounds (e.g. Blue, Purple, Rose, Black)
+     * to guarantee maximum readability and contrast across all controls.
+     */
+    fun contrastForeground(bg: Color): Color {
+        val luminance = (0.299 * bg.red + 0.587 * bg.green + 0.114 * bg.blue) / 255.0
+        return if (luminance > 0.58) Color(0x18, 0x18, 0x1B) else Color.WHITE
+    }
+
+    /**
+     * Checks if the graphics environment and window safely support translucency / opacity
+     * without risk of crashing or unsupported native decorations on the host platform.
+     */
+    fun canApplyTranslucency(window: java.awt.Window? = null): Boolean = runCatching {
+        val ge = java.awt.GraphicsEnvironment.getLocalGraphicsEnvironment()
+        val gd = ge.defaultScreenDevice
+        val supported = gd.isWindowTranslucencySupported(java.awt.GraphicsDevice.WindowTranslucency.TRANSLUCENT)
+        if (!supported) return false
+        if (window == null) return true
+        // On decorated Frames, setOpacity throws IllegalComponentStateException in AWT
+        if (window is java.awt.Frame && !window.isUndecorated && window.isDisplayable) return false
+        true
+    }.getOrDefault(false)
+
+    /**
+     * Safely sets window opacity if and only if the underlying platform and framework support it.
+     */
+    fun setWindowOpacitySafe(window: java.awt.Window, opacity: Float): Boolean = runCatching {
+        if (canApplyTranslucency(window)) {
+            window.opacity = opacity.coerceIn(0.1f, 1.0f)
+            true
+        } else {
+            false
+        }
+    }.getOrDefault(false)
+
     fun addThemeListener(listener: ThemeChangeListener) {
         listeners.add(listener)
     }
@@ -102,7 +147,12 @@ object ThemeManager {
         }.getOrNull()
     }
 
-    fun colorToHex(color: Color): String = String.format("#%02X%02X%02X", color.red, color.green, color.blue)
+    fun colorToHex(color: Color): String =
+        if (color.alpha == 255) {
+            String.format("#%02X%02X%02X", color.red, color.green, color.blue)
+        } else {
+            String.format("#%02X%02X%02X%02X", color.alpha, color.red, color.green, color.blue)
+        }
 
     /**
      * Initializes the theme manager with application configuration and starts the OS appearance watcher.
@@ -187,9 +237,14 @@ object ThemeManager {
         lastResolvedDark = resolvedDark
 
         // FlatLaf dynamic accent color callback
+        val accentFg = accent?.let { contrastForeground(it) } ?: Color.WHITE
         if (accent != null) {
             FlatLaf.setSystemColorGetter { key ->
-                if ("accent" == key || "Component.accentColor" == key || "XDM.accent" == key) accent else null
+                when (key) {
+                    "accent", "Component.accentColor", "XDM.accent" -> accent
+                    "accent.foreground", "Component.accentColor.foreground", "XDM.accent.foreground" -> accentFg
+                    else -> null
+                }
             }
         } else {
             FlatLaf.setSystemColorGetter(null)
@@ -205,8 +260,11 @@ object ThemeManager {
             UIManager.put("XDM.accent", accent)
             UIManager.put("Button.default.background", accent)
             UIManager.put("Button.default.borderColor", accent)
+            UIManager.put("Button.default.foreground", accentFg)
             UIManager.put("CheckBox.icon[filled].selectedBackground", accent)
+            UIManager.put("CheckBox.icon[filled].checkmarkColor", accentFg)
             UIManager.put("ProgressBar.foreground", accent)
+            UIManager.put("ProgressBar.selectionForeground", accentFg)
             UIManager.put("Slider.trackValueColor", accent)
             UIManager.put("Component.focusColor", accent)
         } else {
@@ -214,8 +272,11 @@ object ThemeManager {
             UIManager.put("XDM.accent", null)
             UIManager.put("Button.default.background", null)
             UIManager.put("Button.default.borderColor", null)
+            UIManager.put("Button.default.foreground", null)
             UIManager.put("CheckBox.icon[filled].selectedBackground", null)
+            UIManager.put("CheckBox.icon[filled].checkmarkColor", null)
             UIManager.put("ProgressBar.foreground", null)
+            UIManager.put("ProgressBar.selectionForeground", null)
             UIManager.put("Slider.trackValueColor", null)
             UIManager.put("Component.focusColor", null)
         }

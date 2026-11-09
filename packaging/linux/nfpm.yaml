@@ -25,6 +25,8 @@ contents:
     type: symlink
   - src: packaging/linux/xdm-app.desktop
     dst: /usr/share/applications/xdm-app.desktop
+  - src: packaging/linux/xdm-app.desktop
+    dst: /usr/share/applications/xdm-enhanced.desktop
   - { src: xdm-app/src/main/resources/images/xdm-logo-16.png,  dst: /usr/share/icons/hicolor/16x16/apps/xdm-app.png }
   - { src: xdm-app/src/main/resources/images/xdm-logo-24.png,  dst: /usr/share/icons/hicolor/24x24/apps/xdm-app.png }
   - { src: xdm-app/src/main/resources/images/xdm-logo-32.png,  dst: /usr/share/icons/hicolor/32x32/apps/xdm-app.png }
@@ -33,6 +35,15 @@ contents:
   - { src: xdm-app/src/main/resources/images/xdm-logo-128.png, dst: /usr/share/icons/hicolor/128x128/apps/xdm-app.png }
   - { src: xdm-app/src/main/resources/images/xdm-logo-256.png, dst: /usr/share/icons/hicolor/256x256/apps/xdm-app.png }
   - { src: xdm-app/src/main/resources/images/xdm-logo-512.png, dst: /usr/share/icons/hicolor/512x512/apps/xdm-app.png }
+  - { src: xdm-app/src/main/resources/images/xdm-logo-16.png,  dst: /usr/share/icons/hicolor/16x16/apps/xdm-enhanced.png }
+  - { src: xdm-app/src/main/resources/images/xdm-logo-24.png,  dst: /usr/share/icons/hicolor/24x24/apps/xdm-enhanced.png }
+  - { src: xdm-app/src/main/resources/images/xdm-logo-32.png,  dst: /usr/share/icons/hicolor/32x32/apps/xdm-enhanced.png }
+  - { src: xdm-app/src/main/resources/images/xdm-logo-48.png,  dst: /usr/share/icons/hicolor/48x48/apps/xdm-enhanced.png }
+  - { src: xdm-app/src/main/resources/images/xdm-logo-64.png,  dst: /usr/share/icons/hicolor/64x64/apps/xdm-enhanced.png }
+  - { src: xdm-app/src/main/resources/images/xdm-logo-128.png, dst: /usr/share/icons/hicolor/128x128/apps/xdm-enhanced.png }
+  - { src: xdm-app/src/main/resources/images/xdm-logo-256.png, dst: /usr/share/icons/hicolor/256x256/apps/xdm-enhanced.png }
+  - { src: xdm-app/src/main/resources/images/xdm-logo-512.png, dst: /usr/share/icons/hicolor/512x512/apps/xdm-enhanced.png }
+  - { src: xdm-app/src/main/resources/images/xdm-logo.svg,     dst: /usr/share/icons/hicolor/scalable/apps/xdm-enhanced.svg }
   # app/.package: the jpackage launcher reads a per-user .cfg (~/.local/xdm-app/) only when it exists,
   # and it only works where dpkg / rpm own the launcher, so deb and rpm only (PACKAGING.md 7.3, 8).
   - src: packaging/linux/package-name

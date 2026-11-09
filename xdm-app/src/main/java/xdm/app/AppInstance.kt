@@ -314,9 +314,25 @@ open class AppInstance : IAppInstance {
             }
         }
 
-        // TODO: Check if download window needs to be shown, or directly start the download
-        SwingUtilities.invokeLater {
-            showNewVideoDownloadWindowInternal(vid, fileName, fileSize, contentType)
+        if (AppContext.config.startDownloadAutomatically) {
+            val name = FileUtils.sanitizeFileName(fileName) ?: "video"
+            val tracker = AppContext.videoTracker
+            val http = tracker.getHttpVideo(vid)
+            val hls = tracker.getHlsVideo(vid)
+            val dash = tracker.getDashVideo(vid)
+            val subtitle = tracker.getSubtitle(vid)
+            val url = http?.url ?: subtitle?.task?.url ?: hls?.url ?: dash?.url
+            val origin = http?.origin ?: subtitle?.task?.origin ?: hls?.origin ?: dash?.origin
+            val (categoryId, targetFolder) = DesktopCaptureHost.destination(name, url, origin)
+            val segments = AppContext.config.maxSegments
+            val convertToSrt = AppContext.config.saveSubtitlesAsSrt
+            AppContext.downloader.addVideoDownload(
+                vid, name, categoryId, targetFolder, segments, null, convertToSrt
+            )
+        } else {
+            SwingUtilities.invokeLater {
+                showNewVideoDownloadWindowInternal(vid, fileName, fileSize, contentType)
+            }
         }
     }
 

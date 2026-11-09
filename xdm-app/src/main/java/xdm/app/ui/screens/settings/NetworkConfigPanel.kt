@@ -3,6 +3,7 @@ package xdm.app.ui.screens.settings
 import xdm.app.AppConfig
 import xdm.app.AppContext
 import xdm.app.I8N
+import xdm.app.ui.components.MessageBox
 import xdm.app.utils.RemixIcon
 import xdm.app.utils.px
 import xdm.app.utils.scaledInsets
@@ -153,14 +154,12 @@ class NetworkConfigPanel : SettingsPanel() {
     /** Turning certificate checks off is risky, so ask before switching it on. */
     private fun confirmIgnoreCertErrors() {
         if (!tglIgnoreCertErrors.isSelected) return
-        val choice = JOptionPane.showConfirmDialog(
+        val choice = MessageBox.confirm(
             this,
-            I8N.text("MSG_IGNORE_CERT_ERRORS_CONFIRM"),
             I8N.text("MSG_IGNORE_CERT_ERRORS"),
-            JOptionPane.YES_NO_OPTION,
-            JOptionPane.WARNING_MESSAGE
+            I8N.text("MSG_IGNORE_CERT_ERRORS_CONFIRM")
         )
-        if (choice != JOptionPane.YES_OPTION) {
+        if (!choice) {
             tglIgnoreCertErrors.isSelected = false
         }
     }

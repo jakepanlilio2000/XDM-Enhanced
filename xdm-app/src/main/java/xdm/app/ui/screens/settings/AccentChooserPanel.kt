@@ -30,12 +30,14 @@ class AccentChooserPanel : JPanel() {
         cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
         putClientProperty("JButton.buttonType", "roundRect")
         font = font.deriveFont(11f.px)
+        toolTipText = I8N.text("ACCENT_CUSTOM")
         addActionListener { pickCustomColor() }
     }
     private val btnReset = JButton(I8N.text("ACCENT_RESET")).apply {
         cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
         putClientProperty("JButton.buttonType", "roundRect")
         font = font.deriveFont(11f.px)
+        toolTipText = I8N.text("ACCENT_RESET")
         addActionListener { selectAccent(null) }
     }
 
@@ -50,7 +52,7 @@ class AccentChooserPanel : JPanel() {
         // Default swatch
         val defaultBtn = SwatchButton(
             title = I8N.text("ACCENT_DEFAULT"),
-            colorProvider = { AppTheme.accent },
+            colorProvider = { ThemeManager.defaultAccentColor },
             isDefault = true
         ) { selectAccent(null) }
         group.add(defaultBtn)

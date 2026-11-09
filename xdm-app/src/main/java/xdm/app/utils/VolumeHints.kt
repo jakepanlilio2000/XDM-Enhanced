@@ -63,7 +63,7 @@ object VolumeHints {
         return runCatching { Files.getFileStore(f.toPath()) }.getOrNull()
     }
 
-    private fun existingAncestor(path: String): File? {
+    fun existingAncestor(path: String): File? {
         var f: File? = File(path).absoluteFile
         while (f != null && !f.exists()) f = f.parentFile
         return f

@@ -1,7 +1,7 @@
 {
-    "name": "XDM Integration Module",
+    "name": "XDM Enhanced - Browser Integration",
     "action": {
-        "default_title": "XDM Integration Module",
+        "default_title": "XDM Enhanced",
         "default_icon": {
             "16": "icon16-mono.png",
             "48": "icon48-mono.png",
@@ -9,9 +9,10 @@
         }
     },
     "manifest_version": 3,
-    "version": "3.5",
-    "description": "Send downloads, videos and page links from Chrome to Xtreme Download Manager (XDM). Works with XDM 9.0 and higher.",
-    "homepage_url": "https://github.com/subhra74/xdm",
+    "version": "3.5.2",
+    "version_name": "1.0.0-beta.2",
+    "description": "Send downloads, web videos and links from Chrome to XDM Enhanced. Fast, modern open-source download manager.",
+    "homepage_url": "https://github.com/jakepanlilio2000/XDM-Enhanced",
     "minimum_chrome_version": "103",
     "host_permissions": [
         "*://*/*"
@@ -25,12 +26,16 @@
         "alarms",
         "scripting"
     ],
+    "options_ui": {
+        "page": "options.html",
+        "open_in_tab": true
+    },
     "commands": {
         "open-bulk": {
             "suggested_key": {
                 "default": "Alt+Shift+D"
             },
-            "description": "Grab all links for this page with XDM"
+            "description": "Grab all links for this page with XDM Enhanced"
         }
     },
     "background": {

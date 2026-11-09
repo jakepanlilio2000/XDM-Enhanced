@@ -25,6 +25,7 @@ class RequestWatcher {
     constructor(callback, downloadCallback) {
         this.logger = new Logger();
         this.blockedHosts = [];
+        this.userBlockedSites = [];
         this.mediaExts = [];
         this.requestMap = new Map();
         this.callback = callback;
@@ -60,6 +61,10 @@ class RequestWatcher {
         }
     }
 
+    setUserBlockedSites(sites) {
+        this.userBlockedSites = Array.isArray(sites) ? sites : [];
+    }
+
     isMatchingRequest(res) {
         // A failed response (a 410 from an expired or used-up CDN token, a 403, ...) is not media:
         // XDM would only replay the request and get the same error back.
@@ -69,7 +74,13 @@ class RequestWatcher {
         let u = new URL(res.url);
 
         let hostName = u.host;
-        if (this.blockedHosts.find(h => hostName.indexOf(h) >= 0)) {
+        if (isBlockedHost(hostName)) {
+            return false;
+        }
+        if (this.blockedHosts.some(h => matchesHostRule(hostName, h))) {
+            return false;
+        }
+        if (this.userBlockedSites && this.userBlockedSites.some(h => matchesHostRule(hostName, h))) {
             return false;
         }
 
@@ -112,7 +123,13 @@ class RequestWatcher {
             return false;
         }
         let hostName = new URL(res.url).host;
-        if (this.blockedHosts.find(h => hostName.indexOf(h) >= 0)) {
+        if (isBlockedHost(hostName)) {
+            return false;
+        }
+        if (this.blockedHosts.some(h => matchesHostRule(hostName, h))) {
+            return false;
+        }
+        if (this.userBlockedSites && this.userBlockedSites.some(h => matchesHostRule(hostName, h))) {
             return false;
         }
         let headers = res.responseHeaders || [];

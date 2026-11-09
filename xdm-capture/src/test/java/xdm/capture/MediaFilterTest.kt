@@ -21,7 +21,23 @@ class MediaFilterTest {
         assertFalse(MediaFilter.isMedia("https://cdn.example.com/seg.bin", 200, "application/octet-stream", config), "octet-stream alone")
         assertFalse(MediaFilter.isMedia("https://cdn.example.com/clip.mp4", 403, "video/mp4", config), "failed response")
         assertFalse(MediaFilter.isMedia("https://dl.update.microsoft.com/x.mp4", 200, "video/mp4", config), "blocked host")
+        assertFalse(MediaFilter.isMedia("https://www.youtube.com/videoplayback?id=123", 200, "video/mp4", config), "blocked store site YouTube")
         assertFalse(MediaFilter.isMedia("https://cdn.example.com/api?f=clip.mp4", 200, "application/json", config), "extension only in the query")
+    }
+
+    @Test
+    fun matchesHostRule_exactAndSubdomainBoundary() {
+        assertTrue(MediaFilter.matchesHostRule("example.com", "example.com"))
+        assertTrue(MediaFilter.matchesHostRule("sub.example.com", "example.com"))
+        assertTrue(MediaFilter.matchesHostRule("deep.sub.example.com", "*.example.com"))
+        assertTrue(MediaFilter.matchesHostRule("https://sub.example.com:8080/path", "example.com"))
+        assertTrue(MediaFilter.matchesHostRule("EXAMPLE.COM", "example.com"))
+
+        // Must NOT match substring without dot boundary
+        assertFalse(MediaFilter.matchesHostRule("notexample.com", "example.com"))
+        assertFalse(MediaFilter.matchesHostRule("example.com.evil.com", "example.com"))
+        assertFalse(MediaFilter.matchesHostRule("mybad.com", "bad.com"))
+        assertFalse(MediaFilter.matchesHostRule("bad.company", "bad.com"))
     }
 
     @Test

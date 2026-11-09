@@ -1,6 +1,7 @@
 package xdm.app.ui.components
 
 import xdm.app.MessageBoxResult
+import xdm.app.utils.mainWindowOnScreen
 import xdm.app.utils.shownWindow
 import xdm.app.utils.windowIconImages
 import java.awt.Component
@@ -22,29 +23,56 @@ data class AuthInput(val userName: String, val password: String)
 
 object MessageBox {
     fun confirmWithCheckBox(
-        window: Window?, title: String?, message: String, chkMessage: String?
+        window: Component?, title: String?, message: String, chkMessage: String?
     ): MessageBoxResult {
+        val owner = shownWindow(window) ?: mainWindowOnScreen()
         val chk = JCheckBox(chkMessage)
-        if (JOptionPane.showOptionDialog(
-                window,
-                arrayOf<Any>(message, chk),
-                title,
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.QUESTION_MESSAGE,
-                null,
-                null,
-                null
-            )
-            == JOptionPane.YES_OPTION
-        ) {
+        val pane = JOptionPane(
+            arrayOf<Any>(message, chk),
+            JOptionPane.QUESTION_MESSAGE,
+            JOptionPane.YES_NO_OPTION,
+            null,
+            null,
+            null
+        )
+        val dialogTitle = title ?: UIManager.getString("OptionPane.titleText") ?: "Confirm"
+        val dialog = if (owner != null) pane.createDialog(owner, dialogTitle)
+        else pane.createDialog(dialogTitle).apply { iconImages = windowIconImages }
+
+        dialog.isModal = true
+        dialog.modalityType = Dialog.ModalityType.APPLICATION_MODAL
+        dialog.iconImages = windowIconImages
+        dialog.pack()
+        dialog.setLocationRelativeTo(owner)
+        dialog.isVisible = true
+
+        val value = pane.value
+        if (value == JOptionPane.YES_OPTION || (value is Int && value == JOptionPane.YES_OPTION)) {
             return if (chk.isSelected) MessageBoxResult.YES_WITH_SELECTION else MessageBoxResult.YES
         }
         return MessageBoxResult.CANCEL
     }
 
-    fun confirm(window: Window?, title: String?, message: String?): Boolean {
-        return (JOptionPane.showConfirmDialog(window, message, title, JOptionPane.YES_NO_OPTION)
-                == JOptionPane.YES_OPTION)
+    fun confirm(window: Component?, title: String?, message: String?): Boolean {
+        val owner = shownWindow(window) ?: mainWindowOnScreen()
+        val pane = JOptionPane(
+            message,
+            JOptionPane.QUESTION_MESSAGE,
+            JOptionPane.YES_NO_OPTION
+        )
+        val dialogTitle = title ?: UIManager.getString("OptionPane.titleText") ?: "Confirm"
+        val dialog = if (owner != null) pane.createDialog(owner, dialogTitle)
+        else pane.createDialog(dialogTitle).apply { iconImages = windowIconImages }
+
+        dialog.isModal = true
+        dialog.modalityType = Dialog.ModalityType.APPLICATION_MODAL
+        dialog.iconImages = windowIconImages
+        dialog.pack()
+        dialog.setLocationRelativeTo(owner)
+        dialog.isVisible = true
+
+        val value = pane.value
+        return value == JOptionPane.YES_OPTION || (value is Int && value == JOptionPane.YES_OPTION)
     }
 
     /** Info messages on screen, by owner and message: asking again brings the open one forward. EDT only. */

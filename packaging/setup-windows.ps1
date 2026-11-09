@@ -181,8 +181,22 @@ if ($wixMajor -ge 7) { Write-Host "   ok: wix $(& wix --version)" }
 elseif ($wixMajor -gt 0) { Write-Host "   too old (v$wixMajor): rerun with -InstallWix"; $missing += 'WiX 7' }
 else { Write-Host '   missing (MSI only): rerun with -InstallWix'; $missing += 'WiX 7' }
 
+Write-Host '>> NSIS (for the Windows installer)'
+$makensisCandidates = @(
+  'C:\Program Files (x86)\NSIS\makensis.exe',
+  'C:\Program Files\NSIS\makensis.exe'
+)
+$makensisCmd = Get-Command makensis.exe -ErrorAction SilentlyContinue
+if ($makensisCmd) { $makensisCandidates = @($makensisCmd.Source) + $makensisCandidates }
+$foundMakensis = $makensisCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+if ($foundMakensis) {
+  $ver = (& $foundMakensis /VERSION)
+  Write-Host "   ok: NSIS $ver ($foundMakensis)"
+} else {
+  Write-Host '   missing (NSIS installer only): install NSIS from https://nsis.sourceforge.io/'
+}
+
 Write-Host ''
-if ($missing) {
   Write-Host "Missing: $($missing -join ', ')"
   Write-Host 'Without the .NET SDK and WiX, build-bundle.ps1 can still build the app image (no -Type msi).'
 } else {

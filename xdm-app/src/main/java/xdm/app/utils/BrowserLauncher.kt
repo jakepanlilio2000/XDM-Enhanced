@@ -73,6 +73,62 @@ object BrowserLauncher {
         else -> launchLinux(browser, url)
     }
 
+    /** Non-blocking check for whether [browser] appears to be installed on the system. */
+    fun isInstalled(browser: Browser): Boolean = runCatching {
+        when (detectOS()) {
+            OS.Windows -> isInstalledWindows(browser)
+            OS.MacOS -> isInstalledMac(browser)
+            else -> isInstalledLinux(browser)
+        }
+    }.getOrDefault(false)
+
+    private fun isInstalledWindows(browser: Browser): Boolean {
+        if (browser == Browser.EDGE) return true
+
+        val roots = listOf("ProgramW6432", "ProgramFiles", "ProgramFiles(x86)", "LOCALAPPDATA")
+            .mapNotNull { System.getenv(it) }
+            .distinct()
+        if (roots.any { File(File(it, browser.windowsDir), browser.windowsExe).isFile }) {
+            return true
+        }
+
+        val appPathsKey = """Software\Microsoft\Windows\CurrentVersion\App Paths\${browser.windowsExe}"""
+        return xdm.app.utils.win.Win32Registry.getString(appPathsKey, "") != null
+    }
+
+    private fun isInstalledMac(browser: Browser): Boolean {
+        val appName = when (browser) {
+            Browser.CHROME -> "Google Chrome.app"
+            Browser.FIREFOX -> "Firefox.app"
+            Browser.EDGE -> "Microsoft Edge.app"
+            Browser.BRAVE -> "Brave Browser.app"
+        }
+        val locations = listOf(
+            File("/Applications", appName),
+            File(System.getProperty("user.home"), "Applications/$appName")
+        )
+        return locations.any { it.exists() }
+    }
+
+    private fun isInstalledLinux(browser: Browser): Boolean {
+        val home = System.getProperty("user.home")
+        val binDirs = (System.getenv("PATH")?.split(File.pathSeparator).orEmpty() +
+                listOf("/usr/bin", "/usr/local/bin", "/snap/bin", "$home/.local/bin"))
+            .filter { it.isNotEmpty() }
+            .distinct()
+
+        for (cmd in browser.linuxCommands) {
+            for (dir in binDirs) {
+                val f = File(dir, cmd)
+                if (f.isFile && f.canExecute()) return true
+            }
+        }
+        if (browser.linuxPaths.any { File(it).let { f -> f.isFile && f.canExecute() } }) return true
+        if (File("/var/lib/flatpak/exports/bin", browser.flatpakId).exists()) return true
+        if (File("$home/.local/share/flatpak/exports/bin", browser.flatpakId).exists()) return true
+        return false
+    }
+
     private fun launchMac(browser: Browser, url: String): Boolean =
         // `open -b` exits non-zero when no app has that bundle id, without opening anything.
         browser.macBundleIds.any { id -> runAndWait(listOf("/usr/bin/open", "-b", id, url)) }

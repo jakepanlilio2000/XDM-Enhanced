@@ -213,23 +213,93 @@ export function compileFilter(text) {
     if (!text) {
         return () => true;
     }
-    const re = /^\/(.+)\/([a-z]*)$/i.exec(text);
+    const matcher = createKeywordMatcher(text);
+    if (!matcher) {
+        return null;
+    }
+    return matcher.matches;
+}
+
+/**
+ * Creates an individual keyword matcher from a single token string.
+ * Supports:
+ * - Regular expressions: /pattern/flags (defaults to case-insensitive)
+ * - Wildcards: containing * or ?
+ * - Plain substrings: case-insensitive match on URL, filename, or link text
+ * Returns null if the token cannot be compiled (e.g. malformed regex).
+ */
+export function createKeywordMatcher(token) {
+    token = (token || "").trim();
+    if (!token) {
+        return null;
+    }
+
+    const re = /^\/(.+)\/([a-z]*)$/i.exec(token);
     if (re) {
         try {
-            const rx = new RegExp(re[1], re[2].includes("i") ? re[2] : re[2] + "i");
-            return item => rx.test(item.url) || rx.test(item.filename) || (item.text ? rx.test(item.text) : false);
+            const flags = re[2].includes("i") ? re[2] : re[2] + "i";
+            const rx = new RegExp(re[1], flags);
+            return {
+                type: "regex",
+                text: token,
+                matches: item => rx.test(item.url || "") || rx.test(item.filename || "") || (item.text ? rx.test(item.text) : false)
+            };
         } catch (e) {
             return null;
         }
     }
-    if (/[*?]/.test(text)) {
-        const pattern = text.split("").map(ch => ch === "*" ? ".*" : ch === "?" ? "." :
-            ch.replace(/[.+^${}()|[\]\\]/g, "\\$&")).join("");
-        const rx = new RegExp("^" + pattern + "$", "i");
-        return item => rx.test(item.filename) || rx.test(item.url);
+
+    if (/[*?]/.test(token)) {
+        try {
+            const pattern = token.split("").map(ch => ch === "*" ? ".*" : ch === "?" ? "." :
+                ch.replace(/[.+^${}()|[\]\\]/g, "\\$&")).join("");
+            const rx = new RegExp("^" + pattern + "$", "i");
+            return {
+                type: "wildcard",
+                text: token,
+                matches: item => rx.test(item.filename || "") || rx.test(item.url || "") || (item.text ? rx.test(item.text) : false)
+            };
+        } catch (e) {
+            return null;
+        }
     }
-    const needle = text.toLowerCase();
-    return item => item.url.toLowerCase().includes(needle)
-        || item.filename.toLowerCase().includes(needle)
-        || (item.text || "").toLowerCase().includes(needle);
+
+    const needle = token.toLowerCase();
+    return {
+        type: "substring",
+        text: token,
+        matches: item => (item.url && item.url.toLowerCase().includes(needle))
+            || (item.filename && item.filename.toLowerCase().includes(needle))
+            || (item.text && item.text.toLowerCase().includes(needle))
+    };
+}
+
+/**
+ * Compiles a list of keyword filter tokens into a single predicate.
+ * Supports AND (all keywords must match) and OR (at least one keyword must match).
+ * Empty keyword list matches everything.
+ */
+export function compileKeywordFilter(keywords = [], matchMode = "AND") {
+    if (!Array.isArray(keywords) || keywords.length === 0) {
+        return () => true;
+    }
+
+    const matchers = [];
+    for (const kw of keywords) {
+        const m = createKeywordMatcher(kw);
+        if (m) {
+            matchers.push(m);
+        }
+    }
+
+    if (matchers.length === 0) {
+        return () => true;
+    }
+
+    const isOr = String(matchMode).toUpperCase() === "OR";
+    if (isOr) {
+        return item => matchers.some(m => m.matches(item));
+    } else {
+        return item => matchers.every(m => m.matches(item));
+    }
 }

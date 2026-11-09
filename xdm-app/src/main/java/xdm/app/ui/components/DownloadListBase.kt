@@ -68,6 +68,8 @@ abstract class DownloadListBase(final override val filter: MainListViewFilter) :
         table.tableHeader = null
         table.fillsViewportHeight = true
         table.background = AppTheme.listBackground
+        table.dragEnabled = true
+        table.transferHandler = DownloadListTransferHandler { selectedItems }
 
         val keys =
             mutableListOf(RowSorter.SortKey(0, SortOrder.DESCENDING))

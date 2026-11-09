@@ -52,6 +52,9 @@ object AppContext {
     val hasScheduler: Boolean
         get() = ::scheduler.isInitialized
 
+    val hasDownloader: Boolean
+        get() = ::downloader.isInitialized
+
     val hasConfig: Boolean
         get() = ::config.isInitialized
 

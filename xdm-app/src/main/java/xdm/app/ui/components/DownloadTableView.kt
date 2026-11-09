@@ -86,6 +86,8 @@ class DownloadTableView(
         table.tableHeader.reorderingAllowed = true
         table.tableHeader.resizingAllowed = true
         table.tableHeader.font = table.tableHeader.font.deriveFont(Font.BOLD, 11f.px)
+        table.dragEnabled = true
+        table.transferHandler = DownloadListTransferHandler { selectedItems }
 
         // Install Renderers
         table.columnModel.getColumn(DownloadTableModel.COL_FILE_NAME).cellRenderer = DownloadTableRenderers.FileNameCellRenderer()
@@ -368,6 +370,7 @@ class DownloadTableView(
         emptyTextLabel.foreground = UIManager.getColor("Label.disabledForeground") ?: Color.GRAY
         table.tableHeader.updateUI()
         table.tableHeader.font = table.tableHeader.font.deriveFont(Font.BOLD, 11f.px)
+        (table.columnModel.getColumn(DownloadTableModel.COL_PROGRESS).cellRenderer as? DownloadTableRenderers.ProgressCellRenderer)?.updateUI()
         table.updateUI()
         repaint()
     }

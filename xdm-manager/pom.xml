@@ -5,7 +5,7 @@
     <parent>
         <groupId>xdm</groupId>
         <artifactId>xdm</artifactId>
-        <version>1.0.0-beta.1</version>
+        <version>1.0.0-beta.2</version>
     </parent>
     <groupId>xdm-manager</groupId>
     <artifactId>xdm-manager</artifactId>
@@ -59,7 +59,7 @@
         <dependency>
             <groupId>xdm-capture</groupId>
             <artifactId>xdm-capture</artifactId>
-            <version>1.0.0-beta.1</version>
+            <version>1.0.0-beta.2</version>
         </dependency>
     </dependencies>
 

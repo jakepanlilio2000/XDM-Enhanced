@@ -11,9 +11,9 @@ window.onload = function () {
             return;
         }
         document.getElementById("notice").className = "notice ok";
-        document.getElementById("status").textContent = "Connected to XDM";
+        document.getElementById("status").textContent = "Connected to XDM Enhanced";
         document.getElementById("detail").textContent =
-            "Click the XDM icon again to see what has been detected on this page.";
+            "Click the XDM Enhanced icon again to see what has been detected on this page.";
         document.getElementById("actions").hidden = true;
     });
 };

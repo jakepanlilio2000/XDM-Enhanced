@@ -30,24 +30,12 @@ class PlatformInvoke : IPlatformInvoke {
     }
 
     override fun runCustomCommand(file: String) {
-        val template = AppContext.config.customCommand.trim()
-        if (template.isEmpty()) {
-            Logger.info("Run command enabled but no command configured")
-            return
-        }
-        val tokens = tokenize(template)
-        // Substitute the %file% placeholder if present, otherwise append the file as an argument.
-        val command = if (tokens.any { it.contains(FILE_TOKEN) }) {
-            tokens.map { it.replace(FILE_TOKEN, file) }
-        } else {
-            tokens + file
-        }
-        launch(command, "custom command")
+        xdm.app.rules.PostDownloadActionEngine.execute(File(file))
     }
 
     override fun shutdownPC() {
         Logger.info("Initiating shutdown after all downloads")
-        initShutdown()
+        xdm.app.power.PowerManager.perform(xdm.app.power.CompletionAction.SHUTDOWN)
     }
 
     override fun markDownloadedFile(file: File, source: DownloadSource): Boolean = OriginMarker.mark(file, source)

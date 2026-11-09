@@ -33,6 +33,25 @@ object MediaFilter {
     val DEFAULT_BLOCKED_HOSTS = listOf("update.microsoft.com", "windowsupdate.com", "thwawte.com")
 
     /**
+     * Checks whether a hostname matches a host rule using exact or subdomain boundary matching.
+     * Prevents substring false positives.
+     */
+    fun matchesHostRule(hostOrUrl: String, rule: String): Boolean {
+        val extractedHost = if (hostOrUrl.contains("://")) {
+            hostOrUrl.toHttpUrlOrNull()?.host ?: hostOrUrl.substringAfter("://").substringBefore("/").substringBefore(":")
+        } else {
+            hostOrUrl.substringBefore("/").substringBefore(":")
+        }
+        val cleanHost = extractedHost.lowercase(Locale.ROOT).removeSuffix(".")
+        val cleanRule = rule.lowercase(Locale.ROOT).trim()
+            .removePrefix("http://").removePrefix("https://")
+            .substringBefore("/").substringBefore(":")
+            .removePrefix("*.").removePrefix(".").removeSuffix(".")
+        if (cleanHost.isEmpty() || cleanRule.isEmpty()) return false
+        return cleanHost == cleanRule || cleanHost.endsWith(".$cleanRule")
+    }
+
+    /**
      * True when a response with [status] and [contentType] from [url] is media: a 2xx, not from a
      * blocked host, and with a media extension on its path or a media Content-Type.
      */
@@ -40,10 +59,11 @@ object MediaFilter {
         // A failed response (a 410 from an expired or used-up CDN token, a 403, ...) is not media:
         // XDM would only replay the request and get the same error back.
         if (status !in 200..299) return false
+        if (BlockedSites.isBlockedUrl(url)) return false
         val parsed = url.toHttpUrlOrNull() ?: return false
         // The extension compares against URL.host, which carries a non-default port.
         val host = if (parsed.port == okhttp3.HttpUrl.defaultPort(parsed.scheme)) parsed.host else "${parsed.host}:${parsed.port}"
-        if (config.blockedHosts.any { host.contains(it) }) return false
+        if (config.blockedHosts.any { matchesHostRule(host, it) }) return false
         val path = parsed.encodedPath.uppercase(Locale.ROOT)
         if (config.detectSubtitles && isSubtitle(url, contentType)) return true
         if (config.videoExtensions.any { path.endsWith("." + it.uppercase(Locale.ROOT)) }) return true

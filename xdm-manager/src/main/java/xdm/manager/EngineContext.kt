@@ -138,6 +138,7 @@ interface PlatformHooks {
 
     /** A download finished: sounds, virus scan, custom command, as the app is configured. */
     fun downloadFinished(filePath: String)
+    fun downloadFinished(filePath: String, id: Long) = downloadFinished(filePath)
 
     /** A download failed (not stopped by the user). */
     fun downloadFailed(id: Long)

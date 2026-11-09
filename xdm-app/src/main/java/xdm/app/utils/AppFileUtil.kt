@@ -19,6 +19,27 @@ fun folderFor(category: DownloadCategory?): String =
     category?.folder?.takeIf { it.isNotBlank() } ?: config.resolvedNoneFolder
 
 /**
+ * Returns [preferred] if its filesystem root or an existing ancestor exists.
+ * If the path's drive or root is unavailable (e.g. an unmounted drive or invalid path),
+ * falls back to the accessible user Downloads or home folder for this download without mutating config.
+ */
+fun resolveAccessibleFolder(preferred: String): String {
+    if (preferred.isBlank()) return fallbackDownloadFolder()
+    val f = File(preferred)
+    val ancestor = VolumeHints.existingAncestor(f.absolutePath)
+    if (ancestor != null) {
+        return f.absolutePath
+    }
+    return fallbackDownloadFolder()
+}
+
+/** Safe accessible fallback directory when a configured drive is disconnected. */
+fun fallbackDownloadFolder(): String {
+    val userDownloads = File(System.getProperty("user.home"), "Downloads")
+    return if (userDownloads.exists() || userDownloads.mkdirs()) userDownloads.absolutePath else System.getProperty("user.home")
+}
+
+/**
  * The category a browser capture starts in: the rule match, unless the user's last hand-pick was None
  * ([IAppConfig.rememberNone]), in which case rules preselect nothing.
  */

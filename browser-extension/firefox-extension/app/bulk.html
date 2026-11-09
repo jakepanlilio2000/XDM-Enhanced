@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Download with XDM</title>
+  <title>Download with XDM Enhanced</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="bulk.css">
   <script type="module" src="bulk.js"></script>
@@ -48,6 +48,21 @@
         placeholder="Filter by name, *.jpg or /regex/" aria-label="Filter">
       <kbd>/</kbd>
     </label>
+  </div>
+
+  <div class="keyword-bar" id="keywordBar">
+    <div class="keyword-input-wrap" id="keywordWrap">
+      <div class="keyword-tokens" id="keywordTokens"></div>
+      <input id="keywordInput" type="text" spellcheck="false" autocomplete="off"
+        placeholder="Add keyword, *.ext, or /regex/ (Enter to add)…" aria-label="Add filter keyword">
+    </div>
+    <div class="keyword-controls">
+      <div class="segmented mode-selector" role="group" aria-label="Keyword match mode">
+        <button class="segment mode-btn active" id="modeAnd" type="button" data-mode="AND" title="All keywords must match (AND)">ALL</button>
+        <button class="segment mode-btn" id="modeOr" type="button" data-mode="OR" title="Any keyword matches (OR)">ANY</button>
+      </div>
+      <button class="link-button" id="clearKeywords" type="button" title="Clear all keywords" style="font-size: 12px;" hidden>Clear</button>
+    </div>
   </div>
 
   <div class="chips" id="chips" role="group" aria-label="File types"></div>
