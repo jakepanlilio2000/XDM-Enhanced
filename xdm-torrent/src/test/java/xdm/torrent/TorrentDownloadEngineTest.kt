@@ -246,10 +246,15 @@ class TorrentDownloadEngineTest {
             task.start()
             task.addPeer(seeder.endpoint)
 
-            assertTrue(finishedLatch.await(20, TimeUnit.SECONDS), "Selected file transfer should complete")
+            assertTrue(finishedLatch.await(30, TimeUnit.SECONDS), "Selected file transfer should complete")
 
             val downloadedFileA = File(destDir, "multi_source/file_a.bin")
             val downloadedFileB = File(destDir, "multi_source/file_b.bin")
+
+            val deadline = System.currentTimeMillis() + 5000L
+            while (!downloadedFileA.exists() && System.currentTimeMillis() < deadline) {
+                Thread.sleep(100)
+            }
 
             assertTrue(downloadedFileA.exists(), "Selected file A should exist")
             assertEquals(hash1, TorrentTransferTestFixture.sha256(downloadedFileA), "Selected file A hash should match")

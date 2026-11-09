@@ -5,6 +5,68 @@ All notable changes to the XDM Enhanced project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0-beta.3] - 2026-11-10
+
+### Added
+
+- **Dedicated Language Settings Tab:**
+  - Extracted language selection into an independent `Language` tab in the Settings window.
+  - Live UI translation switching across 32 supported language bundles without requiring application restart.
+- **Table View vs. Classic Cards Dual Layout:**
+  - Two distinct, selectable presentation modes for the download list:
+    - **Table View:** Dense data grid with sortable columns for Name, Size, Status, Progress, Transfer Rate, and ETA.
+    - **Classic Cards:** Informational card-based layout featuring rich file icons, inline progress bars, and direct action buttons.
+  - View mode preference persists across application restarts.
+- **Segment Visualization & Connection Table:**
+  - Dedicated multi-segment colored visualization bar depicting downloaded, active, and pending chunks.
+  - Collapsible segment details table displaying active connection counts, individual chunk byte offsets, status, and download rates.
+- **Network Optimizer:**
+  - Guided network tuning utility accessible from the Tools menu.
+  - Low, Normal, and High / Aggressive connection presets optimizing connection limits, buffer sizes, and socket timeouts based on network latency and bandwidth.
+- **Refresh Download Link:**
+  - Integrated link replacement dialog to update expired or invalid download URLs (e.g., pre-signed S3/CDN URLs).
+  - Pre-flight compatibility probing: validates that replacement URL matches expected file size and supports HTTP 206 byte-ranges before resuming existing chunks.
+- **Existing Torrent Data Detection & Recheck:**
+  - Automatic detection of pre-existing files when adding a torrent or selecting a custom destination.
+  - Non-destructive piece hash checking using the BitTorrent session engine (`CHECKING_FILES` state), resuming only missing pieces and avoiding redundant downloads.
+- **Redesigned About Dialog & GitHub Integration:**
+  - Modernized FlatLaf card layout reflecting dynamic build metadata from `app-version.json`.
+  - Visible "Star on GitHub" action button with system browser dispatch and clipboard fallback.
+  - Tabbed interface providing detailed project description, license notices, upstream acknowledgment, and system runtime diagnostics.
+
+### Improved
+
+- **Automatic Download Categorization:**
+  - Extension-based categorization engine automatically sorting downloads into Documents, Music, Video, Programs, and Compressed.
+  - Dedicated destination directory routing per category with support for user-defined custom rules and manual overrides.
+- **Magnet Metadata Naming:**
+  - Immediate temporary naming state ("Fetching metadata...") displaying hash or display name parameter until torrent metadata arrives.
+  - Automatic resolution to real torrent display name upon metadata arrival, updating Table View, Classic Cards, and progress dialogs on the Event Dispatch Thread and persisting to database.
+- **Platform-Aware Wayland Settings:**
+  - Display server detection on Linux (`XDG_SESSION_TYPE`, `WAYLAND_DISPLAY`).
+  - Automatic fallback to lightweight popup menus and combo boxes (`WaylandComboBoxUI`) to eliminate flickering and heavy-weight window clipping under Wayland compositors.
+- **Responsive Transfer-Speed & ETA Reporting:**
+  - Smoothed download rate calculations and long ETA formatting across active HTTP and BitTorrent transfers.
+
+### Fixed
+
+- **Category Sidebar Visibility Restoration:**
+  - Restored collapsible category navigation sidebar in the main window with category badge counts.
+  - Fixed persistence bug where sidebar visibility state was not retained across application restarts.
+- **Torrent Progress Window Segment Bar Visibility:**
+  - Fixed regression where the HTTP segment visualization bar remained visible during BitTorrent transfers; segment panels are now strictly hidden in favor of torrent swarm metrics.
+- **NSIS Dynamic Version Injection:**
+  - Guarded `PRODUCT_VERSION` definition in `xdm-installer.nsi` with `!ifndef`, allowing build scripts (`build-bundle.ps1`) to pass release versions cleanly.
+- **Path Traversal Sanitization in Torrents:**
+  - Hardened torrent file paths and metadata against directory traversal sequences (`../../`), drive letters, and Windows reserved device names (`CON`, `PRN`, `AUX`, `NUL`).
+
+### Acknowledgments
+
+- Subhra Das Gupta (@subhra74) for the foundational XDM architecture.
+- FormDev Software GmbH for FlatLaf modern Look and Feel.
+- The libtorrent and libtorrent4j projects for native BitTorrent capabilities.
+- Remix Design for the Remix Icon library.
+
 ## [1.0.0-beta.2] - 2026-11-09
 
 ### Added

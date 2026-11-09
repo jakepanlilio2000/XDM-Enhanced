@@ -72,10 +72,14 @@ The original upstream documentation is preserved in [README.UPSTREAM.md](README.
 - **Subtitle Extraction:** Automatically extracts and converts embedded WebVTT subtitles into timed `.srt` format.
 
 ### Desktop Experience & Dynamic Theming
-- **High-Density Desktop UI:** Traditional desktop layout featuring a 7-category navigation sidebar (*All Downloads*, *Compressed*, *Documents*, *Music*, *Programs*, *Video*, *Torrents*), toolbar controls, sortable data table, and real-time disk storage status bar.
+- **Dual Presentation Modes (Table View & Classic Cards):** Switch seamlessly between a high-density tabular view with sortable columns (Name, Size, Status, Progress, Speed, ETA) and an informational card-based view with rich file icons, inline progress meters, and quick action buttons.
+- **Segment Visualization & Connection Table:** Dedicated colored multi-segment visualization bar in progress dialogs accompanied by a collapsible table detailing connection rates, byte ranges, and chunk states.
+- **Dedicated Language Settings:** Independent Language panel with instant live-switching across 32 supported language bundles.
+- **High-Density Desktop UI:** Traditional desktop layout featuring a 7-category navigation sidebar (*All Downloads*, *Compressed*, *Documents*, *Music*, *Programs*, *Video*, *Torrents*), toolbar controls, and real-time disk storage status bar.
 - **Dynamic Look & Feel (FlatLaf):** Instant appearance switching across Light, Dark, and System modes without requiring an application restart.
-- **Accent Color Customization:** Six curated palette presets (*Blue*, *Cyan*, *Green*, *Amber*, *Purple*, *Rose*), custom hex color picker, and instant reset-to-default.
-- **Drag-and-Drop File Handoff:** Drag completed downloads directly from the download table into Windows Explorer, media players, or external programs.
+- **Accent Color Customization:** Curated palette presets (Indigo, Blue, Cyan, Emerald, Amber, Rose, Purple, Orange), custom hex color picker, and instant reset-to-default.
+- **Drag-and-Drop File Handoff:** Drag completed downloads directly from the download list into Windows Explorer, media players, or external programs.
+- **Network Optimizer:** Pre-configured network presets (Low, Normal, High) automatically tuning connection limits, buffer allocations, and socket timeouts.
 
 ### Workflow Automation & Power Controls
 - **Post-Download Action Rules:** Automated execution of user-configured commands upon file completion based on file extension matching. Supports variable interpolation (`%file%`, `%file_name%`, `%file_extension%`, `%file_directory%`, `%absolute_file_path%`, `%absolute_directory_path%`) with execution safety validation.
@@ -380,7 +384,8 @@ XDM-Enhanced/
 
 Detailed notes on all versions are documented in [CHANGELOG.md](CHANGELOG.md).
 
-- **v1.0.0-beta.2 (Current Release):** Post-download action rules engine, download completion power actions (sleep, shutdown, hibernate), drag-and-drop file handoff, browser extension "Block this site" exclusions and multi-keyword filtering, clickable desktop browser settings tiles, NSIS setup installer, and folder persistence fixes.
+- **v1.0.0-beta.3 (Current Release):** Dedicated language settings tab with live switching across 32 languages, distinct Table View vs. Classic Cards presentation modes, segmented download progress visualization bar with active connection metrics, Network Optimizer connection presets, download link refreshing with pre-flight byte-range validation, automatic file categorization by extension, magnet metadata naming resolution, existing torrent data detection and piece rechecking, and redesigned FlatLaf About dialog with GitHub integration.
+- **v1.0.0-beta.2:** Post-download action rules engine, download completion power actions (sleep, shutdown, hibernate), drag-and-drop file handoff, browser extension "Block this site" exclusions and multi-keyword filtering, clickable desktop browser settings tiles, NSIS setup installer, and folder persistence fixes.
 - **v1.0.0-beta.1:** Initial independent release adding native BitTorrent and magnet downloading, FlatLaf dynamic theming (Light, Dark, System modes), customizable accent color palettes, high-density desktop toolbar, storage meter, and isolated application configuration directories.
 
 ---
@@ -392,7 +397,7 @@ If you encounter an issue or unexpected behavior:
 1. Check existing issues on the [Issue Tracker](https://github.com/jakepanlilio2000/XDM-Enhanced/issues) to avoid duplicates.
 2. Open a new issue providing:
    - Operating system and version (e.g., Windows 11 23H2, Ubuntu 24.04).
-   - XDM Enhanced version (e.g., `v1.0.0-beta.2`).
+   - XDM Enhanced version (e.g., `v1.0.0-beta.3`).
    - Browser name and extension version (if reporting browser integration issues).
    - Clear steps to reproduce the problem and relevant log snippets from `%APPDATA%\xdm-enhanced\log.txt` (Windows) or `~/.xdm-enhanced/log.txt` (Linux/macOS).
 

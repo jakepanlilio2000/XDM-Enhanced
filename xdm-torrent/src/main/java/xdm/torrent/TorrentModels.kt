@@ -22,7 +22,18 @@ sealed class TorrentSource {
     }
 
     data class MagnetUri(val uri: String, val displayName: String? = null) : TorrentSource() {
-        override val name: String get() = displayName ?: "Magnet Download"
+        override val name: String
+            get() {
+                if (!displayName.isNullOrBlank()) return displayName
+                val dn = TorrentMetadataParser.parseMagnetDisplayName(uri)
+                if (!dn.isNullOrBlank()) return dn
+                val hash = TorrentMetadataParser.parseMagnetInfoHash(uri)
+                return if (!hash.isNullOrBlank()) {
+                    "Fetching metadata (${hash.take(8)}...)"
+                } else {
+                    "Fetching metadata"
+                }
+            }
     }
 
     abstract val name: String
@@ -229,7 +240,8 @@ data class TorrentProgressSnapshot(
     val shareRatio: Float = 0.0f,
     val seedingDurationSeconds: Long = 0L,
     val queuePosition: Int = -1,
-    val isPrivate: Boolean = false
+    val isPrivate: Boolean = false,
+    val checkingProgressPercent: Int = 0
 )
 
 /**
@@ -241,5 +253,6 @@ interface TorrentTaskListener {
     fun onPieceFinished(task: TorrentDownloadTask, pieceIndex: Int, verifiedCount: Int, totalPieces: Int) {}
     fun onFinished(task: TorrentDownloadTask) {}
     fun onError(task: TorrentDownloadTask, message: String, error: DownloadError?) {}
+    fun onMetadataReceived(task: TorrentDownloadTask, metadata: TorrentMetadata) {}
 }
 

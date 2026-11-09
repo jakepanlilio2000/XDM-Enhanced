@@ -9,6 +9,8 @@ import xdm.app.ui.components.CappedComboBox
 import xdm.app.ui.components.MessageBox
 import xdm.app.utils.RemixIcon
 import xdm.app.utils.ScaledEmptyBorder
+import xdm.app.utils.captureCategory
+import xdm.app.utils.categoryById
 import xdm.app.utils.chooseFile
 import xdm.app.utils.rememberHandPickedFolder
 import xdm.app.resolvedNoneFolder
@@ -653,7 +655,7 @@ class BatchDownloadDialog(near: Window?, private val request: BatchRequest) : JF
                     cookie = request.cookies.getOrNull(e.item.cookieGroup),
                     headers = request.headers,
                     origin = request.pageUrl,
-                    categoryId = null,
+                    categoryId = captureCategory(e.fileName, e.item.url, request.pageUrl)?.id,
                     targetFolder = folder,
                     maxPiece = AppContext.config.maxSegments,
                     authInfo = null,
@@ -684,7 +686,7 @@ class BatchDownloadDialog(near: Window?, private val request: BatchRequest) : JF
                 cookie = cookie,
                 headers = request.headers,
                 origin = request.pageUrl,
-                categoryId = null,
+                categoryId = captureCategory(fileName, single.url, request.pageUrl)?.id ?: categoryById("CAT_VIDEOS")?.id,
                 targetFolder = folder,
                 maxPiece = AppContext.config.maxSegments,
                 authInfo = null,

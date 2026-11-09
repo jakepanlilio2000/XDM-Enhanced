@@ -662,7 +662,7 @@ if ($Type -eq 'nsis') {
   $NsiScript = Join-Path $PSScriptRoot 'windows\xdm-installer.nsi'
   $OutExe = Join-Path $DestDir "XDM-Enhanced-Setup-v$AppVersion-win-$Arch.exe"
   Write-Host ">> makensis -> $OutExe"
-  & $makensis "/DOUT_FILE=$OutExe" "/DAPP_IMAGE_DIR=$ImageDir" $NsiScript
+  & $makensis "/DOUT_FILE=$OutExe" "/DAPP_IMAGE_DIR=$ImageDir" "/DPRODUCT_VERSION=$AppVersion" $NsiScript
   if ($LASTEXITCODE -ne 0) {
     throw 'makensis failed'
   }

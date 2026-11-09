@@ -28,20 +28,13 @@ import java.awt.geom.RoundRectangle2D
 import javax.swing.JComponent
 import javax.swing.UIManager
 
-class SegmentPanel : JComponent() {
-    private var segDet: Collection<SegmentProgress> = listOf()
-    private var totalSize: Long = 0
+open class SegmentPanel : JComponent() {
+    protected var segDet: Collection<SegmentProgress> = listOf()
+    protected var totalSize: Long = 0
 
-    /**
-     * Keeps the preferred height when the layout falls back to minimum sizes. A bare JComponent
-     * reports its current size as its minimum (0 before the first layout), so in the progress
-     * window's GridBagLayout -- which switches to minimum sizes whenever a long file name makes the
-     * preferred layout too wide -- the bar collapsed to a sliver.
-     */
-    override fun getMinimumSize(): Dimension =
-        if (isMinimumSizeSet) super.getMinimumSize() else Dimension(0, preferredSize.height)
+    val segments: Collection<SegmentProgress> get() = segDet
 
-    fun setValues(segDet: Collection<SegmentProgress>) {
+    open fun setValues(segDet: Collection<SegmentProgress>) {
         this.segDet = segDet
         this.totalSize = segDet.sumOf { it.length }
         repaint()

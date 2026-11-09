@@ -55,7 +55,7 @@ data class DbRecord(
      * The category the download was saved with, for the sidebar filter; null is None. An id whose
      * category was deleted also reads as None. Persisted.
      */
-    val categoryId: String? = null,
+    var categoryId: String? = null,
     /**
      * While [status] is [RecordStatus.DOWNLOADING]: how far (percent) the part file has been filled on a disk
      * without holes (FAT32, exFAT) before the download splits, or -1 when it isn't being filled. Not persisted.

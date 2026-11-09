@@ -27,6 +27,7 @@ import java.awt.event.MouseEvent
 import javax.swing.*
 import javax.swing.event.ListSelectionListener
 import javax.swing.event.TableModelEvent
+import javax.swing.table.TableColumn
 import javax.swing.table.TableRowSorter
 
 class DownloadTableView(
@@ -36,6 +37,7 @@ class DownloadTableView(
     private val model: DownloadTableModel = DownloadTableModel()
     private val table: JTable = JTable(model)
     private val sorter: TableRowSorter<DownloadTableModel> = TableRowSorter(model)
+    private val allTableColumns: List<TableColumn>
     private val scrollPane: JScrollPane
     private val cardLayout = CardLayout()
     private val cardPanel = JPanel(cardLayout)
@@ -111,10 +113,42 @@ class DownloadTableView(
         table.columnModel.getColumn(DownloadTableModel.COL_DATE_ADDED).preferredWidth = 130.px
         table.columnModel.getColumn(DownloadTableModel.COL_SWARM).preferredWidth = 110.px
 
+        allTableColumns = (0 until DownloadTableModel.COLUMN_NAMES.size).map {
+            table.columnModel.getColumn(it)
+        }
+
+        // Explicit comparators for numeric and custom columns
+        sorter.setComparator(DownloadTableModel.COL_FILE_NAME, String.CASE_INSENSITIVE_ORDER)
+        sorter.setComparator(DownloadTableModel.COL_SIZE, Comparator<Long> { a, b -> (a ?: 0L).compareTo(b ?: 0L) })
+        sorter.setComparator(DownloadTableModel.COL_TYPE, String.CASE_INSENSITIVE_ORDER)
+        sorter.setComparator(DownloadTableModel.COL_STATUS, Comparator<RecordStatus> { a, b -> (a?.name ?: "").compareTo(b?.name ?: "") })
+        sorter.setComparator(DownloadTableModel.COL_PROGRESS, Comparator<Int> { a, b -> (a ?: 0).compareTo(b ?: 0) })
+        sorter.setComparator(DownloadTableModel.COL_TIME_LEFT, Comparator<Long> { a, b -> (a ?: 0L).compareTo(b ?: 0L) })
+        sorter.setComparator(DownloadTableModel.COL_TRANSFER_RATE, Comparator<Float> { a, b -> (a ?: 0f).compareTo(b ?: 0f) })
+        sorter.setComparator(DownloadTableModel.COL_DATE_ADDED, Comparator<Long> { a, b -> (a ?: 0L).compareTo(b ?: 0L) })
+        sorter.setComparator(DownloadTableModel.COL_SWARM, String.CASE_INSENSITIVE_ORDER)
+
         // Sorting & Filtering
         sorter.rowFilter = filter
         table.rowSorter = sorter
         sorter.sortKeys = listOf(RowSorter.SortKey(DownloadTableModel.COL_DATE_ADDED, SortOrder.DESCENDING))
+
+        // Header context menu for column visibility configuration
+        table.tableHeader.addMouseListener(object : MouseAdapter() {
+            override fun mousePressed(e: MouseEvent) {
+                if (e.isPopupTrigger || SwingUtilities.isRightMouseButton(e)) {
+                    showColumnHeaderMenu(e.x, e.y)
+                }
+            }
+
+            override fun mouseReleased(e: MouseEvent) {
+                if (e.isPopupTrigger) {
+                    showColumnHeaderMenu(e.x, e.y)
+                }
+            }
+        })
+
+        applyHiddenColumnsConfig()
 
         scrollPane = JScrollPane(table).apply {
             border = BorderFactory.createEmptyBorder()
@@ -287,6 +321,24 @@ class DownloadTableView(
             menu.addSeparator()
         }
 
+        val catMenu = JMenu("Category").apply {
+            icon = FontIcon(RemixIcon.FOLDER_LINE, 16.px)
+            val currentCatId = if (selected.size == 1) first.categoryId else null
+            val noneItem = JRadioButtonMenuItem("None", currentCatId == null).apply {
+                addActionListener { AppMenuHandler.changeCategory(selected, null) }
+            }
+            add(noneItem)
+            addSeparator()
+            AppContext.config.categories.forEach { cat ->
+                val item = JRadioButtonMenuItem(cat.name, currentCatId == cat.id).apply {
+                    addActionListener { AppMenuHandler.changeCategory(selected, cat.id) }
+                }
+                add(item)
+            }
+        }
+        menu.add(catMenu)
+        menu.addSeparator()
+
         menu.add(JMenuItem("Delete", FontIcon(RemixIcon.DELETE_BIN_LINE, 16.px)).apply {
             addActionListener { AppMenuHandler.deleteSelectedDownloads(selected, window) }
         })
@@ -349,6 +401,100 @@ class DownloadTableView(
 
     override fun clear() {
         SingleWindows.show(ClearDownloadsDialog::class) { ClearDownloadsDialog(window) }
+    }
+
+    fun isColumnVisible(modelIndex: Int): Boolean {
+        for (i in 0 until table.columnModel.columnCount) {
+            if (table.columnModel.getColumn(i).modelIndex == modelIndex) return true
+        }
+        return false
+    }
+
+    fun setColumnVisible(modelIndex: Int, visible: Boolean) {
+        if (visible) {
+            if (isColumnVisible(modelIndex)) return
+            val targetCol = allTableColumns[modelIndex]
+            var insertPos = table.columnModel.columnCount
+            for (i in 0 until table.columnModel.columnCount) {
+                if (table.columnModel.getColumn(i).modelIndex > modelIndex) {
+                    insertPos = i
+                    break
+                }
+            }
+            table.columnModel.addColumn(targetCol)
+            if (insertPos < table.columnModel.columnCount - 1) {
+                table.columnModel.moveColumn(table.columnModel.columnCount - 1, insertPos)
+            }
+        } else {
+            if (!isColumnVisible(modelIndex)) return
+            if (table.columnModel.columnCount <= 1 || modelIndex == DownloadTableModel.COL_FILE_NAME) return
+            for (i in 0 until table.columnModel.columnCount) {
+                val col = table.columnModel.getColumn(i)
+                if (col.modelIndex == modelIndex) {
+                    table.columnModel.removeColumn(col)
+                    break
+                }
+            }
+        }
+        saveHiddenColumnsConfig()
+    }
+
+    private fun saveHiddenColumnsConfig() {
+        val hidden = (0 until DownloadTableModel.COLUMN_NAMES.size)
+            .filter { !isColumnVisible(it) }
+            .joinToString(",")
+        AppContext.config.tableHiddenColumns = hidden
+        AppContext.config.save()
+    }
+
+    private fun applyHiddenColumnsConfig() {
+        val hidden = AppContext.config.tableHiddenColumns
+        if (hidden.isNotBlank()) {
+            val indices = hidden.split(",").mapNotNull { it.trim().toIntOrNull() }.toSet()
+            indices.forEach { modelIdx ->
+                if (modelIdx in 1 until DownloadTableModel.COLUMN_NAMES.size) {
+                    setColumnVisible(modelIdx, false)
+                }
+            }
+        }
+    }
+
+    private fun showColumnHeaderMenu(x: Int, y: Int) {
+        val menu = JPopupMenu()
+        val title = JLabel("Configure Columns").apply {
+            font = font.deriveFont(Font.BOLD, 11f.px)
+            border = ScaledEmptyBorder(4, 8, 4, 8)
+            foreground = UIManager.getColor("Label.disabledForeground") ?: Color.GRAY
+        }
+        menu.add(title)
+        menu.addSeparator()
+
+        DownloadTableModel.COLUMN_NAMES.forEachIndexed { idx, name ->
+            val visible = isColumnVisible(idx)
+            val item = JCheckBoxMenuItem(name, visible).apply {
+                if (idx == DownloadTableModel.COL_FILE_NAME) {
+                    isEnabled = false
+                }
+                addActionListener {
+                    setColumnVisible(idx, isSelected)
+                }
+            }
+            menu.add(item)
+        }
+        menu.show(table.tableHeader, x, y)
+    }
+
+    override fun selectByIds(ids: Set<Long>) {
+        table.clearSelection()
+        ids.forEach { id ->
+            val modelRow = model.findRowById(id)
+            if (modelRow >= 0 && modelRow < model.rowCount) {
+                val viewRow = table.convertRowIndexToView(modelRow)
+                if (viewRow in 0 until table.rowCount) {
+                    table.addRowSelectionInterval(viewRow, viewRow)
+                }
+            }
+        }
     }
 
     fun selectById(id: Long) {

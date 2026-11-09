@@ -4,6 +4,9 @@
 
 package xdm.manager
 
+import xdm.core.util.FileUtils
+import xdm.core.util.fixExtension
+import xdm.core.util.getNameFromContentDisposition
 import java.util.Locale
 
 /**
@@ -14,7 +17,9 @@ import java.util.Locale
  * - URL patterns are tried against both the download URL and the page it came from.
  * - A category matches with Any (one pattern of any kind) or All (every non-empty kind) semantics.
  * - When several match, the most specific kind that matched wins (URL > file name > extension), then
- *   list order.
+ *   list order. Within extension tier, longer/more specific extensions (e.g. .tar.gz over .gz) win.
+ * - If the file name is missing or has a script extension (.php, etc.), candidate file names in URL query
+ *   parameters (e.g. ?file=doc.pdf) and trustworthy MIME types are evaluated.
  *
  * Compiled patterns are cached per category list instance: the config replaces the list as a whole on
  * every change, so a new instance means the snapshot is rebuilt, and readers on any thread see either
@@ -22,6 +27,17 @@ import java.util.Locale
  */
 object CategoryRules {
     private enum class Tier { EXTENSION, FILE_NAME, URL }
+
+    private data class MatchScore(
+        val tier: Tier,
+        val specificity: Int = 0,
+    ) : Comparable<MatchScore> {
+        override fun compareTo(other: MatchScore): Int {
+            val tc = tier.compareTo(other.tier)
+            if (tc != 0) return tc
+            return specificity.compareTo(other.specificity)
+        }
+    }
 
     private class Compiled(
         val category: DownloadCategory,
@@ -34,37 +50,110 @@ object CategoryRules {
     @Volatile
     private var snapshot: Snapshot? = null
 
+    private val SCRIPT_EXTS = setOf("php", "asp", "aspx", "jsp", "cgi", "pl", "py", "do", "action", "ashx", "htm", "html", "cfm", "shtml")
+
+    /**
+     * Extracts a filename from URL query parameters (e.g. ?file=document.pdf or ?name=photo.jpg).
+     */
+    fun extractCandidateFileName(url: String?): String? {
+        if (url.isNullOrBlank()) return null
+        try {
+            val qIdx = url.indexOf('?')
+            if (qIdx >= 0 && qIdx < url.length - 1) {
+                val query = url.substring(qIdx + 1).substringBefore('#')
+                val params = query.split('&')
+                val candidateKeys = listOf("file", "filename", "name", "attachment", "fn", "path", "target", "download", "f", "doc", "media", "url")
+                for (param in params) {
+                    val eq = param.indexOf('=')
+                    if (eq > 0) {
+                        val key = param.substring(0, eq).trim().lowercase(Locale.ROOT)
+                        if (key in candidateKeys) {
+                            val rawValue = param.substring(eq + 1).trim()
+                            val decoded = FileUtils.decodeFileName(rawValue)
+                            val sanitized = FileUtils.sanitizeFileName(decoded)
+                            if (!sanitized.isNullOrBlank() && sanitized.contains('.') && !sanitized.endsWith('.')) {
+                                return sanitized
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (_: Exception) {}
+        return null
+    }
+
+    /**
+     * Resolves the best candidate file name from the given file name, url, content type, and content disposition.
+     */
+    fun resolveCandidateFileName(
+        fileName: String?,
+        url: String?,
+        contentType: String? = null,
+        contentDisposition: String? = null
+    ): String? {
+        val cdName = getNameFromContentDisposition(contentDisposition)?.let { FileUtils.sanitizeFileName(it) }
+        var candidate = cdName ?: fileName?.takeIf { it.isNotBlank() && it != "FILE" }
+        val ext = candidate?.substringAfterLast('.', "")?.lowercase(Locale.ROOT)
+        if (candidate == null || ext.isNullOrEmpty() || ext in SCRIPT_EXTS) {
+            val fromUrl = extractCandidateFileName(url)
+            if (fromUrl != null) {
+                candidate = fromUrl
+            } else if (!url.isNullOrBlank()) {
+                val fromPath = FileUtils.getFileName(url)
+                if (fromPath != "FILE" && fromPath.isNotBlank() && fromPath.contains('.')) {
+                    val pathExt = fromPath.substringAfterLast('.', "").lowercase(Locale.ROOT)
+                    if (pathExt !in SCRIPT_EXTS) {
+                        candidate = fromPath
+                    }
+                }
+            }
+        }
+        if (candidate != null && contentType != null) {
+            candidate = fixExtension(candidate, contentType, replace = false)
+        }
+        return candidate
+    }
+
     /** The category [fileName] / [url] / [pageUrl] belongs to in [categories], or null for None. */
     fun match(
         fileName: String?,
         url: String?,
         pageUrl: String?,
         categories: List<DownloadCategory> = EngineContext.config.categories,
+        contentType: String? = null,
+        contentDisposition: String? = null,
     ): DownloadCategory? {
-        var best: Pair<Tier, DownloadCategory>? = null
+        val resolvedName = resolveCandidateFileName(fileName, url, contentType, contentDisposition)
+        var best: Pair<MatchScore, DownloadCategory>? = null
         for (c in compiled(categories)) {
-            val tier = matchTier(c, fileName, url, pageUrl) ?: continue
-            // Strictly greater: within a tier the first category in list order keeps the match.
-            if (best == null || tier > best.first) best = tier to c.category
+            val score = matchScore(c, resolvedName, url, pageUrl) ?: continue
+            // Strictly greater: within a tier/score the first category in list order keeps the match.
+            if (best == null || score > best.first) best = score to c.category
         }
         return best?.second
     }
 
     /** The most specific kind through which [c] matches, or null if it does not. */
-    private fun matchTier(c: Compiled, fileName: String?, url: String?, pageUrl: String?): Tier? {
+    private fun matchScore(c: Compiled, fileName: String?, url: String?, pageUrl: String?): MatchScore? {
         val name = fileName?.takeIf { it.isNotBlank() }
-        val ext = c.category.extensions.isNotEmpty() && name != null && c.category.matches(name)
-        val byName = c.names.isNotEmpty() && name != null && c.names.any { it.matches(name) }
-        val byUrl = c.urls.isNotEmpty() && listOfNotNull(url, pageUrl).any { u -> c.urls.any { it.matches(u) } }
+        val matchingExt = if (name != null) c.category.matchingExtension(name) else null
+        val ext = matchingExt != null
+        val matchingNameGlob = if (name != null) c.names.firstOrNull { it.matches(name) } else null
+        val byName = matchingNameGlob != null
+        val matchingUrlGlob = if (!url.isNullOrBlank() || !pageUrl.isNullOrBlank()) {
+            listOfNotNull(url, pageUrl).firstNotNullOfOrNull { u -> c.urls.firstOrNull { it.matches(u) } }
+        } else null
+        val byUrl = matchingUrlGlob != null
+
         if (c.category.matchAll) {
             if (c.category.extensions.isNotEmpty() && !ext) return null
             if (c.names.isNotEmpty() && !byName) return null
             if (c.urls.isNotEmpty() && !byUrl) return null
         }
         return when {
-            byUrl -> Tier.URL
-            byName -> Tier.FILE_NAME
-            ext -> Tier.EXTENSION
+            byUrl -> MatchScore(Tier.URL, matchingUrlGlob?.patternLength ?: 0)
+            byName -> MatchScore(Tier.FILE_NAME, matchingNameGlob?.patternLength ?: 0)
+            ext -> MatchScore(Tier.EXTENSION, matchingExt?.length ?: 0)
             else -> null
         }
     }
@@ -80,6 +169,8 @@ object CategoryRules {
 
     /** A compiled pattern. Matching is linear in the value's length, so no pattern can stall the caller. */
     class Glob private constructor(private val pattern: String, private val contains: Boolean) {
+        val patternLength: Int get() = pattern.length
+
         fun matches(value: String): Boolean {
             val v = value.lowercase(Locale.ROOT)
             return if (contains) v.contains(pattern) else wildcardMatch(pattern, v)

@@ -63,17 +63,28 @@ class GeneralPanel : SettingsPanel() {
 
     private val optListMode = SettingsOptionGroup(
         listOf(
-            SettingsOption(ListSelectionMode.CLASSIC, I8N.text("LIST_MODE_CLASSIC"), RemixIcon.FILE_LIST_2_LINE),
+            SettingsOption(ListSelectionMode.TABLE, I8N.text("LIST_MODE_TABLE"), RemixIcon.FILE_LIST_2_LINE),
+            SettingsOption(ListSelectionMode.CLASSIC, I8N.text("LIST_MODE_CLASSIC"), RemixIcon.FILE_TEXT_LINE),
             SettingsOption(ListSelectionMode.MODERN, I8N.text("LIST_MODE_MODERN"), RemixIcon.CHECKBOX_LINE),
         )
     )
 
     private val langModel = DefaultComboBoxModel<String>()
-    private val cmbLang = rounded(JComboBox(langModel)).apply {
+    internal val cmbLang = rounded(JComboBox(langModel)).apply {
         preferredSize = Dimension(190.px, preferredSize.height)
         maximumSize = preferredSize
     }
     private val languages = I8N.languages()
+
+    var onLangChanged: ((Int) -> Unit)? = null
+
+    fun getLangSelectedIndex(): Int = cmbLang.selectedIndex
+
+    fun setLangSelectedIndex(index: Int) {
+        if (index in 0 until langModel.size && cmbLang.selectedIndex != index) {
+            cmbLang.selectedIndex = index
+        }
+    }
 
     private val cmbUiScale = rounded(JComboBox(AppConfig.UI_SCALES.map { "$it%" }.toTypedArray())).apply {
         preferredSize = Dimension(190.px, preferredSize.height)
@@ -127,6 +138,7 @@ class GeneralPanel : SettingsPanel() {
         add(settingsGap())
 
         langModel.addAll(languages.map { it.name })
+        cmbLang.addActionListener { onLangChanged?.invoke(cmbLang.selectedIndex) }
 
         add(
             settingsSection(

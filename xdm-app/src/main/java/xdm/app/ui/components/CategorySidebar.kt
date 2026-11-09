@@ -66,6 +66,7 @@ class CategorySidebar(
     private val musicNode: DefaultMutableTreeNode
     private val programsNode: DefaultMutableTreeNode
     private val videosNode: DefaultMutableTreeNode
+    private val imagesNode: DefaultMutableTreeNode
     private val otherNode: DefaultMutableTreeNode
     private val unfinishedNode: DefaultMutableTreeNode
     private val completedNode: DefaultMutableTreeNode
@@ -98,6 +99,9 @@ class CategorySidebar(
         programsNode = DefaultMutableTreeNode(
             SidebarNodeData("Programs", FontIcon(RemixIcon.TERMINAL_BOX_LINE, 18.px, Color(230, 80, 80)), FilterState.All, categoryId = "CAT_PROGRAMS")
         )
+        imagesNode = DefaultMutableTreeNode(
+            SidebarNodeData("Images", FontIcon(RemixIcon.IMAGE_LINE, 18.px, Color(56, 189, 248)), FilterState.All, categoryId = "CAT_IMAGES")
+        )
         otherNode = DefaultMutableTreeNode(
             SidebarNodeData("Other", FontIcon(RemixIcon.FILE_LINE, 18.px, Color.GRAY), FilterState.All, isOther = true)
         )
@@ -107,6 +111,7 @@ class CategorySidebar(
         allDownloadsNode.add(musicNode)
         allDownloadsNode.add(programsNode)
         allDownloadsNode.add(videosNode)
+        allDownloadsNode.add(imagesNode)
         allDownloadsNode.add(otherNode)
 
         unfinishedNode = DefaultMutableTreeNode(
@@ -260,6 +265,7 @@ class CategorySidebar(
         setIcon(musicNode, FontIcon(RemixIcon.MUSIC_2_LINE, 18.px, UIManager.getColor("XDM.category.CAT_MUSIC") ?: Color(240, 136, 62)))
         setIcon(videosNode, FontIcon(RemixIcon.MOVIE_LINE, 18.px, UIManager.getColor("XDM.category.CAT_VIDEOS") ?: Color(163, 113, 247)))
         setIcon(programsNode, FontIcon(RemixIcon.TERMINAL_BOX_LINE, 18.px, UIManager.getColor("XDM.category.CAT_PROGRAMS") ?: Color(230, 80, 80)))
+        setIcon(imagesNode, FontIcon(RemixIcon.IMAGE_LINE, 18.px, UIManager.getColor("XDM.category.CAT_IMAGES") ?: Color(56, 189, 248)))
         setIcon(otherNode, FontIcon(RemixIcon.FILE_LINE, 18.px, AppTheme.sidebarIcon))
         setIcon(unfinishedNode, FontIcon(RemixIcon.PROGRESS_2_LINE, 18.px, accent))
         setIcon(completedNode, FontIcon(RemixIcon.CHECKBOX_CIRCLE_LINE, 18.px, if (isDark) Color(63, 185, 80) else Color(26, 127, 55)))
@@ -290,6 +296,7 @@ class CategorySidebar(
         updateNode(musicNode, records.count { it.categoryId == "CAT_MUSIC" })
         updateNode(videosNode, records.count { it.categoryId == "CAT_VIDEOS" })
         updateNode(programsNode, records.count { it.categoryId == "CAT_PROGRAMS" })
+        updateNode(imagesNode, records.count { it.categoryId == "CAT_IMAGES" })
         updateNode(otherNode, records.count { it.categoryId == null || it.categoryId !in categoryIds })
         updateNode(unfinishedNode, records.count { it.status != RecordStatus.FINISHED })
         updateNode(completedNode, records.count { it.status == RecordStatus.FINISHED })

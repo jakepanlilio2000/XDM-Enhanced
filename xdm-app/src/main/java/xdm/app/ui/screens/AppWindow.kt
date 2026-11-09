@@ -22,12 +22,14 @@ import javax.swing.border.MatteBorder
  * or until the window is first shown, and a found update is announced with a system notification.
  */
 class AppWindow(image: Image, startHidden: Boolean = false) : JFrame(), ActionListener {
-    private var listView: DownloadListView = createListView(MainListViewFilter(FilterState.All, null, ""))
+    internal var listView: DownloadListView = createListView(MainListViewFilter(FilterState.All, null, ""))
     private lateinit var listContainer: JPanel
     private lateinit var toolbar: DownloadToolBar
     private lateinit var sidebar: CategorySidebar
     private lateinit var statusBar: DownloadStatusBar
     private lateinit var splitPane: JSplitPane
+    private var defaultDividerSize = 5
+    private var chkSidebar: JCheckBoxMenuItem? = null
     private val updatePanel = UpdatePanel()
     private val autoStartPanel = AutoStartPanel()
     /** The banners at the bottom of the window, stacked. */
@@ -37,6 +39,9 @@ class AppWindow(image: Image, startHidden: Boolean = false) : JFrame(), ActionLi
     /** EDT only. The delayed update check of a hidden start, until it runs. */
     private var pendingUpdateCheck: Timer? = null
     private val themeChangeListener = ThemeManager.ThemeChangeListener { updateTheme() }
+    private var optTableViewItem: JRadioButtonMenuItem? = null
+    private var optClassicCardsItem: JRadioButtonMenuItem? = null
+    private var optModernCardsItem: JRadioButtonMenuItem? = null
 
     init {
         title = XDM_WINDOW_TITLE
@@ -169,12 +174,24 @@ class AppWindow(image: Image, startHidden: Boolean = false) : JFrame(), ActionLi
             background = AppTheme.listBackground
         }
 
+        val showSidebar = AppContext.config.showCategoriesSidebar
+        val initialLoc = AppContext.config.sidebarDividerLocation.takeIf { it > 50 } ?: 210.px
         splitPane = JSplitPane(JSplitPane.HORIZONTAL_SPLIT).apply {
             border = MatteBorder(1, 0, 0, 0, AppTheme.sidebarBorder)
-            dividerLocation = 210.px
-            leftComponent = sidebar
+            defaultDividerSize = dividerSize
+            dividerLocation = initialLoc
+            leftComponent = if (showSidebar) sidebar else null
+            if (!showSidebar) {
+                dividerSize = 0
+            }
             rightComponent = rightPanel
             background = AppTheme.listBackground
+            addPropertyChangeListener(JSplitPane.DIVIDER_LOCATION_PROPERTY) { evt ->
+                val loc = evt.newValue as? Int ?: return@addPropertyChangeListener
+                if (AppContext.config.showCategoriesSidebar && leftComponent != null && loc > 50) {
+                    AppContext.config.sidebarDividerLocation = loc
+                }
+            }
         }
 
         add(splitPane, BorderLayout.CENTER)
@@ -207,9 +224,9 @@ class AppWindow(image: Image, startHidden: Boolean = false) : JFrame(), ActionLi
 
     private fun createListView(filter: MainListViewFilter): DownloadListView =
         when (AppContext.config.listSelectionMode) {
-            ListSelectionMode.CLASSIC -> DownloadTableView(filter)
-            ListSelectionMode.MODERN -> ModernListView(filter)
             ListSelectionMode.TABLE -> DownloadTableView(filter)
+            ListSelectionMode.CLASSIC -> ClassicListView(filter)
+            ListSelectionMode.MODERN -> ModernListView(filter)
         }
 
     private fun wireListView() {
@@ -222,27 +239,70 @@ class AppWindow(image: Image, startHidden: Boolean = false) : JFrame(), ActionLi
         }
     }
 
+    private fun syncViewModeMenu() {
+        val mode = AppContext.config.listSelectionMode
+        optTableViewItem?.isSelected = (mode == ListSelectionMode.TABLE)
+        optClassicCardsItem?.isSelected = (mode == ListSelectionMode.CLASSIC)
+        optModernCardsItem?.isSelected = (mode == ListSelectionMode.MODERN)
+    }
+
     /**
      * After Settings is saved: swaps in the other list if the selection mode changed. The new list
-     * keeps the filter and search text; the selection and scroll position start fresh.
+     * keeps the filter, search text, and preserves selected item IDs.
      */
-    private fun applyListSelectionMode() {
+    internal fun applyListSelectionMode() {
         val wanted = when (AppContext.config.listSelectionMode) {
-            ListSelectionMode.CLASSIC -> DownloadTableView::class
-            ListSelectionMode.MODERN -> ModernListView::class
             ListSelectionMode.TABLE -> DownloadTableView::class
+            ListSelectionMode.CLASSIC -> ClassicListView::class
+            ListSelectionMode.MODERN -> ModernListView::class
         }
+        syncViewModeMenu()
         if (wanted.isInstance(listView)) return
         val old = listView.filter
+        val oldSelectedIds = listView.selectedItems.map { it.id }.toSet()
         listView = createListView(MainListViewFilter(old.filterState, old.filterCategory, old.searchText))
         wireListView()
-        toolbar.updateSelectionState(emptyList())
+        if (oldSelectedIds.isNotEmpty()) {
+            listView.selectByIds(oldSelectedIds)
+        }
+        toolbar.updateSelectionState(listView.selectedItems)
         listContainer.removeAll()
         listContainer.add(listView.component)
         listContainer.revalidate()
         listContainer.repaint()
         sidebar.scheduleRecount()
     }
+
+    fun setSidebarVisible(visible: Boolean) {
+        if (visible) {
+            splitPane.leftComponent = sidebar
+            sidebar.isVisible = true
+            val loc = AppContext.config.sidebarDividerLocation.takeIf { it > 50 } ?: 210.px
+            splitPane.dividerSize = defaultDividerSize
+            splitPane.dividerLocation = loc
+            SwingUtilities.invokeLater {
+                if (AppContext.config.showCategoriesSidebar && splitPane.leftComponent != null) {
+                    splitPane.dividerLocation = loc
+                }
+            }
+        } else {
+            val loc = splitPane.dividerLocation
+            if (loc > 50) {
+                AppContext.config.sidebarDividerLocation = loc
+            }
+            splitPane.leftComponent = null
+            splitPane.dividerSize = 0
+        }
+        if (chkSidebar?.isSelected != visible) {
+            chkSidebar?.isSelected = visible
+        }
+        AppContext.config.showCategoriesSidebar = visible
+        AppContext.config.save()
+        splitPane.revalidate()
+        splitPane.repaint()
+    }
+
+    fun isSidebarVisible(): Boolean = AppContext.config.showCategoriesSidebar && splitPane.leftComponent != null
 
     fun updateTheme() {
         val os = detectOS()
@@ -348,12 +408,10 @@ class AppWindow(image: Image, startHidden: Boolean = false) : JFrame(), ActionLi
 
         // 3. View Menu
         val viewMenu = JMenu("View").apply {
-            val chkSidebar = JCheckBoxMenuItem("Show Categories Sidebar", true).apply {
-                addActionListener {
-                    splitPane.leftComponent.isVisible = isSelected
-                    splitPane.revalidate()
-                }
+            val chk = JCheckBoxMenuItem("Show Categories Sidebar", AppContext.config.showCategoriesSidebar).apply {
+                addActionListener { setSidebarVisible(isSelected) }
             }
+            chkSidebar = chk
             val chkToolbar = JCheckBoxMenuItem("Show Toolbar", true).apply {
                 addActionListener {
                     toolbar.isVisible = isSelected
@@ -366,14 +424,14 @@ class AppWindow(image: Image, startHidden: Boolean = false) : JFrame(), ActionLi
                     statusBar.revalidate()
                 }
             }
-            add(chkSidebar)
+            chkSidebar?.let { add(it) }
             add(chkToolbar)
             add(chkStatusBar)
             addSeparator()
 
             val modeMenu = JMenu("View Mode")
             val group = ButtonGroup()
-            val optTable = JRadioButtonMenuItem("Table View (Default)", AppContext.config.listSelectionMode == ListSelectionMode.TABLE).apply {
+            val optTable = JRadioButtonMenuItem("Table View", AppContext.config.listSelectionMode == ListSelectionMode.TABLE).apply {
                 addActionListener {
                     AppContext.config.listSelectionMode = ListSelectionMode.TABLE
                     AppContext.config.save()
@@ -394,6 +452,9 @@ class AppWindow(image: Image, startHidden: Boolean = false) : JFrame(), ActionLi
                     applyListSelectionMode()
                 }
             }
+            optTableViewItem = optTable
+            optClassicCardsItem = optClassic
+            optModernCardsItem = optModern
             group.add(optTable)
             group.add(optClassic)
             group.add(optModern)

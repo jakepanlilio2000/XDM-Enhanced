@@ -7,6 +7,8 @@ import xdm.app.MessageBoxResult
 import xdm.app.ui.screens.AppWindow
 import xdm.app.ui.screens.BatchUrlDialog
 import xdm.app.ui.screens.ChangeFolderDialog
+import xdm.app.ui.screens.NetworkOptimizerDialog
+import xdm.app.ui.screens.SettingsWindow
 import xdm.app.ui.screens.StreamDownloadDialog
 import xdm.app.utils.SingleWindows
 import xdm.app.utils.captureDestination
@@ -121,6 +123,15 @@ object AppMenuHandler {
         SingleWindows.show("change-folder" to ent.id) { ChangeFolderDialog(window, ent) }
     }
 
+    /** Changes the category for the selected downloads. */
+    fun changeCategory(records: List<DbRecord>, newCategoryId: String?) {
+        records.forEach { ent ->
+            if (ent.categoryId != newCategoryId) {
+                downloader.changeCategory(ent.id, newCategoryId)
+            }
+        }
+    }
+
     fun resumeDownload(ent: DbRecord?) {
         if (ent == null) return
         if (ent.downloadType == DownloadType.Torrent) {
@@ -223,53 +234,12 @@ object AppMenuHandler {
         //XDMUtils.browseURL("https://github.com/subhra74/xdm/issues")
     }
 
+    fun showNetworkOptimizer(window: Window?) {
+        SingleWindows.show(NetworkOptimizerDialog::class) { NetworkOptimizerDialog(window) }
+    }
+
     fun optimizeRWin() {
-//        val cmbLang =
-//            JComboBox(
-//                arrayOf(
-//                    text("LBL_NET_OPT_DEF"),
-//                    text("LBL_NET_OPT_64"),
-//                    text("LBL_NET_OPT_128"),
-//                    text("LBL_NET_OPT_256")
-//                )
-//            )
-//        cmbLang.selectedIndex = 0
-//
-//        val prompt = text("LBL_NET_OPT_MSG")
-//
-//        val obj = arrayOfNulls<Any>(2)
-//        obj[0] = prompt
-//        obj[1] = cmbLang
-//
-//        when (Config.getInstance().tcpWindowSize) {
-//            64 -> cmbLang.setSelectedIndex(1)
-//            128 -> cmbLang.setSelectedIndex(2)
-//            256 -> cmbLang.setSelectedIndex(3)
-//            else -> cmbLang.setSelectedIndex(0)
-//        }
-//
-//        if (JOptionPane.showOptionDialog(
-//                null,
-//                obj,
-//                text("LBL_OPTIMIZE_NETWORK"),
-//                JOptionPane.OK_CANCEL_OPTION,
-//                JOptionPane.PLAIN_MESSAGE,
-//                null,
-//                null,
-//                null
-//            )
-//            == JOptionPane.OK_OPTION
-//        ) {
-//            val index = cmbLang.selectedIndex
-//            if (index != -1) {
-//                when (index) {
-//                    1 -> Config.getInstance().tcpWindowSize = 64
-//                    2 -> Config.getInstance().tcpWindowSize = 128
-//                    3 -> Config.getInstance().tcpWindowSize = 256
-//                    else -> Config.getInstance().tcpWindowSize = 0
-//                }
-//            }
-//        }
+        showNetworkOptimizer(null)
     }
 
     /** "Batch download": asks for the links, then shows the batch dialog. */
@@ -290,68 +260,16 @@ object AppMenuHandler {
     }
 
     fun showLanguageDlg(window: AppWindow?) {
-//        val langMap = Properties()
-//        var `in`: InputStream? = null
-//        try {
-//            `in` = AppMenuHandler::class.java.getResourceAsStream("/lang/map")
-//            if (`in` == null) {
-//                `in` = FileInputStream("lang/map")
-//            }
-//            langMap.load(InputStreamReader(`in`, Charset.forName("utf-8")))
-//        } catch (e: Exception) {
-//            Logger.error(e)
-//        } finally {
-//            if (`in` != null) {
-//                try {
-//                    `in`.close()
-//                } catch (e2: Exception) {
-//                }
-//            }
-//        }
-//
-//        var index = 0
-//
-//        val keyList = ArrayList(langMap.stringPropertyNames())
-//        val valList = Vector<String>()
-//
-//        for (i in keyList.indices) {
-//            val name = keyList[i]
-//            val `val` = langMap.getProperty(name)
-//            valList.add(`val`)
-//            if (name == Config.getInstance().language) {
-//                index = i
-//            }
-//        }
-//
-//        val cmbLang = JComboBox(valList)
-//        cmbLang.selectedIndex = index
-//
-//        val prompt = text("MSG_LANG1")
-//
-//        val obj = arrayOfNulls<Any>(3)
-//        obj[0] = prompt
-//        obj[1] = cmbLang
-//        obj[2] = text("MSG_LANG2")
-//
-//        if (JOptionPane.showOptionDialog(
-//                window,
-//                obj,
-//                text("MSG_LANG1"),
-//                JOptionPane.OK_CANCEL_OPTION,
-//                JOptionPane.PLAIN_MESSAGE,
-//                null,
-//                null,
-//                null
-//            )
-//            == JOptionPane.OK_OPTION
-//        ) {
-//            index = cmbLang.selectedIndex
-//            if (index != -1) {
-//                Config.getInstance().language = keyList[index]
-//            }
-//            val lang = langMap.getProperty(cmbLang.selectedItem.toString() + "")
-//            if (lang != null) Config.getInstance().language = lang
-//        }
+        val settings = SingleWindows.show(SettingsWindow::class) {
+            SettingsWindow().apply {
+                onSaved = { window?.applyListSelectionMode() }
+                setLocationRelativeTo(window)
+                loadConfig()
+            }
+        }
+        settings.selectPage("MSG_LANG1")
+        settings.toFront()
+        settings.requestFocus()
     }
 
     fun changeFile(window: AppWindow?) {
@@ -377,25 +295,40 @@ object AppMenuHandler {
     }
 
     fun openRefreshPage(window: AppWindow?) {
-        //    var items = window.getSelectedDownloads();
-        //    if (items == null || items.isEmpty()) {
-        //      return;
-        //    }
-        //    DownloadEntry ent = items.get(0);
-        //    if (ent == null) {
-        //      return;
-        //    }
-        //    if (!(ent.getState() == XDMConstants.PAUSED || ent.getState() == XDMConstants.FAILED)) {
-        //      return;
-        //    }
-        //    try {
-        //      //      HttpMetadata md = HttpMetadata.load(ent.getId());
-        //      //				RefreshUrlPage rp = RefreshUrlPage.getPage(this);
-        //      //				rp.setDetails(md);
-        //      //				rp.showPanel();
-        //    } catch (Exception e2) {
-        //      Logger.log(e2);
-        //    }
+        val selected = window?.selectedDownloads?.firstOrNull()
+        if (selected == null) {
+            MessageBox.show(
+                window,
+                text("MENU_REFRESH_LINK"),
+                "Please select an interrupted, paused, or failed download to refresh its link."
+            )
+            return
+        }
+        if (selected.downloadType != DownloadType.Http) {
+            MessageBox.show(
+                window,
+                text("MENU_REFRESH_LINK"),
+                text("ERR_NO_REFRESH")
+            )
+            return
+        }
+        if (selected.status == RecordStatus.FINISHED) {
+            MessageBox.show(
+                window,
+                text("MENU_REFRESH_LINK"),
+                "The selected download is already completed."
+            )
+            return
+        }
+        if (!selected.status.isStopped) {
+            MessageBox.show(
+                window,
+                text("MENU_REFRESH_LINK"),
+                "Please pause the download before refreshing its link."
+            )
+            return
+        }
+        AppContext.app.showRefreshWindow(selected.id)
     }
 
 

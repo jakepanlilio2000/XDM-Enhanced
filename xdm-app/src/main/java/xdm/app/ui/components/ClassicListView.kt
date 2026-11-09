@@ -1,15 +1,18 @@
 package xdm.app.ui.components
 
+import xdm.app.AppContext
 import xdm.manager.DbRecord
+import xdm.manager.RecordStatus
+import java.awt.Dimension
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.SwingUtilities
 import javax.swing.event.ListSelectionEvent
 
 /**
- * The Classic download list, as in a file manager: click selects, Ctrl/⌘ and Shift extend,
- * double-click opens, right click shows the menu for the selection. Row buttons stay visible and
- * act on their own row only. See [ClassicListRow].
+ * The Classic Cards download list: visually separate, spacious download cards
+ * with category icon badges, thicker progress indicators, quick action buttons,
+ * and rich stats. See [ClassicCardPanel] and [ClassicListRow].
  */
 class ClassicListView(
     filter: MainListViewFilter = MainListViewFilter(FilterState.All, null, "")
@@ -17,6 +20,10 @@ class ClassicListView(
     private val menu = DownloadRowMenu(withPrimaryActions = true)
 
     init {
+        table.showHorizontalLines = false
+        table.showVerticalLines = false
+        table.intercellSpacing = Dimension(0, 0)
+
         val renderer = ClassicListRow(table)
         val editor = ClassicListRow(table, model)
         install(renderer, editor, renderer.height)
@@ -24,8 +31,6 @@ class ClassicListView(
         table.selectionModel.addListSelectionListener { e: ListSelectionEvent ->
             if (!e.valueIsAdjusting) {
                 editor.selectionChanged()
-                // One selected row is handled by its own buttons and menu; the toolbar's bulk
-                // actions are for two or more.
                 bulkSelectionCallback?.invoke(table.selectedRowCount > 1)
             }
         }
@@ -42,7 +47,13 @@ class ClassicListView(
         editor.apply {
             onMenuClick = { entry: DbRecord -> showMenuUnderButton(menu.forRow(entry, jsp)) }
             onContextMenu = { invoker, x, y -> menu.showAt(selectedItems, invoker, x, y) }
-            onOpen = { e: DbRecord -> AppMenuHandler.openFile(e, window) }
+            onOpen = { e: DbRecord ->
+                if (e.status == RecordStatus.FINISHED) {
+                    AppMenuHandler.openFile(e, window)
+                } else {
+                    AppContext.app.showProgressWindow(e.id, e.fileName)
+                }
+            }
             onOpenFolderClick = { e: DbRecord -> AppMenuHandler.openFolder(e, window) }
             onPauseClick = { e: DbRecord -> AppMenuHandler.pauseDownload(e) }
             onResumeClick = { e: DbRecord -> AppMenuHandler.resumeDownload(e) }

@@ -25,7 +25,7 @@ import kotlin.math.abs
  * moves the pointer, so both still select.
  */
 class WaylandComboBoxUI : FlatComboBoxUI() {
-    override fun createPopup(): ComboPopup = WaylandComboPopup()
+    public override fun createPopup(): ComboPopup = WaylandComboPopup()
 
     private inner class WaylandComboPopup : FlatComboPopup(comboBox) {
         /** Screen point of the press on the combo box or its arrow that may have opened the popup. */
@@ -35,7 +35,7 @@ class WaylandComboBoxUI : FlatComboBoxUI() {
             val delegate = super.createMouseListener()
             return object : MouseListener by delegate {
                 override fun mousePressed(e: MouseEvent) {
-                    openingPress = e.locationOnScreen
+                    openingPress = runCatching { e.locationOnScreen }.getOrNull()
                     delegate.mousePressed(e)
                 }
 
@@ -57,7 +57,8 @@ class WaylandComboBoxUI : FlatComboBoxUI() {
                 override fun mouseReleased(e: MouseEvent) {
                     val press = openingPress
                     openingPress = null
-                    if (press != null && isNear(press, e.locationOnScreen)) return
+                    val loc = runCatching { e.locationOnScreen }.getOrNull()
+                    if (press != null && loc != null && isNear(press, loc)) return
                     delegate.mouseReleased(e)
                 }
             }
@@ -69,7 +70,7 @@ class WaylandComboBoxUI : FlatComboBoxUI() {
         }
 
         private fun isNear(a: Point, b: Point): Boolean {
-            val threshold = DragSource.getDragThreshold()
+            val threshold = runCatching { DragSource.getDragThreshold() }.getOrDefault(5)
             return abs(a.x - b.x) <= threshold && abs(a.y - b.y) <= threshold
         }
     }

@@ -3,6 +3,7 @@ package xdm.app.ui.screens
 import xdm.app.AppContext
 import xdm.app.I8N.text
 import xdm.app.ui.components.MessageBox
+import xdm.app.utils.captureCategory
 import xdm.app.utils.getClipBoardText
 import xdm.core.downloaders.DownloadError
 import xdm.core.downloaders.DownloadType
@@ -38,6 +39,9 @@ object TorrentUiBridge {
                 lastUpdateTimes[task.id] = now
 
                 val rec = AppContext.db.getById(task.id) ?: return
+                if (!task.isCustomName && rec.fileName != snapshot.name && snapshot.name.isNotBlank() && !TorrentMetadataParser.isPlaceholderName(snapshot.name)) {
+                    rec.fileName = snapshot.name
+                }
                 rec.downloaded = snapshot.downloadedBytes
                 rec.size = snapshot.totalBytes
                 rec.progress = snapshot.progressPercent
@@ -52,6 +56,31 @@ object TorrentUiBridge {
                 AppContext.db.update(rec)
                 AppContext.app.updateDownloadInView(task.id)
                 AppContext.app.updateTorrentProgressWindow(task.id, snapshot)
+            }
+
+            override fun onMetadataReceived(task: TorrentDownloadTask, metadata: TorrentMetadata) {
+                val rec = AppContext.db.getById(task.id) ?: return
+                var updated = false
+                if (!task.isCustomName && rec.fileName != task.name && task.name.isNotBlank() && !TorrentMetadataParser.isPlaceholderName(task.name)) {
+                    rec.fileName = task.name
+                    updated = true
+                }
+                if (metadata.totalSize > 0 && rec.size != metadata.totalSize) {
+                    rec.size = metadata.totalSize
+                    updated = true
+                }
+                if (rec.categoryId == null) {
+                    val cat = captureCategory(task.name, null, null)?.id
+                    if (cat != null) {
+                        rec.categoryId = cat
+                        updated = true
+                    }
+                }
+                if (updated) {
+                    AppContext.db.update(rec)
+                    AppContext.app.updateDownloadInView(task.id)
+                }
+                AppContext.app.updateTorrentProgressWindow(task.id, task.getSnapshot())
             }
 
             override fun onFinished(task: TorrentDownloadTask) {
@@ -100,9 +129,15 @@ object TorrentUiBridge {
                         selected = false,
                         status = if (t.isCompleted) RecordStatus.FINISHED else RecordStatus.PAUSED,
                         downloadType = DownloadType.Torrent,
-                        categoryId = null
+                        categoryId = captureCategory(t.name, null, null)?.id
                     )
                     AppContext.db.add(newRec)
+                } else if (existing.fileName != t.name && !TorrentMetadataParser.isPlaceholderName(t.name)) {
+                    existing.fileName = t.name
+                    if (snap.totalBytes > 0 && existing.size != snap.totalBytes) {
+                        existing.size = snap.totalBytes
+                    }
+                    AppContext.db.update(existing)
                 }
             }
         } catch (e: Throwable) {

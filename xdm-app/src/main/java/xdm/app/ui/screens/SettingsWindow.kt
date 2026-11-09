@@ -2,6 +2,7 @@ package xdm.app.ui.screens
 
 import xdm.app.AppContext
 import xdm.app.ConfigSnapshot
+import xdm.app.I8N
 import xdm.app.I8N.text
 import xdm.app.ui.screens.settings.AdvancedConfigPanel
 import xdm.app.ui.screens.settings.BitTorrentPanel
@@ -9,6 +10,7 @@ import xdm.app.ui.screens.settings.BrowserMonitorPanel
 import xdm.app.ui.screens.settings.DownloadsPanel
 import xdm.app.ui.screens.settings.FoldersPanel
 import xdm.app.ui.screens.settings.GeneralPanel
+import xdm.app.ui.screens.settings.LanguagePanel
 import xdm.app.ui.screens.settings.NetworkConfigPanel
 import xdm.app.ui.components.AppTheme
 import xdm.app.ui.components.ThemeManager
@@ -80,6 +82,7 @@ class SettingsWindow : JFrame() {
     private val browserMonitorPanel = BrowserMonitorPanel()
     private val networkConfigPanel = NetworkConfigPanel()
     private val bitTorrentPanel = BitTorrentPanel()
+    private val languagePanel = LanguagePanel()
     private val advancedConfigPanel = AdvancedConfigPanel()
 
     private val pages = listOf(
@@ -89,6 +92,7 @@ class SettingsWindow : JFrame() {
         Page("SETTINGS_MONITORING", RemixIcon.PUZZLE_LINE, browserMonitorPanel),
         Page("SETTINGS_NETWORK", RemixIcon.WIFI_LINE, networkConfigPanel),
         Page("SETTINGS_BITTORRENT", RemixIcon.SERVER_LINE, bitTorrentPanel),
+        Page("MSG_LANG1", RemixIcon.GLOBAL_LINE, languagePanel),
         Page("MSG_ADV_TITLE", RemixIcon.TERMINAL_BOX_LINE, advancedConfigPanel),
     )
 
@@ -161,6 +165,9 @@ class SettingsWindow : JFrame() {
         btnSave.requestFocusInWindow()
         ThemeManager.addThemeListener(themeChangeListener)
 
+        languagePanel.onLangChanged = { idx -> generalPanel.setLangSelectedIndex(idx) }
+        generalPanel.onLangChanged = { idx -> languagePanel.setLangSelectedIndex(idx) }
+
         addWindowListener(object : WindowAdapter() {
             // Every page opens at its top. Layout passes run around the first show (wrapping text
             // settling its height, loaded values resizing rows), so reset once they have drained.
@@ -188,15 +195,21 @@ class SettingsWindow : JFrame() {
     fun save() {
         val config = AppContext.config
         val beforeWrite = ConfigSnapshot.of(config)
+        val oldLang = config.lang
         generalPanel.save()
         downloadsPanel.save()
         foldersPanel.save()
         browserMonitorPanel.save()
         networkConfigPanel.save()
         bitTorrentPanel.save()
+        languagePanel.save()
         advancedConfigPanel.save()
         loaded?.keepChangedElsewhere(config, beforeWrite)
         config.save()
+        loaded = ConfigSnapshot.of(config)
+        if (config.lang != oldLang) {
+            I8N.loadTexts(config.lang)
+        }
         TorrentUiBridge.applyTorrentConfig()
         // The browser-monitor panel writes the three fields the extension gates capture on -
         // fileExtensions, videoExtensions and blockedHosts - so publish after persisting rather
@@ -214,7 +227,17 @@ class SettingsWindow : JFrame() {
         browserMonitorPanel.load()
         networkConfigPanel.load()
         bitTorrentPanel.load()
+        languagePanel.load()
         advancedConfigPanel.load()
+    }
+
+    /** Switches to the page identified by [key] in [pages], e.g. "MSG_LANG1" or "SETTINGS_GENERAL". */
+    fun selectPage(key: String) {
+        val idx = pages.indexOfFirst { it.key == key }
+        if (idx >= 0) {
+            navList.selectedIndex = idx
+            card.show(panelHolder, pages[idx].key)
+        }
     }
 
     /** The left rail: its own tinted surface, separated from the content by a hairline. */

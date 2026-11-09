@@ -9,6 +9,7 @@ import xdm.core.util.TagReader
 import xdm.core.util.TagWriter
 import xdm.core.util.TaggedFile
 import xdm.core.util.byStableId
+import xdm.manager.CategoryRules
 import xdm.manager.DbRecord
 import xdm.manager.DownloadStore
 import xdm.manager.RecordStatus
@@ -103,6 +104,9 @@ class AppDB(private val configDir: String) : DownloadStore {
 
     @Synchronized
     override fun add(rec: DbRecord) {
+        if (rec.categoryId == null) {
+            rec.categoryId = CategoryRules.match(rec.fileName, null, null)?.id
+        }
         addActive(rec)
         update(rec)
     }
@@ -318,7 +322,7 @@ class AppDB(private val configDir: String) : DownloadStore {
                 else -> RecordStatus.PAUSED
             },
             downloadType = downloadType ?: return null,
-            categoryId = categoryId,
+            categoryId = categoryId ?: CategoryRules.match(fileName, null, null)?.id,
         )
     }
 

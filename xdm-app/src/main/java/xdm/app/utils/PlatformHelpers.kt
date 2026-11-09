@@ -316,6 +316,29 @@ fun openFileExternal(file: String, folder: String?) {
 }
 
 /**
+ * Opens [file] in [folder] with the system's "Open With..." chooser dialog.
+ */
+fun openWithExternal(file: String, folder: String?) {
+    val f = File(folder, file)
+    if (!f.exists()) throw FileNotFoundException(f.absolutePath)
+    val os = detectOS()
+    thread(isDaemon = true, name = "open-with-file") {
+        when (os) {
+            OS.Windows -> WinUtils.openWith(f)
+            OS.Linux -> {
+                val ok = runCatching { ProcessBuilder("gtk-launch", f.absolutePath).start() }.isSuccess
+                if (!ok) runCatching { Desktop.getDesktop().open(f) }.onFailure { Logger.error(it) }
+            }
+            OS.MacOS -> {
+                runCatching { ProcessBuilder("open", "-a", "Finder", f.absolutePath).start() }
+                    .onFailure { runCatching { Desktop.getDesktop().open(f) }.onFailure { Logger.error(it) } }
+            }
+            else -> runCatching { Desktop.getDesktop().open(f) }.onFailure { Logger.error(it) }
+        }
+    }
+}
+
+/**
  * Opens [folder] in the file manager, selecting [file] when it is given. Throws [FileNotFoundException]
  * when the file (or, with no file, the folder) is gone. The file manager is started on a background
  * thread: Windows initialises COM, Linux may wait for D-Bus to start the file manager.

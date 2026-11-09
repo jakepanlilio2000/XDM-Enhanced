@@ -89,7 +89,7 @@ class DownloadDialogsAndProgressTest : DownloadManagerTestBase() {
 
         assertEquals(20, wnd.progressBar.value)
         assertEquals("20%", wnd.progressBar.string)
-        assertTrue(wnd.lblStat3.text.contains("Speed:"))
+        assertTrue(wnd.lblStat3.text.contains("Transfer rate:") || wnd.lblStat3.text.contains("Speed:"))
         assertFalse(wnd.lblTorrentSwarm.isVisible, "Swarm label must be hidden for HTTP downloads")
         assertTrue(wnd.segPanel.isVisible, "Segment panel must be visible when segData is provided")
 

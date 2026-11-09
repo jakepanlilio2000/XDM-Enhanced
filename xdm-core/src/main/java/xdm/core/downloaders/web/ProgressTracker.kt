@@ -10,7 +10,14 @@ import xdm.core.downloaders.web.streaming.downloader.StreamingChunk
 import xdm.core.util.FormatHelper.getEtaAsSec
 import java.util.*
 
-data class SegmentProgress(var start: Long = 0, var length: Long = 0, var downloaded: Long = 0, val id: Long = 0)
+data class SegmentProgress(
+    var start: Long = 0,
+    var length: Long = 0,
+    var downloaded: Long = 0,
+    val id: Long = 0,
+    var status: String = "Downloading",
+    var speed: Float = 0f,
+)
 
 class ProgressTracker(val singleFile: Boolean) {
     var init = false
@@ -58,10 +65,10 @@ class ProgressTracker(val singleFile: Boolean) {
         this.totalSize = totalSize
         this.totalDownloadedBytes += downloadedBytes
         this.downloadedBytesSinceStartOrResume += downloadedBytes
-        if (ticks - this.lastProgressUpdatedAt > 500 && ticksElapsed > 0) {
+        if (ticks - this.lastProgressUpdatedAt >= 300 && ticksElapsed > 0) {
             val instantSpeed =
                 (((this.totalDownloadedBytes - this.lastDownloadedBytes) * 1000f) / (ticks - this.lastProgressUpdatedAt))
-            if (speedHistory.size > 5) {
+            if (speedHistory.size > 6) {
                 this.speedSum -= speedHistory.removeFirst()
             }
             speedHistory.add(instantSpeed)
@@ -89,7 +96,7 @@ class ProgressTracker(val singleFile: Boolean) {
         val ticks = System.currentTimeMillis()
         val ticksElapsed = ticks - this.ticksAtDownloadStartOrResume
         update(ticks, ticksElapsed, downloadedBytes, totalSize, { prg }, { totalSize?.minus(totalDownloadedBytes) })
-        if (ticks - this.lastChunkStatsUpdated > 1000 && ticksElapsed > 0) {
+        if (ticks - this.lastChunkStatsUpdated >= 300 && ticksElapsed > 0) {
             updateChunkProgressDataSingleFile(chunks)
             this.lastChunkStatsUpdated = ticks
             return true
@@ -120,7 +127,7 @@ class ProgressTracker(val singleFile: Boolean) {
             },
             remainingBytes = { size().takeIf { it.bytes > 0 }?.let { it.bytes - streamDownloadedBytes } },
         )
-        if (ticks - this.lastChunkStatsUpdated > 1000 && ticksElapsed > 0) {
+        if (ticks - this.lastChunkStatsUpdated >= 300 && ticksElapsed > 0) {
             updateChunkProgressData(chunks)
             this.lastChunkStatsUpdated = ticks
             return true
@@ -137,7 +144,7 @@ class ProgressTracker(val singleFile: Boolean) {
         val ticks = System.currentTimeMillis()
         val ticksElapsed = ticks - this.ticksAtDownloadStartOrResume
         update(ticks, ticksElapsed, downloadedBytes, totalSize, { progress }, { totalSize?.minus(totalDownloadedBytes) })
-        if (ticks - this.lastChunkStatsUpdated > 1000 && ticksElapsed > 0) {
+        if (ticks - this.lastChunkStatsUpdated >= 300 && ticksElapsed > 0) {
             this.lastChunkStatsUpdated = ticks
             return true
         }
@@ -184,19 +191,31 @@ class ProgressTracker(val singleFile: Boolean) {
         }
         for (chunk in chunks.values) {
             val seg = sortedSegments.find { it.id == chunk.id }
+            val chunkStatus = chunk.status.get()
+            val statusStr = when (chunkStatus) {
+                ChunkStatus.Finished -> "Complete"
+                ChunkStatus.Downloading -> "Receiving data..."
+                ChunkStatus.Ready -> "Connecting..."
+                ChunkStatus.Failed -> "Failed"
+                ChunkStatus.Cancelled -> "Cancelled"
+                ChunkStatus.Skipped -> "Skipped"
+                null -> "Pending"
+            }
             if (seg == null) {
                 sortedSegments.add(
                     SegmentProgress(
                         id = chunk.id,
                         start = chunk.offset,
                         downloaded = chunk.downloaded.get(),
-                        length = chunk.length.get()
+                        length = chunk.length.get(),
+                        status = statusStr,
                     )
                 )
             } else {
                 seg.start = chunk.offset
                 seg.length = chunk.length.get()
                 seg.downloaded = chunk.downloaded.get()
+                seg.status = statusStr
             }
         }
     }
@@ -211,15 +230,26 @@ class ProgressTracker(val singleFile: Boolean) {
         }
         for ((index, chunk) in chunks.withIndex()) {
             val len = chunk.length.get()
+            val chunkStatus = chunk.status.get()
             val fraction = when {
-                chunk.status.get() == ChunkStatus.Finished -> 1.0
+                chunkStatus == ChunkStatus.Finished -> 1.0
                 len > 0 -> (chunk.downloaded.get().toDouble() / len).coerceIn(0.0, 1.0)
                 else -> 0.0
+            }
+            val statusStr = when (chunkStatus) {
+                ChunkStatus.Finished -> "Complete"
+                ChunkStatus.Downloading -> "Receiving data..."
+                ChunkStatus.Ready -> "Connecting..."
+                ChunkStatus.Failed -> "Failed"
+                ChunkStatus.Cancelled -> "Cancelled"
+                ChunkStatus.Skipped -> "Skipped"
+                null -> "Pending"
             }
             val s = segments[index]
             s.start = index * STREAM_SLOT
             s.length = STREAM_SLOT
             s.downloaded = (fraction * STREAM_SLOT).toLong()
+            s.status = statusStr
         }
     }
 

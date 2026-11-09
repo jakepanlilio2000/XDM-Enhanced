@@ -229,6 +229,19 @@ abstract class DownloadListBase(final override val filter: MainListViewFilter) :
         SingleWindows.show(ClearDownloadsDialog::class) { ClearDownloadsDialog(window) }
     }
 
+    override fun selectByIds(ids: Set<Long>) {
+        table.clearSelection()
+        ids.forEach { id ->
+            val modelRow = AppContext.db.indexById(id) ?: return@forEach
+            if (modelRow in 0 until model.rowCount) {
+                val viewRow = table.convertRowIndexToView(modelRow)
+                if (viewRow in 0 until table.rowCount) {
+                    table.addRowSelectionInterval(viewRow, viewRow)
+                }
+            }
+        }
+    }
+
     override fun updateTheme() {
         cardPanel.background = AppTheme.listBackground
         table.background = AppTheme.listBackground

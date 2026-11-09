@@ -14,6 +14,8 @@ import org.libtorrent4j.alerts.SaveResumeDataAlert
 import org.libtorrent4j.alerts.SaveResumeDataFailedAlert
 import org.libtorrent4j.alerts.TorrentErrorAlert
 import org.libtorrent4j.alerts.TorrentFinishedAlert
+import org.libtorrent4j.alerts.TorrentCheckedAlert
+import org.libtorrent4j.alerts.StateChangedAlert
 import org.libtorrent4j.TorrentInfo
 import xdm.core.downloaders.DownloadError
 import xdm.core.downloaders.DownloadHost
@@ -105,7 +107,9 @@ class TorrentDownloadManager(
         host: DownloadHost? = null,
         fileSelection: List<Boolean>? = null,
         initialPeers: List<TcpEndpoint>? = null,
-        categoryId: String? = null
+        categoryId: String? = null,
+        customName: String? = null,
+        verifyExisting: Boolean = false
     ): TorrentDownloadTask {
         // Duplicate check by task ID
         tasksById[id]?.let { return it }
@@ -123,6 +127,7 @@ class TorrentDownloadManager(
             resumeFile = resumeFile,
             configDir = configDir,
             initialCategoryId = categoryId,
+            customName = customName,
             onRemoveCallback = { t ->
                 tasksById.remove(t.id)
                 if (t.infoHash.isNotBlank()) {
@@ -141,6 +146,9 @@ class TorrentDownloadManager(
         }
 
         tasksById[id] = task
+        if (verifyExisting) {
+            task.forceRecheckOnStart = true
+        }
         task.seedingRule = SeedingRule(engine.currentConfig.seedingMode, engine.currentConfig.seedingRatioLimit, engine.currentConfig.seedingTimeLimitSeconds)
 
         task.addListener(object : TorrentTaskListener {
@@ -152,6 +160,10 @@ class TorrentDownloadManager(
                 if (newState == TorrentTaskState.PAUSED || newState == TorrentTaskState.FINISHED || newState == TorrentTaskState.SEEDING) {
                     taskInfoDB?.saveTorrentTask(task.toTaskInfo(categoryId))
                 }
+            }
+
+            override fun onMetadataReceived(task: TorrentDownloadTask, metadata: TorrentMetadata) {
+                taskInfoDB?.saveTorrentTask(task.toTaskInfo(categoryId))
             }
         })
 
@@ -220,6 +232,7 @@ class TorrentDownloadManager(
             configDir = configDir,
             initialState = restoredState,
             initialCategoryId = info.categoryId,
+            customName = if (!TorrentMetadataParser.isPlaceholderName(info.name)) info.name else null,
             onRemoveCallback = { t ->
                 tasksById.remove(t.id)
                 if (t.infoHash.isNotBlank()) {
@@ -261,6 +274,10 @@ class TorrentDownloadManager(
                 if (newState == TorrentTaskState.PAUSED || newState == TorrentTaskState.FINISHED || newState == TorrentTaskState.SEEDING) {
                     taskInfoDB?.saveTorrentTask(task.toTaskInfo(info.categoryId))
                 }
+            }
+
+            override fun onMetadataReceived(task: TorrentDownloadTask, metadata: TorrentMetadata) {
+                taskInfoDB?.saveTorrentTask(task.toTaskInfo(info.categoryId))
             }
         })
 
@@ -366,6 +383,8 @@ class TorrentDownloadManager(
                 AlertType.ADD_TORRENT.swig(),
                 AlertType.PIECE_FINISHED.swig(),
                 AlertType.TORRENT_FINISHED.swig(),
+                AlertType.TORRENT_CHECKED.swig(),
+                AlertType.STATE_CHANGED.swig(),
                 AlertType.TORRENT_ERROR.swig(),
                 AlertType.FILE_ERROR.swig(),
                 AlertType.METADATA_RECEIVED.swig(),
@@ -411,9 +430,39 @@ class TorrentDownloadManager(
                         if (handle != null && handle.isValid) {
                             val hash = handle.infoHash().toHex().lowercase()
                             val task = tasksByInfoHash[hash]
-                            val finalSize = handle.status().totalDone()
-                            task?.onCompleted(finalSize)
-                            task?.saveResumeDataSync(1000)
+                            val st = handle.status()
+                            val total = task?.getTorrentInfo()?.totalSize() ?: st.total()
+                            val hasAllData = if (st.totalWanted() > 0) {
+                                st.totalWantedDone() >= st.totalWanted()
+                            } else if (total > 0) {
+                                st.totalDone() >= total
+                            } else false
+
+                            if (hasAllData) {
+                                val finalSize = st.totalDone()
+                                task?.onCompleted(finalSize)
+                                task?.saveResumeDataSync(1000)
+                            }
+                        }
+                    } catch (_: Throwable) {}
+                }
+                is TorrentCheckedAlert -> {
+                    try {
+                        val handle = alert.handle()
+                        if (handle != null && handle.isValid) {
+                            val hash = handle.infoHash().toHex().lowercase()
+                            val task = tasksByInfoHash[hash] ?: tasksById.values.find { it.infoHash == hash }
+                            task?.onTorrentChecked()
+                        }
+                    } catch (_: Throwable) {}
+                }
+                is StateChangedAlert -> {
+                    try {
+                        val handle = alert.handle()
+                        if (handle != null && handle.isValid) {
+                            val hash = handle.infoHash().toHex().lowercase()
+                            val task = tasksByInfoHash[hash] ?: tasksById.values.find { it.infoHash == hash }
+                            task?.getSnapshot()
                         }
                     } catch (_: Throwable) {}
                 }

@@ -7,6 +7,7 @@ import xdm.app.ui.components.MessageBox
 import xdm.app.utils.FontIcon
 import xdm.app.utils.RemixIcon
 import xdm.app.utils.ScaledEmptyBorder
+import xdm.app.utils.captureCategory
 import xdm.app.utils.px
 import xdm.app.utils.windowIconImages
 import xdm.core.downloaders.DownloadType
@@ -20,6 +21,8 @@ import xdm.torrent.TorrentFileEntry
 import xdm.torrent.TorrentMetadata
 import xdm.torrent.TorrentMetadataParser
 import xdm.torrent.TorrentSource
+import xdm.torrent.TorrentExistingDataDetector
+import xdm.torrent.ExistingTorrentDataCheck
 import java.awt.BorderLayout
 import java.awt.Color
 import java.awt.Component
@@ -38,7 +41,8 @@ import kotlin.math.max
 class NewTorrentDownloadWindow(
     val source: TorrentSource,
     val initialMetadata: TorrentMetadata? = null,
-    parent: Window? = null
+    parent: Window? = null,
+    val initialSaveDir: File? = null
 ) : JDialog(parent) {
 
     private var metadata: TorrentMetadata? = initialMetadata
@@ -59,9 +63,9 @@ class NewTorrentDownloadWindow(
         text = metadata?.name ?: source.name
     }
 
-    private val txtFolder = JTextField().apply {
+    val txtFolder = JTextField().apply {
         putClientProperty(FlatClientProperties.STYLE, "arc: 8")
-        text = AppContext.config.defaultDownloadFolder
+        text = initialSaveDir?.absolutePath ?: AppContext.config.defaultDownloadFolder
     }
 
     private val cmbCategory = JComboBox<String>().apply {
@@ -79,6 +83,24 @@ class NewTorrentDownloadWindow(
     }
 
     private val lblDiskSpace = JLabel().apply {
+        font = font.deriveFont(11f.px)
+        foreground = Color.GRAY
+    }
+
+    val pnlExistingData = JPanel(BorderLayout(8.px, 4.px)).apply {
+        border = BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(Color(56, 139, 253, 140), 1, true),
+            ScaledEmptyBorder(6, 10, 6, 10)
+        )
+        isVisible = false
+    }
+
+    val chkVerifyExisting = JCheckBox("Existing files detected. Verify and resume available data.").apply {
+        isSelected = true
+        font = font.deriveFont(Font.BOLD, 11f.px)
+    }
+
+    val lblExistingDetails = JLabel().apply {
         font = font.deriveFont(11f.px)
         foreground = Color.GRAY
     }
@@ -126,8 +148,34 @@ class NewTorrentDownloadWindow(
         }
 
         initUI()
+        autoSelectCategory(txtName.text)
         updateDiskSpace()
+        checkExistingFiles()
         updateSummary()
+    }
+
+    private var populatingCategory = false
+    private var userPickedCategory = false
+
+    private fun autoSelectCategory(name: String) {
+        if (userPickedCategory) return
+        val matched = captureCategory(name, null, null) ?: return
+        populatingCategory = true
+        try {
+            for (i in 0 until cmbCategory.itemCount) {
+                if (cmbCategory.getItemAt(i) == matched.name) {
+                    cmbCategory.selectedIndex = i
+                    if (matched.folder.isNotBlank() && initialSaveDir == null) {
+                        txtFolder.text = matched.folder
+                        updateDiskSpace()
+                        checkExistingFiles()
+                    }
+                    break
+                }
+            }
+        } finally {
+            populatingCategory = false
+        }
     }
 
     private fun initUI() {
@@ -183,8 +231,39 @@ class NewTorrentDownloadWindow(
         formPanel.add(JLabel("Category:"), gbc)
         gbc.gridx = 1; gbc.gridy = 4; gbc.weightx = 0.5
         formPanel.add(cmbCategory, gbc)
+        cmbCategory.addActionListener {
+            if (populatingCategory) return@addActionListener
+            userPickedCategory = true
+            val catName = cmbCategory.selectedItem as? String
+            val cat = AppContext.config.categories.firstOrNull { it.name == catName }
+            if (cat != null && cat.folder.isNotBlank()) {
+                txtFolder.text = cat.folder
+                updateDiskSpace()
+                checkExistingFiles()
+            }
+        }
+        txtFolder.document.addDocumentListener(object : javax.swing.event.DocumentListener {
+            override fun insertUpdate(e: javax.swing.event.DocumentEvent?) { updateDiskSpace(); checkExistingFiles() }
+            override fun removeUpdate(e: javax.swing.event.DocumentEvent?) { updateDiskSpace(); checkExistingFiles() }
+            override fun changedUpdate(e: javax.swing.event.DocumentEvent?) { updateDiskSpace(); checkExistingFiles() }
+        })
+        txtName.document.addDocumentListener(object : javax.swing.event.DocumentListener {
+            override fun insertUpdate(e: javax.swing.event.DocumentEvent?) = autoSelectCategory(txtName.text)
+            override fun removeUpdate(e: javax.swing.event.DocumentEvent?) = autoSelectCategory(txtName.text)
+            override fun changedUpdate(e: javax.swing.event.DocumentEvent?) = autoSelectCategory(txtName.text)
+        })
         gbc.gridx = 2; gbc.gridy = 4; gbc.weightx = 0.5
         formPanel.add(lblDiskSpace, gbc)
+
+        // Row 5: Existing Data Check
+        val boxExisting = Box.createVerticalBox().apply {
+            add(chkVerifyExisting)
+            add(Box.createVerticalStrut(2.px))
+            add(lblExistingDetails)
+        }
+        pnlExistingData.add(boxExisting, BorderLayout.CENTER)
+        gbc.gridx = 0; gbc.gridy = 5; gbc.weightx = 1.0; gbc.gridwidth = 3
+        formPanel.add(pnlExistingData, gbc)
 
         root.add(formPanel, BorderLayout.NORTH)
 
@@ -277,7 +356,31 @@ class NewTorrentDownloadWindow(
         if (fc.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
             txtFolder.text = fc.selectedFile.absolutePath
             updateDiskSpace()
+            checkExistingFiles()
         }
+    }
+
+    fun checkExistingFiles() {
+        val meta = metadata
+        val folder = File(txtFolder.text.trim())
+        if (meta == null || !folder.exists() || !folder.isDirectory) {
+            pnlExistingData.isVisible = false
+            return
+        }
+
+        val check = TorrentExistingDataDetector.detect(folder, meta)
+        if (check.hasExistingData) {
+            val sizeStr = FormatHelper.formatSize(check.existingBytes.toDouble())
+            val totalStr = FormatHelper.formatSize(check.totalExpectedBytes.toDouble())
+            chkVerifyExisting.text = "Existing files detected. Verify and resume available data."
+            lblExistingDetails.text = "Found ${check.existingFilesCount} of ${check.totalFilesCount} files ($sizeStr / $totalStr on disk). Will verify piece hashes."
+            chkVerifyExisting.isSelected = true
+            pnlExistingData.isVisible = true
+        } else {
+            pnlExistingData.isVisible = false
+        }
+        revalidate()
+        repaint()
     }
 
     private fun updateDiskSpace() {
@@ -341,14 +444,24 @@ class NewTorrentDownloadWindow(
             AppContext.config.categories.firstOrNull { it.name == catName }?.id
         } else null
 
+        val enteredName = txtName.text.trim()
+        val initialDefaultName = metadata?.name ?: source.name
+        val isCustom = enteredName.isNotBlank() &&
+                enteredName != initialDefaultName &&
+                !TorrentMetadataParser.isPlaceholderName(enteredName)
+        val customName = if (isCustom) enteredName else null
+
         val id = CoreUtils.uniqueId()
+        val verifyExisting = pnlExistingData.isVisible && chkVerifyExisting.isSelected
         try {
             val task = AppContext.torrentManager.createTask(
                 id = id,
                 source = source,
                 saveDir = destFolder,
                 fileSelection = fileSelection,
-                categoryId = categoryId
+                categoryId = categoryId,
+                customName = customName,
+                verifyExisting = verifyExisting
             )
             TorrentUiBridge.attachTaskListener(task)
 
@@ -359,7 +472,7 @@ class NewTorrentDownloadWindow(
                 downloaded = 0L,
                 progress = 0,
                 date = System.currentTimeMillis(),
-                fileName = name,
+                fileName = task.name,
                 eta = 0L,
                 speed = 0f,
                 selected = false,
@@ -372,7 +485,7 @@ class NewTorrentDownloadWindow(
 
             if (startNow) {
                 task.resume()
-                AppContext.app.showProgressWindow(id, name)
+                AppContext.app.showProgressWindow(id, task.name)
             }
 
             dispose()

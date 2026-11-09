@@ -38,8 +38,39 @@ object WaylandToolkit {
     private const val APP_ID = "xdm-app"
     private const val ENV_OVERRIDE = "XDM_WAYLAND"
 
+    enum class SupportStatus {
+        SUPPORTED,
+        NOT_LINUX,
+        NOT_WAYLAND_SESSION,
+        RUNTIME_LACKS_TOOLKIT
+    }
+
+    /** Detailed support status of the current environment and runtime. */
+    val supportStatus: SupportStatus
+        get() = checkSupport(detectOS(), isWaylandSession(), runtimeHasToolkit())
+
+    internal fun checkSupport(os: OS, isWayland: Boolean, hasToolkit: Boolean): SupportStatus = when {
+        os != OS.Linux -> SupportStatus.NOT_LINUX
+        !isWayland -> SupportStatus.NOT_WAYLAND_SESSION
+        !hasToolkit -> SupportStatus.RUNTIME_LACKS_TOOLKIT
+        else -> SupportStatus.SUPPORTED
+    }
+
+    /** Human-readable explanation of why native Wayland is or isn't available. */
+    fun getExplanation(status: SupportStatus): String = when (status) {
+        SupportStatus.SUPPORTED ->
+            "Native Wayland rendering is supported on this system (requires application restart)."
+        SupportStatus.NOT_LINUX ->
+            "Native Wayland is only available on Linux desktop systems."
+        SupportStatus.NOT_WAYLAND_SESSION ->
+            "Active desktop session is not Wayland (running under X11 or Wayland socket not found)."
+        SupportStatus.RUNTIME_LACKS_TOOLKIT ->
+            "Current Java runtime does not provide native Wayland toolkit (requires JetBrains Runtime with WLToolkit)."
+    }
+
     /** True on a Linux Wayland session whose runtime has the Wayland toolkit, i.e. the setting can matter. */
-    val isSupported: Boolean by lazy { detectOS() == OS.Linux && isWaylandSession() && runtimeHasToolkit() }
+    val isSupported: Boolean
+        get() = supportStatus == SupportStatus.SUPPORTED
 
     /** True when this JVM was told to use the Wayland toolkit. */
     val isActive: Boolean
@@ -74,17 +105,23 @@ object WaylandToolkit {
      * `WAYLAND_DISPLAY` names the compositor's socket (relative to `XDG_RUNTIME_DIR` unless absolute).
      * The socket has to exist, so a variable left over in an ssh shell or a nested X session doesn't
      * count; `XDG_SESSION_TYPE=wayland` alone doesn't either, since the toolkit needs that socket.
+     * Stale WAYLAND_DISPLAY variables during an X11 session (`XDG_SESSION_TYPE=x11`) are disqualified.
      */
-    private fun isWaylandSession(): Boolean {
-        val display = System.getenv("WAYLAND_DISPLAY")?.takeIf { it.isNotBlank() } ?: return false
-        val socket = if (display.startsWith("/")) File(display) else {
-            val runtimeDir = System.getenv("XDG_RUNTIME_DIR")?.takeIf { it.isNotBlank() } ?: return false
-            File(runtimeDir, display)
+    internal fun isWaylandSession(
+        sessionType: String? = System.getenv("XDG_SESSION_TYPE"),
+        display: String? = System.getenv("WAYLAND_DISPLAY"),
+        runtimeDir: String? = System.getenv("XDG_RUNTIME_DIR")
+    ): Boolean {
+        if (sessionType?.equals("x11", ignoreCase = true) == true) return false
+        val disp = display?.takeIf { it.isNotBlank() } ?: return false
+        val socket = if (disp.startsWith("/")) File(disp) else {
+            val dir = runtimeDir?.takeIf { it.isNotBlank() } ?: return false
+            File(dir, disp)
         }
         return socket.exists()
     }
 
     /** Loads without initializing: only the JetBrains Runtime has the class. */
-    private fun runtimeHasToolkit(): Boolean =
-        runCatching { Class.forName(WL_TOOLKIT_CLASS, false, ClassLoader.getSystemClassLoader()) }.isSuccess
+    internal fun runtimeHasToolkit(classLoader: ClassLoader = ClassLoader.getSystemClassLoader()): Boolean =
+        runCatching { Class.forName(WL_TOOLKIT_CLASS, false, classLoader) }.isSuccess
 }

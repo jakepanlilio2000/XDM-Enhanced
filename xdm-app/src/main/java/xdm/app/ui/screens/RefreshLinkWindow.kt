@@ -16,9 +16,11 @@ import xdm.app.utils.scaledInsets
 import xdm.app.utils.scaledSize
 import xdm.app.utils.windowIconImages
 import xdm.core.network.http.HeaderMap
+import xdm.manager.LinkValidationResult
 import java.awt.BorderLayout
 import java.awt.CardLayout
 import java.awt.Color
+import java.awt.Cursor
 import java.awt.Dimension
 import java.awt.FlowLayout
 import java.awt.Font
@@ -42,6 +44,7 @@ import javax.swing.JScrollPane
 import javax.swing.JTable
 import javax.swing.JTextField
 import javax.swing.ListSelectionModel
+import javax.swing.SwingUtilities
 import javax.swing.UIManager
 import javax.swing.table.AbstractTableModel
 
@@ -358,8 +361,70 @@ class RefreshLinkWindow(
             return
         }
         val (headers, cookie) = collectHeaders()
-        AppContext.downloader.updateDownloadLink(id, url, headers, cookie)
-        dispose()
+        btnApply.isEnabled = false
+        btnCancel.isEnabled = false
+        cursor = Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR)
+
+        Thread {
+            val result = AppContext.downloader.validateReplacement(id, url, headers, cookie)
+            SwingUtilities.invokeLater {
+                cursor = Cursor.getDefaultCursor()
+                btnApply.isEnabled = true
+                btnCancel.isEnabled = true
+
+                when (result) {
+                    is LinkValidationResult.Compatible -> {
+                        AppContext.downloader.updateDownloadLink(id, result.finalUrl, result.headers, result.cookie)
+                        MessageBox.show(
+                            this,
+                            title,
+                            "Download link successfully verified and updated! Existing progress has been preserved.\nYou may now resume the download."
+                        )
+                        dispose()
+                    }
+
+                    is LinkValidationResult.Incompatible -> {
+                        when (result.reason) {
+                            LinkValidationResult.IncompatibleReason.SIZE_MISMATCH,
+                            LinkValidationResult.IncompatibleReason.NO_RANGE_SUPPORT,
+                            LinkValidationResult.IncompatibleReason.CONTENT_CHANGED -> {
+                                val options = arrayOf("Restart from Beginning", "Cancel")
+                                val choice = JOptionPane.showOptionDialog(
+                                    this,
+                                    "The replacement link cannot safely resume this download:\n${result.details}\n\nStarting over will clear previously downloaded data.\nWould you like to restart the download from the beginning with this new link?",
+                                    title,
+                                    JOptionPane.DEFAULT_OPTION,
+                                    JOptionPane.WARNING_MESSAGE,
+                                    null,
+                                    options,
+                                    options[1]
+                                )
+                                if (choice == 0) {
+                                    AppContext.downloader.restartDownloadWithNewLink(id, url, headers, cookie)
+                                    MessageBox.show(
+                                        this,
+                                        title,
+                                        "Download progress has been reset. The download will start from the beginning using the new link."
+                                    )
+                                    dispose()
+                                }
+                            }
+
+                            LinkValidationResult.IncompatibleReason.NOT_FOUND,
+                            LinkValidationResult.IncompatibleReason.SERVER_ERROR,
+                            LinkValidationResult.IncompatibleReason.NETWORK_ERROR -> {
+                                MessageBox.show(
+                                    this,
+                                    title,
+                                    "Unable to verify replacement link:\n${result.details}",
+                                    JOptionPane.ERROR_MESSAGE
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }.start()
     }
 
     private fun isValidUrl(url: String): Boolean {

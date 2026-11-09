@@ -10,6 +10,7 @@ import xdm.core.downloaders.DownloadType
 import xdm.core.util.FormatHelper
 import xdm.manager.DbRecord
 import xdm.manager.RecordStatus
+import xdm.torrent.TorrentTaskState
 import java.awt.Color
 import java.awt.Component
 import java.awt.Font
@@ -128,31 +129,47 @@ object DownloadTableRenderers {
             column: Int
         ): Component {
             super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column)
-            val status = value as? RecordStatus
-            if (status != null) {
-                text = when (status) {
-                    RecordStatus.DOWNLOADING -> "Downloading"
-                    RecordStatus.FINISHED -> "Finished"
-                    RecordStatus.PAUSED -> "Paused"
-                    RecordStatus.ERROR -> "Error"
-                    RecordStatus.ASSEMBLING -> "Assembling"
-                    RecordStatus.MOVING -> "Moving"
-                    RecordStatus.READY -> "Queued"
-                }
+            val modelRow = table.convertRowIndexToModel(row)
+            val model = table.model as? DownloadTableModel
+            val rec = model?.getItemAt(modelRow)
+            val torrentTask = if (rec?.downloadType == DownloadType.Torrent) AppContext.torrentManager.getTask(rec.id) else null
+            val torrentSnap = torrentTask?.getSnapshot()
+            val isChecking = torrentSnap?.state == TorrentTaskState.CHECKING_FILES
+
+            if (isChecking) {
+                text = "Checking (${torrentSnap!!.checkingProgressPercent}%)"
                 if (!isSelected) {
-                    val isDark = com.formdev.flatlaf.FlatLaf.isLafDark()
-                    foreground = when (status) {
-                        RecordStatus.FINISHED -> if (isDark) Color(63, 185, 80) else Color(26, 127, 55)
-                        RecordStatus.DOWNLOADING -> AppTheme.accent
-                        RecordStatus.PAUSED -> AppTheme.pausedForeground
-                        RecordStatus.ERROR -> AppTheme.failedForeground
-                        else -> table.foreground
-                    }
+                    foreground = AppTheme.accent
                 } else {
                     foreground = table.selectionForeground
                 }
             } else {
-                text = ""
+                val status = value as? RecordStatus
+                if (status != null) {
+                    text = when (status) {
+                        RecordStatus.DOWNLOADING -> "Downloading"
+                        RecordStatus.FINISHED -> "Finished"
+                        RecordStatus.PAUSED -> "Paused"
+                        RecordStatus.ERROR -> "Error"
+                        RecordStatus.ASSEMBLING -> "Assembling"
+                        RecordStatus.MOVING -> "Moving"
+                        RecordStatus.READY -> "Queued"
+                    }
+                    if (!isSelected) {
+                        val isDark = com.formdev.flatlaf.FlatLaf.isLafDark()
+                        foreground = when (status) {
+                            RecordStatus.FINISHED -> if (isDark) Color(63, 185, 80) else Color(26, 127, 55)
+                            RecordStatus.DOWNLOADING -> AppTheme.accent
+                            RecordStatus.PAUSED -> AppTheme.pausedForeground
+                            RecordStatus.ERROR -> AppTheme.failedForeground
+                            else -> table.foreground
+                        }
+                    } else {
+                        foreground = table.selectionForeground
+                    }
+                } else {
+                    text = ""
+                }
             }
             return this
         }
@@ -185,21 +202,23 @@ object DownloadTableRenderers {
             column: Int
         ): Component {
             val progress = (value as? Number)?.toInt() ?: 0
-            progressBar.value = progress
-            val accent = AppTheme.accent
-            progressBar.foreground = accent
-            val accentFg = ThemeManager.contrastForeground(accent)
-            progressBar.putClientProperty("ProgressBar.selectionForeground", accentFg)
-            progressBar.putClientProperty("ProgressBar.selectionBackground", table.foreground)
-
             val modelRow = table.convertRowIndexToModel(row)
             val model = table.model as? DownloadTableModel
             val rec = model?.getItemAt(modelRow)
+            val torrentTask = if (rec?.downloadType == DownloadType.Torrent) AppContext.torrentManager.getTask(rec.id) else null
+            val torrentSnap = torrentTask?.getSnapshot()
+            val isChecking = torrentSnap?.state == TorrentTaskState.CHECKING_FILES
 
-            progressBar.string = if (rec?.status == RecordStatus.FINISHED) {
-                "100%"
+            if (isChecking) {
+                progressBar.value = torrentSnap!!.checkingProgressPercent
+                progressBar.string = "Checking ${torrentSnap.checkingProgressPercent}%"
             } else {
-                "$progress%"
+                progressBar.value = progress
+                progressBar.string = if (rec?.status == RecordStatus.FINISHED) {
+                    "100%"
+                } else {
+                    "$progress%"
+                }
             }
 
             if (isSelected) {

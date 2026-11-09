@@ -43,15 +43,31 @@ fun fallbackDownloadFolder(): String {
  * The category a browser capture starts in: the rule match, unless the user's last hand-pick was None
  * ([IAppConfig.rememberNone]), in which case rules preselect nothing.
  */
-fun captureCategory(fileName: String?, url: String?, pageUrl: String?): DownloadCategory? =
-    if (config.rememberNone) null else CategoryRules.match(fileName, url, pageUrl)
+fun captureCategory(
+    fileName: String?,
+    url: String?,
+    pageUrl: String?,
+    contentType: String? = null,
+    contentDisposition: String? = null,
+): DownloadCategory? =
+    if (config.rememberNone) null else CategoryRules.match(
+        fileName, url, pageUrl,
+        contentType = contentType,
+        contentDisposition = contentDisposition
+    )
 
 /**
  * Where a browser capture goes when it starts without a dialog: the category the rules pick (none if
  * None is remembered) and that category's folder, or the None folder. Returns `categoryId to targetFolder`.
  */
-fun captureDestination(fileName: String?, url: String?, pageUrl: String?): Pair<String?, String> {
-    val category = captureCategory(fileName, url, pageUrl)
+fun captureDestination(
+    fileName: String?,
+    url: String?,
+    pageUrl: String?,
+    contentType: String? = null,
+    contentDisposition: String? = null,
+): Pair<String?, String> {
+    val category = captureCategory(fileName, url, pageUrl, contentType, contentDisposition)
     return category?.id to folderFor(category)
 }
 

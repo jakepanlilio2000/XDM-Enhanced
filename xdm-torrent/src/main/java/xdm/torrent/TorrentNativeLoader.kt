@@ -35,6 +35,11 @@ object TorrentNativeLoader {
                 throw TorrentNativeLoadException("Configured libtorrent4j.jni.path does not exist or is not a file: $existingPath")
             }
             try {
+                try {
+                    System.load(file.absolutePath)
+                } catch (_: Throwable) {
+                    // Ignore if already loaded into JVM by libtorrent4j internal loader
+                }
                 val ver = libtorrent.version()
                 loadedVersion = ver
                 loaded.set(true)

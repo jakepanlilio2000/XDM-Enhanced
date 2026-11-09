@@ -54,8 +54,13 @@ data class DownloadCategory(
         get() = defaultNameOf(id) == name
 
     /** Whether [fileName] has one of [extensions]. Used for row icons; download matching is [CategoryRules]. */
+    fun matchingExtension(fileName: String): String? =
+        extensions.filter { fileName.endsWith(it, ignoreCase = true) }
+            .maxByOrNull { it.length }
+
+    /** Whether [fileName] has one of [extensions]. Used for row icons; download matching is [CategoryRules]. */
     fun matches(fileName: String): Boolean =
-        extensions.any { fileName.endsWith(it, ignoreCase = true) }
+        matchingExtension(fileName) != null
 
     /** True when the category has no rules at all: it is only ever picked by hand. */
     val hasNoRules: Boolean
@@ -76,23 +81,27 @@ data class DownloadCategory(
         private val BUILT_INS = listOf(
             BuiltIn(
                 "CAT_DOCUMENTS", "Documents",
-                setOf(".pdf", ".docx", ".doc", ".ppt", ".pptx", ".odt", ".odf")
+                setOf(".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt", ".odt", ".odf", ".rtf", ".csv", ".ods", ".odp")
             ),
             BuiltIn(
                 "CAT_COMPRESSED", "Compressed",
-                setOf(".zip", ".rar", ".7z", ".gz", ".tar", ".tgz", ".tz", ".bz2", ".xz")
+                setOf(".zip", ".rar", ".7z", ".tar.gz", ".tar.bz2", ".tar.xz", ".tar.zst", ".gz", ".tar", ".tgz", ".tz", ".bz2", ".xz", ".zst", ".cab")
             ),
             BuiltIn(
                 "CAT_MUSIC", "Music",
-                setOf(".mp3", ".aac", ".wav", ".ac3")
+                setOf(".mp3", ".flac", ".wav", ".aac", ".ogg", ".oga", ".m4a", ".opus", ".wma", ".ac3")
             ),
             BuiltIn(
                 "CAT_VIDEOS", "Video",
-                setOf(".ts", ".mp4", ".mkv", ".webm", ".avi")
+                setOf(".mp4", ".mkv", ".avi", ".mov", ".webm", ".ts", ".m4v", ".wmv", ".flv", ".3gp", ".ogv", ".mpg", ".mpeg")
             ),
             BuiltIn(
                 "CAT_PROGRAMS", "Programs",
-                setOf(".exe", ".msi", ".msix", ".deb", ".dmg", ".rpm", ".iso", ".pkg", ".sh", ".py")
+                setOf(".exe", ".msi", ".msix", ".apk", ".deb", ".rpm", ".dmg", ".iso", ".pkg", ".sh", ".py", ".appimage", ".jar", ".xapk")
+            ),
+            BuiltIn(
+                "CAT_IMAGES", "Images",
+                setOf(".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg", ".bmp", ".ico", ".tiff", ".tif", ".avif", ".heic")
             ),
         )
 

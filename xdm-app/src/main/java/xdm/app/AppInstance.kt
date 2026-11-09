@@ -39,11 +39,13 @@ import xdm.core.downloaders.DownloadError
 import xdm.core.downloaders.DownloadType
 import xdm.core.downloaders.HttpDownloadTaskInfo
 import xdm.core.downloaders.web.SegmentProgress
+import xdm.core.network.http.HeaderMap
 import xdm.core.util.FormatHelper.formatSize
 import xdm.core.util.Logger
 import xdm.core.util.MovePhase
 import xdm.manager.BatchFileCounts
 import xdm.manager.DbRecord
+import xdm.manager.LinkValidationResult
 import java.awt.Desktop
 import java.awt.MenuItem
 import java.awt.PopupMenu
@@ -247,7 +249,8 @@ open class AppInstance : IAppInstance {
         runOnUIThread {
             // Checksums only make sense for a file fetched from one URL as-is.
             val source = if (AppContext.db.getById(id)?.downloadType == DownloadType.Http) ChecksumPanel.sourceOf(id) else null
-            DownloadCompleteWindow().apply { setDetails(fileName, folder, fileSize, source) }.isVisible = true
+            val sourceUrl = AppContext.taskInfoDB.getHttpTask(id)?.url ?: AppContext.taskInfoDB.getTorrentTask(id)?.sourceUri ?: AppContext.db.getById(id)?.fileName
+            DownloadCompleteWindow().apply { setDetails(fileName, folder, fileSize, source, sourceUrl) }.isVisible = true
         }
     }
 
@@ -290,9 +293,8 @@ open class AppInstance : IAppInstance {
 
     override fun addDownload(downloadInfo: HttpDownloadTaskInfo?) {
         if (downloadInfo != null && AppContext.refreshLinkInProgress.compareAndSet(true, false)) {
-            AppContext.downloader.updateDownloadInfo(AppContext.refreshLinkId.get(), downloadInfo)
-            // Called on the browser-integration server thread.
-            runOnUIThread { refreshLinkWindow?.showRefreshed() }
+            val refreshId = AppContext.refreshLinkId.get()
+            handleRefreshedLink(refreshId, downloadInfo.url, downloadInfo.headers, downloadInfo.cookie)
             return
         }
         if (downloadInfo != null && AppContext.config.startDownloadAutomatically) {
@@ -308,8 +310,8 @@ open class AppInstance : IAppInstance {
     override fun addVideoDownload(vid: Long, fileName: String, fileSize: Long?, contentType: String?) {
         AppContext.videoTracker.getHttpVideo(vid)?.let { source ->
             if (AppContext.refreshLinkInProgress.compareAndSet(true, false)) {
-                AppContext.downloader.updateDownloadInfo(AppContext.refreshLinkId.get(), source)
-                runOnUIThread { refreshLinkWindow?.showRefreshed() }
+                val refreshId = AppContext.refreshLinkId.get()
+                handleRefreshedLink(refreshId, source.url, source.headers, source.cookie)
                 return
             }
         }
@@ -332,6 +334,55 @@ open class AppInstance : IAppInstance {
         } else {
             SwingUtilities.invokeLater {
                 showNewVideoDownloadWindowInternal(vid, fileName, fileSize, contentType)
+            }
+        }
+    }
+
+    private fun handleRefreshedLink(refreshId: Long, url: String, headers: HeaderMap?, cookie: String?) {
+        val result = AppContext.downloader.validateReplacement(refreshId, url, headers, cookie)
+        when (result) {
+            is LinkValidationResult.Compatible -> {
+                AppContext.downloader.updateDownloadLink(refreshId, result.finalUrl, result.headers, result.cookie)
+                runOnUIThread { refreshLinkWindow?.showRefreshed() }
+            }
+
+            is LinkValidationResult.Incompatible -> {
+                runOnUIThread {
+                    val window = refreshLinkWindow ?: appWindow
+                    when (result.reason) {
+                        LinkValidationResult.IncompatibleReason.SIZE_MISMATCH,
+                        LinkValidationResult.IncompatibleReason.NO_RANGE_SUPPORT,
+                        LinkValidationResult.IncompatibleReason.CONTENT_CHANGED -> {
+                            val options = arrayOf("Restart from Beginning", "Cancel")
+                            val choice = JOptionPane.showOptionDialog(
+                                window,
+                                "The captured link cannot safely resume this download:\n${result.details}\n\nStarting over will clear previously downloaded data.\nWould you like to restart the download from the beginning with this new link?",
+                                "Refresh Download Link",
+                                JOptionPane.DEFAULT_OPTION,
+                                JOptionPane.WARNING_MESSAGE,
+                                null,
+                                options,
+                                options[1]
+                            )
+                            if (choice == 0) {
+                                AppContext.downloader.restartDownloadWithNewLink(refreshId, url, headers, cookie)
+                                refreshLinkWindow?.showRefreshed()
+                            } else {
+                                AppContext.refreshLinkInProgress.set(true)
+                            }
+                        }
+
+                        else -> {
+                            MessageBox.show(
+                                window,
+                                "Refresh Download Link",
+                                "Unable to verify captured link:\n${result.details}",
+                                JOptionPane.ERROR_MESSAGE
+                            )
+                            AppContext.refreshLinkInProgress.set(true)
+                        }
+                    }
+                }
             }
         }
     }

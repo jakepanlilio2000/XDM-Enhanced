@@ -15,6 +15,17 @@ object WinUtils {
     fun open(f: File): Boolean = f.exists() && Win32Shell.openFile(f.absolutePath)
 
     /**
+     * Opens the native Windows "Open with..." dialog for [f].
+     */
+    fun openWith(f: File): Boolean {
+        if (!f.exists()) return false
+        return runCatching {
+            ProcessBuilder("rundll32.exe", "shell32.dll,OpenAs_RunDLL", f.absolutePath).start()
+            true
+        }.getOrDefault(false)
+    }
+
+    /**
      * Opens [folder] in Explorer with [file] selected. Both go through the shell API rather than an
      * `explorer.exe` command line, which splits on commas. Initialises COM, so never on the EDT.
      * When the shell calls cannot run at all, falls back to `explorer`, with the path quoted.

@@ -65,14 +65,41 @@ object AppContext {
     /** Answers 401 / 407 for every download client; asks the user through a Swing dialog. */
     val httpAuth: HttpAuth by lazy { HttpAuth(SwingCredentialPrompt) }
 
-    val torrentManager: TorrentDownloadManager by lazy {
-        val cDir = if (::configDir.isInitialized) File(configDir) else null
-        val db = if (::taskInfoDB.isInitialized) taskInfoDB else cDir?.let { TaskInfoDB(it.absolutePath) }
-        val tm = TorrentDownloadManager(configDir = cDir, taskInfoDB = db)
-        Runtime.getRuntime().addShutdownHook(Thread({
-            runCatching { tm.shutdown(saveResumeData = true, timeoutMs = 2000) }
-        }, "XDM-Torrent-ShutdownHook"))
-        tm
+    @Volatile
+    private var customTorrentManager: TorrentDownloadManager? = null
+    private var torrentShutdownHook: Thread? = null
+
+    var torrentManager: TorrentDownloadManager
+        get() {
+            customTorrentManager?.let { return it }
+            return synchronized(this) {
+                customTorrentManager?.let { return it }
+                val cDir = if (::configDir.isInitialized) File(configDir) else null
+                val db = if (::taskInfoDB.isInitialized) taskInfoDB else cDir?.let { TaskInfoDB(it.absolutePath) }
+                val tm = TorrentDownloadManager(configDir = cDir, taskInfoDB = db)
+                val hook = Thread({
+                    runCatching { tm.shutdown(saveResumeData = true, timeoutMs = 2000) }
+                }, "XDM-Torrent-ShutdownHook")
+                runCatching { Runtime.getRuntime().addShutdownHook(hook) }
+                torrentShutdownHook = hook
+                customTorrentManager = tm
+                tm
+            }
+        }
+        set(value) {
+            synchronized(this) {
+                customTorrentManager = value
+            }
+        }
+
+    fun resetTorrentManagerForTest() {
+        synchronized(this) {
+            torrentShutdownHook?.let {
+                runCatching { Runtime.getRuntime().removeShutdownHook(it) }
+                torrentShutdownHook = null
+            }
+            customTorrentManager = null
+        }
     }
 
     var refreshLinkInProgress = AtomicBoolean(false)

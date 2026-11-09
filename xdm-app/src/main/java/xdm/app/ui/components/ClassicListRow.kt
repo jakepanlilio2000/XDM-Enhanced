@@ -1,7 +1,9 @@
 package xdm.app.ui.components
 
+import xdm.app.AppContext
 import xdm.app.utils.isMacPopupTrigger
 import xdm.manager.DbRecord
+import xdm.manager.RecordStatus
 import java.awt.Component
 import java.awt.Toolkit
 import java.awt.event.MouseAdapter
@@ -15,27 +17,22 @@ import javax.swing.table.TableCellEditor
 import javax.swing.table.TableCellRenderer
 
 /**
- * Row of the Classic list, used both as renderer and as the hover editor that makes the row
- * buttons live. A click anywhere but a button selects the row (Ctrl/⌘ toggles, Shift extends),
- * a double-click opens it and a right click asks for the menu. The tile always shows the file type;
- * selection is the [RowWashPanel] background.
- *
- * The editor reads its row from [JTable.getEditingRow] rather than remembering it, so it stays
- * right after keyboard navigation (which stops editing without removing this editor).
+ * Card row for the Classic Cards download list mode.
+ * Renders a full floating card container with rich metadata, category icon badge,
+ * larger progress bar, and contextual quick actions.
  */
 class ClassicListRow(
     private val table: JTable,
     private val model: MainListViewModel? = null
 ) : TableCellRenderer, TableCellEditor {
-    private val wash = RowWashPanel()
-    private val row = DownloadRowPanel(wash)
+    private val card = ClassicCardPanel()
     private var editEntry: DbRecord? = null
 
-    var onPauseClick: ActionCallBack? by row::onPauseClick
-    var onResumeClick: ActionCallBack? by row::onResumeClick
-    var onOpenFolderClick: ActionCallBack? by row::onOpenFolderClick
-    var onDeleteClick: ActionCallBack? by row::onDeleteClick
-    var onMenuClick: ActionCallBack? by row::onMenuClick
+    var onPauseClick: ActionCallBack? by card::onPauseClick
+    var onResumeClick: ActionCallBack? by card::onResumeClick
+    var onOpenFolderClick: ActionCallBack? by card::onOpenFolderClick
+    var onDeleteClick: ActionCallBack? by card::onDeleteClick
+    var onMenuClick: ActionCallBack? by card::onMenuClick
     var onOpen: ActionCallBack? = null
 
     /** A right click on the row at ([x], [y]) in [invoker]; the row is already part of the selection. */
@@ -50,12 +47,12 @@ class ClassicListRow(
             val vr = editRow
             if (vr == -1 || r < 0 || r >= table.rowCount) return@addTableModelListener
             if (table.convertRowIndexToView(r) == vr) {
-                (model.getValueAt(r, 0) as? DbRecord)?.let { show(it, table.isRowSelected(vr)) }
+                (model.getValueAt(r, 0) as? DbRecord)?.let { show(it, table.isRowSelected(vr), isHovered = true) }
             }
         }
 
         val shortcut = Toolkit.getDefaultToolkit().menuShortcutKeyMaskEx
-        wash.addMouseListener(object : MouseAdapter() {
+        val mouseListener = object : MouseAdapter() {
             override fun mousePressed(e: MouseEvent) {
                 val vr = editRow
                 if (vr == -1) return
@@ -68,7 +65,13 @@ class ClassicListRow(
                 val toggle = (e.modifiersEx and shortcut) != 0
                 table.changeSelection(vr, 0, toggle, e.isShiftDown)
                 if (e.clickCount == 2 && !toggle && !e.isShiftDown) {
-                    editEntry?.let { onOpen?.invoke(it) }
+                    editEntry?.let {
+                        if (it.status == RecordStatus.FINISHED) {
+                            onOpen?.invoke(it)
+                        } else {
+                            AppContext.app.showProgressWindow(it.id, it.fileName)
+                        }
+                    }
                 }
             }
 
@@ -82,11 +85,11 @@ class ClassicListRow(
                 setHovered(true)
             }
 
-            // Also raised when the mouse moves onto a row button; only leaving the row counts.
             override fun mouseExited(e: MouseEvent) {
-                if (wash.getMousePosition(true) == null) setHovered(false)
+                if (card.container.getMousePosition(true) == null) setHovered(false)
             }
-        })
+        }
+        card.attachMouseListener(mouseListener)
     }
 
     private fun showContextMenu(e: MouseEvent, vr: Int) {
@@ -95,54 +98,42 @@ class ClassicListRow(
     }
 
     private fun setHovered(hovered: Boolean) {
-        if (wash.hovered == hovered) return
-        wash.hovered = hovered
-        wash.repaint()
+        card.setHovered(hovered)
     }
 
     /** Called by the list when the selection changes, so the open editor follows it. */
     fun selectionChanged() {
         val vr = editRow
         if (vr == -1) return
-        val selected = table.isRowSelected(vr)
-        if (wash.selected != selected) {
-            wash.selected = selected
-            wash.repaint()
-        }
+        card.setSelected(table.isRowSelected(vr))
     }
 
     val height: Int
-        get() = row.height
+        get() = card.height
 
     fun showMenuUnderButton(menu: javax.swing.JPopupMenu) {
-        row.showMenuUnderButton(menu)
+        card.showMenuUnderButton(menu)
     }
 
-    private fun show(ent: DbRecord, isSelected: Boolean) {
-        row.showFileIcon(ent)
-        row.update(ent, showButtons = true)
-        wash.selected = isSelected
+    private fun show(ent: DbRecord, isSelected: Boolean, isHovered: Boolean) {
+        card.update(ent, isSelected = isSelected, isHovered = isHovered)
     }
 
     override fun getTableCellRendererComponent(
         table: JTable, value: Any, isSelected: Boolean, hasFocus: Boolean, row: Int, column: Int
     ): Component {
         editEntry = null
-        this.row.entry = null
-        wash.hovered = false
-        show(value as DbRecord, isSelected)
-        return wash
+        card.entry = null
+        show(value as DbRecord, isSelected, isHovered = false)
+        return card.container
     }
 
     override fun getTableCellEditorComponent(
         table: JTable, value: Any, isSelected: Boolean, row: Int, column: Int
     ): Component {
         editEntry = value as? DbRecord
-        this.row.entry = editEntry
-        // Only opened for the row under the mouse.
-        wash.hovered = true
-        editEntry?.let { show(it, isSelected) }
-        return wash
+        editEntry?.let { show(it, isSelected, isHovered = true) }
+        return card.container
     }
 
     override fun getCellEditorValue(): Any = 99

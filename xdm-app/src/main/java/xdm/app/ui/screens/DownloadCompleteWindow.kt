@@ -8,6 +8,7 @@ import xdm.app.utils.ScaledEmptyBorder
 import xdm.app.utils.createIcon
 import xdm.app.utils.openFileExternal
 import xdm.app.utils.openFolderExternal
+import xdm.app.utils.openWithExternal
 import xdm.app.utils.px
 import xdm.app.utils.scaledInsets
 import xdm.app.utils.windowIconImages
@@ -41,6 +42,7 @@ import javax.swing.Box
 import javax.swing.Icon
 import javax.swing.BoxLayout
 import javax.swing.JButton
+import javax.swing.JCheckBox
 import javax.swing.JComponent
 import javax.swing.JFrame
 import javax.swing.KeyStroke
@@ -64,13 +66,26 @@ class DownloadCompleteWindow : JFrame() {
 
     private val txtFolderPath = borderlessField()
     private val txtFileName = borderlessField()
+    private val txtSourceUrl = borderlessField()
     private val btnCopyFileName = copyButton(txtFileName)
-    private val lblFileSize = JLabel("---").apply {
+    private val btnCopySourceUrl = copyButton(txtSourceUrl)
+
+    val lblFileSize = JLabel("---").apply {
         foreground = mutedFg
         alignmentX = Component.LEFT_ALIGNMENT
     }
 
-    private val btnOpenFile = JButton(text("CTX_OPEN_FILE")).apply {
+    val chkDontShowAgain = JCheckBox(text("CD_DONT_SHOW_AGAIN")).apply {
+        font = font.deriveFont(11f.px)
+        isSelected = !AppContext.config.showDownloadCompleteWindow
+        isOpaque = false
+        addActionListener {
+            AppContext.config.showDownloadCompleteWindow = !isSelected
+            AppContext.config.save()
+        }
+    }
+
+    val btnOpenFile = JButton(text("CTX_OPEN_FILE")).apply {
         putClientProperty("JButton.buttonType", "default")
         addActionListener {
             try {
@@ -81,7 +96,21 @@ class DownloadCompleteWindow : JFrame() {
             }
         }
     }
-    private val btnOpenFolder = JButton(text("CTX_OPEN_FOLDER")).apply {
+
+    val btnOpenWith = JButton(text("CD_OPEN_WITH")).apply {
+        addActionListener {
+            try {
+                if (!fileMoved) {
+                    openWithExternal(txtFileName.text, txtFolderPath.text)
+                }
+                dispose()
+            } catch (e: Exception) {
+                Logger.error(e)
+            }
+        }
+    }
+
+    val btnOpenFolder = JButton(text("CTX_OPEN_FOLDER")).apply {
         addActionListener {
             try {
                 // Once moved, the name field holds "File moved": open the folder without selecting a file.
@@ -92,10 +121,12 @@ class DownloadCompleteWindow : JFrame() {
             }
         }
     }
-    private val btnClose = JButton(text("LBL_CLOSE")).apply {
+
+    val btnClose = JButton(text("LBL_CLOSE")).apply {
         addActionListener { dispose() }
     }
-    private val btnSkipNotification = footerIconButton(RemixIcon.NOTIFICATION_OFF_FILL, text("MSG_DONT_SHOW_AGAIN")) {
+
+    val btnSkipNotification = footerIconButton(RemixIcon.NOTIFICATION_OFF_FILL, text("MSG_DONT_SHOW_AGAIN")) {
         AppContext.config.showDownloadCompleteWindow = false
         dispose()
     }
@@ -104,7 +135,7 @@ class DownloadCompleteWindow : JFrame() {
     private var checksumSource: ChecksumSource? = null
 
     /** Opens verification in its own non-modal window and closes this one, as the open buttons do. */
-    private val btnVerify = footerIconButton(RemixIcon.FINGERPRINT_FILL, text("CD_VERIFY_CHECKSUM")) {
+    val btnVerify = footerIconButton(RemixIcon.FINGERPRINT_FILL, text("CD_VERIFY_CHECKSUM")) {
         val source = checksumSource ?: return@footerIconButton
         ChecksumWindow(File(txtFolderPath.text, txtFileName.text), source, this).isVisible = true
         dispose()
@@ -117,7 +148,7 @@ class DownloadCompleteWindow : JFrame() {
     private var downloadedFile = File("")
     private var fileMoved = false
 
-    private val btnDrag = footerIconButton(RemixIcon.DRAG_DROP_FILL, text("CD_DRAG_TO_MOVE")) {}.apply {
+    val btnDrag = footerIconButton(RemixIcon.DRAG_DROP_FILL, text("CD_DRAG_TO_MOVE")) {}.apply {
         transferHandler = FileDragHandler()
         cursor = Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR)
         val dragStarter = object : MouseAdapter() {
@@ -168,6 +199,7 @@ class DownloadCompleteWindow : JFrame() {
         btnVerify.isEnabled = false
         btnDrag.isEnabled = false
         btnOpenFile.isEnabled = false
+        btnOpenWith.isEnabled = false
         rootPane.defaultButton = btnOpenFolder
     }
 
@@ -183,7 +215,13 @@ class DownloadCompleteWindow : JFrame() {
         }
     }
 
-    fun setDetails(file: String, folder: String, fileSize: Long, checksumSource: ChecksumSource?) {
+    fun setDetails(
+        file: String,
+        folder: String,
+        fileSize: Long,
+        checksumSource: ChecksumSource?,
+        sourceUrl: String? = null
+    ) {
         this.checksumSource = checksumSource
         btnVerify.isVisible = checksumSource != null
         downloadedFile = File(folder, file)
@@ -191,11 +229,16 @@ class DownloadCompleteWindow : JFrame() {
         fitToContent()
         txtFolderPath.text = folder
         txtFileName.text = file
+        txtSourceUrl.text = sourceUrl ?: "---"
         txtFolderPath.caretPosition = 0
         txtFileName.caretPosition = 0
+        txtSourceUrl.caretPosition = 0
         txtFileName.toolTipText = file
         txtFolderPath.toolTipText = folder
-        lblFileSize.text = formatSize(fileSize.toDouble())
+        txtSourceUrl.toolTipText = sourceUrl
+
+        val byteStr = "%,d".format(fileSize)
+        lblFileSize.text = "Downloaded ${formatSize(fileSize.toDouble())} ($byteStr Bytes)"
     }
 
     private fun borderlessField() = JTextField().apply {
@@ -228,13 +271,11 @@ class DownloadCompleteWindow : JFrame() {
     }
 
     /**
-     * Makes the packed size (at least the usual 400 wide) the floor the user can resize from. Run
-     * again when the footer changes: at a large UI scale or with a long translation the footer can
-     * be wider than 400, and the fingerprint button is only shown after the first pack.
+     * Makes the packed size (at least the usual 480 wide) the floor the user can resize from.
      */
     private fun fitToContent() {
         val preferred = preferredSize
-        val min = Dimension(maxOf(400.px, preferred.width), preferred.height)
+        val min = Dimension(maxOf(480.px, preferred.width), preferred.height)
         minimumSize = min
         size = Dimension(maxOf(width, min.width), maxOf(height, min.height))
     }
@@ -298,30 +339,26 @@ class DownloadCompleteWindow : JFrame() {
             })
         }
 
-        row(0, "ND_FILE", txtFileName, btnCopyFileName, 0)
-        row(2, "CD_LOC", txtFolderPath, copyButton(txtFolderPath), 6)
+        row(0, "CD_SOURCE_ADDRESS", txtSourceUrl, btnCopySourceUrl, 0)
+        row(2, "CD_SAVED_AS", txtFolderPath, copyButton(txtFolderPath), 6)
         return card
     }
 
     init {
         isAlwaysOnTop = true
-        // Show the notification without pulling focus away from whatever the user is
-        // doing: the dialog appears on top but the active window keeps keyboard focus
-        // until the user clicks this one.
         isAutoRequestFocus = false
         title = text("CD_TITLE")
-        // A top-level frame (so it can be minimized) with its own taskbar button: without this it shows Java's icon.
         iconImages = windowIconImages
         defaultCloseOperation = DISPOSE_ON_CLOSE
 
-        // Compact header: icon on the left, title and size stacked beside it.
+        // Header: icon on the left, title and exact size stacked beside it.
         val header = Box.createHorizontalBox().apply {
             alignmentX = Component.LEFT_ALIGNMENT
-            add(JLabel(createIcon(RemixIcon.CHECKBOX_CIRCLE_FILL, 32, Color(0x2ECC71))))
-            add(Box.createHorizontalStrut(10.px))
+            add(JLabel(createIcon(RemixIcon.CHECKBOX_CIRCLE_FILL, 34, Color(0x2ECC71))))
+            add(Box.createHorizontalStrut(12.px))
             add(Box.createVerticalBox().apply {
                 add(JLabel(text("CD_TITLE")).apply {
-                    font = font.deriveFont(Font.BOLD, 14f.px)
+                    font = font.deriveFont(Font.BOLD, 15f.px)
                     foreground = UIManager.getColor("Label.foreground")
                     alignmentX = Component.LEFT_ALIGNMENT
                 })
@@ -333,13 +370,16 @@ class DownloadCompleteWindow : JFrame() {
 
         val content = JPanel().apply {
             layout = BoxLayout(this, BoxLayout.Y_AXIS)
-            border = ScaledEmptyBorder(14, 16, 10, 16)
-            // Fixed heights plus glue: when the window is made taller the rows stay together at the top.
+            border = ScaledEmptyBorder(14, 16, 8, 16)
             add(header.apply { maximumSize = Dimension(Int.MAX_VALUE, preferredSize.height) })
             add(Box.createVerticalStrut(10.px))
             add(infoCard().apply {
                 alignmentX = Component.LEFT_ALIGNMENT
                 maximumSize = Dimension(Int.MAX_VALUE, preferredSize.height)
+            })
+            add(Box.createVerticalStrut(8.px))
+            add(chkDontShowAgain.apply {
+                alignmentX = Component.LEFT_ALIGNMENT
             })
             add(Box.createVerticalGlue())
         }
@@ -352,10 +392,12 @@ class DownloadCompleteWindow : JFrame() {
                 add(btnSkipNotification)
             }, BorderLayout.WEST)
             add(Box.createHorizontalBox().apply {
-                add(btnOpenFolder)
-                add(Box.createHorizontalStrut(8.px))
                 add(btnOpenFile)
-                add(Box.createHorizontalStrut(8.px))
+                add(Box.createHorizontalStrut(6.px))
+                add(btnOpenWith)
+                add(Box.createHorizontalStrut(6.px))
+                add(btnOpenFolder)
+                add(Box.createHorizontalStrut(6.px))
                 add(btnClose)
             }, BorderLayout.EAST)
         }
@@ -377,7 +419,11 @@ class DownloadCompleteWindow : JFrame() {
         setLocationRelativeTo(null)
 
         addWindowListener(object : WindowAdapter() {
+            private var focused = false
+
             override fun windowActivated(e: WindowEvent) {
+                if (focused) return
+                focused = true
                 rootPane.defaultButton?.requestFocusInWindow()
             }
 

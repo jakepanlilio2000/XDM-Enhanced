@@ -44,6 +44,7 @@ interface DownloadListView {
     fun searchTextChanged(text: String)
     fun sort(sortKey: SortKey, ascending: Boolean)
     fun clear()
+    fun selectByIds(ids: Set<Long>) {}
     fun updateTheme() {}
 }
 

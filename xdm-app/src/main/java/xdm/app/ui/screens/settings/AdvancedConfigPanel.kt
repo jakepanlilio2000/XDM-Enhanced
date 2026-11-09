@@ -52,8 +52,10 @@ class AdvancedConfigPanel : SettingsPanel() {
 
     private val tglNoSleep = SettingsToggle()
     private val tglRunOnStartup = SettingsToggle()
-    private val tglWayland = SettingsToggle()
-    private val tglSwingChooser = SettingsToggle()
+    internal val tglWayland = SettingsToggle()
+    internal val tglSwingChooser = SettingsToggle()
+    internal val rowWayland = settingsRow(I8N.text("MSG_WAYLAND"), I8N.text("MSG_WAYLAND_SUB"), tglWayland)
+    internal val rowSwingChooser = settingsRow(I8N.text("MSG_SWING_CHOOSER"), I8N.text("MSG_SWING_CHOOSER_SUB"), tglSwingChooser)
     private val tglSkipDupManifests = SettingsToggle()
 
     private val postDownloadSection = PostDownloadRulesSection()
@@ -85,8 +87,8 @@ class AdvancedConfigPanel : SettingsPanel() {
                 settingsRow(I8N.text("MSG_AUTOSTART"), I8N.text("MSG_AUTOSTART_SUB"), tglRunOnStartup),
                 settingsRow(I8N.text("MSG_AWAKE"), I8N.text("MSG_AWAKE_SUB"), tglNoSleep),
                 settingsRow(I8N.text("MSG_COMPLETION_ACTION"), I8N.text("MSG_COMPLETION_ACTION_SUB"), cmbCompletionAction),
-                settingsRow(I8N.text("MSG_WAYLAND"), I8N.text("MSG_WAYLAND_SUB"), tglWayland),
-                settingsRow(I8N.text("MSG_SWING_CHOOSER"), I8N.text("MSG_SWING_CHOOSER_SUB"), tglSwingChooser),
+                rowWayland,
+                rowSwingChooser,
             )
         )
         add(settingsGap())
@@ -157,13 +159,26 @@ class AdvancedConfigPanel : SettingsPanel() {
         tglNoSleep.isSelected = config.keepAwake
         // The OS entry, not the config, is the truth: it can be removed behind XDM's back.
         tglRunOnStartup.isSelected = AutoStart.isEnabled()
-        // Only a Linux Wayland session on the JetBrains Runtime has a choice; elsewhere it shows off and locked.
-        tglWayland.isSelected = WaylandToolkit.isSupported && config.nativeWayland
-        tglWayland.isEnabled = WaylandToolkit.isSupported
-        // Only Linux has a portal dialog to opt out of; elsewhere it shows off and locked.
+        // Preserves configured preference; enabled only when runtime and desktop support native Wayland.
+        val waylandStatus = WaylandToolkit.supportStatus
+        val waylandSupported = waylandStatus == WaylandToolkit.SupportStatus.SUPPORTED
+        val waylandTip = WaylandToolkit.getExplanation(waylandStatus)
+        tglWayland.isSelected = config.nativeWayland
+        tglWayland.isEnabled = waylandSupported
+        applyTooltip(rowWayland, waylandTip)
+        tglWayland.toolTipText = waylandTip
+
+        // Preserves configured preference; enabled only on Linux where the portal dialog exists.
         val linux = detectOS() == OS.Linux
-        tglSwingChooser.isSelected = linux && config.swingFileChooser
+        val chooserTip = if (linux) {
+            I8N.text("MSG_SWING_CHOOSER_SUB")
+        } else {
+            "Built-in file chooser override is only applicable on Linux (Windows and macOS use native system dialogs)."
+        }
+        tglSwingChooser.isSelected = config.swingFileChooser
         tglSwingChooser.isEnabled = linux
+        applyTooltip(rowSwingChooser, chooserTip)
+        tglSwingChooser.toolTipText = chooserTip
         tglSkipDupManifests.isSelected = config.skipDuplicateManifests
         postDownloadSection.load()
         tglMarkDownloads.isSelected = config.markDownloadedFiles
@@ -196,6 +211,16 @@ class AdvancedConfigPanel : SettingsPanel() {
         config.runVirusScan = tglVirusScan.isSelected
         config.virusScannerPath = txtVirusScan.text
         config.virusScannerArgs = txtArgs.text
+    }
+
+    private fun applyTooltip(comp: JComponent, tip: String) {
+        comp.toolTipText = tip
+        for (i in 0 until comp.componentCount) {
+            val child = comp.getComponent(i)
+            if (child is JComponent) {
+                applyTooltip(child, tip)
+            }
+        }
     }
 
     override fun getInsets(): Insets = scaledInsets(18, 24, 24, 24)

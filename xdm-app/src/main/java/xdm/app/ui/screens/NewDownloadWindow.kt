@@ -26,6 +26,7 @@ import xdm.core.downloaders.HttpDownloadTaskInfo
 import xdm.core.util.*
 import xdm.core.util.CoreUtils.uniqueId
 import xdm.integration.EventChannel
+import xdm.manager.CategoryRules
 import xdm.manager.DuplicateKind
 import xdm.manager.RecordStatus
 import java.awt.*
@@ -46,10 +47,14 @@ import kotlin.math.max
 class NewDownloadWindow : JDialog(null as Window?) {
     private lateinit var txtUrl: JTextField
     private lateinit var txtFileName: JTextField
+    val txtDescription = JTextField().apply {
+        putClientProperty(FlatClientProperties.STYLE, "arc: 10")
+        toolTipText = "Optional description or tags for this download"
+    }
     private lateinit var btnDownload: JButton
     private lateinit var btnLater: JButton
     private lateinit var lblIgnore: JLabel
-    private lateinit var spnSegments: JSpinner
+    lateinit var spnSegments: JSpinner
     private lateinit var picker: DestinationPicker
     private lateinit var lblFileInfo: JLabel
     private lateinit var originalFileName: String
@@ -140,8 +145,8 @@ class NewDownloadWindow : JDialog(null as Window?) {
 
         val gbcLblFileInfo = GridBagConstraints().apply {
             insets = scaledInsets(20, 5, 5, 10)
-            // Address, file, category and save-to rows.
-            gridheight = 4
+            // Address, file, category, save-to, and description rows.
+            gridheight = 5
             gridx = 5
             gridy = 0
         }
@@ -149,6 +154,28 @@ class NewDownloadWindow : JDialog(null as Window?) {
 
         picker = DestinationPicker(this, onChanged = { updateStorageStatus() })
         picker.addTo(contentPane, firstRow = 2)
+
+        // Description row (Reference B)
+        val lblDesc = JLabel(text("LBL_DESCRIPTION")).apply {
+            horizontalAlignment = SwingConstants.RIGHT
+        }
+        val gbcLblDesc = GridBagConstraints().apply {
+            anchor = GridBagConstraints.EAST
+            insets = scaledInsets(5, 20, 5, 10)
+            gridx = 0
+            gridy = 4
+        }
+        contentPane.add(lblDesc, gbcLblDesc)
+
+        val gbcTxtDesc = GridBagConstraints().apply {
+            gridwidth = 4
+            weightx = 1.0
+            insets = scaledInsets(5, 0, 5, 5)
+            fill = GridBagConstraints.HORIZONTAL
+            gridx = 1
+            gridy = 4
+        }
+        contentPane.add(txtDescription, gbcTxtDesc)
 
         lblIgnore = JLabel(text("ND_IGNORE_PAGE")).apply {
             alignmentX = Component.LEFT_ALIGNMENT
@@ -182,7 +209,7 @@ class NewDownloadWindow : JDialog(null as Window?) {
             gridwidth = 4
             insets = scaledInsets(5, 0, 5, 5)
             gridx = 1
-            gridy = 4
+            gridy = 5
         }
         contentPane.add(infoBox, gbcInfoBox)
 
@@ -194,7 +221,7 @@ class NewDownloadWindow : JDialog(null as Window?) {
             gridwidth = 6
             fill = GridBagConstraints.HORIZONTAL
             gridx = 0
-            gridy = 5
+            gridy = 6
         }
         contentPane.add(panel, gcPanel)
         panel.layout = BoxLayout(panel, BoxLayout.X_AXIS)
@@ -227,6 +254,11 @@ class NewDownloadWindow : JDialog(null as Window?) {
         panel.add(btnDownload)
 
         getRootPane().defaultButton = btnDownload
+        rootPane.registerKeyboardAction(
+            { dispose() },
+            KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_ESCAPE, 0),
+            JComponent.WHEN_IN_FOCUSED_WINDOW
+        )
 
         //sameWidth(btnDownload, btnCancel, btnLater)
 
@@ -451,12 +483,12 @@ class NewDownloadWindow : JDialog(null as Window?) {
             return null
         }
 
-        val fileRenamedByUser = !StringUtils.equalsIgnoreCase(txtFileName.text, originalFileName)
+        val userOverrode = !StringUtils.equalsIgnoreCase(txtFileName.text, originalFileName) || picker.userPicked
         val task = HttpDownloadTaskInfo(
             id = uniqueId(),
             url = url,
             fileName = file,
-            respectFileName = fileRenamedByUser,
+            respectFileName = userOverrode,
             cookie = taskInfo?.cookie,
             headers = taskInfo?.headers,
             origin = taskInfo?.origin,
@@ -548,7 +580,7 @@ class NewDownloadWindow : JDialog(null as Window?) {
 
     fun showWindow(taskInfo: HttpDownloadTaskInfo?) {
         lblIgnore.isVisible = taskInfo != null
-        spnSegments.count = AppContext.config.maxSegments
+        spnSegments.count = if (taskInfo != null && taskInfo.maxPiece > 0) taskInfo.maxPiece else AppContext.config.maxSegments
         if (taskInfo == null) {
             val url = getClipBoardText()
             if (url != null && validateURL(url)) {
@@ -577,8 +609,9 @@ class NewDownloadWindow : JDialog(null as Window?) {
 
     /** Picks the file-type glyph, the one the row will show. */
     private fun updateFileIcon() {
-        val glyph = CategoryStyle.glyphForFile(txtFileName.text.orEmpty())
-        lblFileInfo.icon = createIcon(glyph, 36, Color.GRAY)
+        val name = txtFileName.text.orEmpty()
+        val glyph = CategoryStyle.glyphForFile(name)
+        lblFileInfo.icon = createIcon(glyph, 40, Color.GRAY)
     }
 
     /** The name picks the icon and, for a capture not yet touched, re-runs the category rules. */
@@ -593,8 +626,12 @@ class NewDownloadWindow : JDialog(null as Window?) {
             val doc = e.document
             val len = doc.length
             val text = doc.getText(0, len)
-            txtFileName.text = FileUtils.getFileName(text)
+            val candidate = CategoryRules.extractCandidateFileName(text) ?: FileUtils.getFileName(text)
+            txtFileName.text = candidate
             originalFileName = txtFileName.text
+            if (::picker.isInitialized) {
+                picker.urlChanged(text)
+            }
         } catch (err: Exception) {
             Logger.info(err)
         }

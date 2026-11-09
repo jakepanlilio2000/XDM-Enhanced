@@ -18,6 +18,7 @@ import xdm.core.downloaders.PauseEvent
 import xdm.core.downloaders.TorrentDownloadTaskInfo
 import xdm.core.downloaders.TorrentSourceTypes
 import xdm.core.util.FileUtils
+import xdm.core.util.Logger
 import java.io.File
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
@@ -38,6 +39,7 @@ class TorrentDownloadTask(
     initialState: TorrentTaskState? = null,
     val initialCategoryId: String? = null,
     val initialDateAdded: Long? = null,
+    val customName: String? = null,
     private val onRemoveCallback: ((TorrentDownloadTask) -> Unit)? = null
 ) : DownloaderTask {
 
@@ -56,7 +58,15 @@ class TorrentDownloadTask(
 
     private var parsedInfo: TorrentInfo? = null
     private var infoHashHex: String = ""
-    private var taskName: String = source.name
+    var isCustomName: Boolean = !customName.isNullOrBlank() && !TorrentMetadataParser.isPlaceholderName(customName)
+        private set
+    private var taskName: String = if (isCustomName) FileUtils.sanitizeFileName(customName!!) ?: customName!! else source.name
+
+    fun setCustomDisplayName(newName: String) {
+        val safe = FileUtils.sanitizeFileName(newName)?.takeIf { it.isNotBlank() } ?: return
+        taskName = safe
+        isCustomName = true
+    }
 
     val fileSelection = CopyOnWriteArrayList<Boolean>()
     val knownPeers = CopyOnWriteArrayList<TcpEndpoint>()
@@ -66,6 +76,8 @@ class TorrentDownloadTask(
     var uploadLimit: Int = 0
         private set
     var seedingRule: SeedingRule = SeedingRule()
+
+    var forceRecheckOnStart: Boolean = false
 
     val isPrivate: Boolean
         get() = parsedInfo?.isPrivate() ?: false
@@ -112,20 +124,63 @@ class TorrentDownloadTask(
         }
     }
 
-    internal fun updateMetadata(newName: String?, ti: TorrentInfo?) {
-        if (!newName.isNullOrBlank()) {
-            val safe = FileUtils.sanitizeFileName(newName)?.takeIf { it.isNotBlank() }
-            if (safe != null && (taskName.isBlank() || taskName == "torrent" || taskName == "magnet")) {
-                taskName = safe
-            }
-        }
+    fun updateMetadata(newName: String?, ti: TorrentInfo?) {
+        val oldName = taskName
+        val oldTi = parsedInfo
+        var nameChanged = false
+
         if (parsedInfo == null && ti != null && ti.isValid) {
             parsedInfo = ti
-            val safe = FileUtils.sanitizeFileName(ti.name())?.takeIf { it.isNotBlank() }
-            if (safe != null) {
+            val rawName = ti.name()
+            val safe = FileUtils.sanitizeFileName(rawName)?.takeIf { it.isNotBlank() }
+            if (safe != null && !isCustomName) {
                 taskName = safe
+                nameChanged = taskName != oldName
             }
             initFileSelectionIfEmpty(ti.files().numFiles())
+        } else if (!newName.isNullOrBlank() && !isCustomName) {
+            val safe = FileUtils.sanitizeFileName(newName)?.takeIf { it.isNotBlank() }
+            if (safe != null && (TorrentMetadataParser.isPlaceholderName(taskName) || taskName.startsWith("Fetching metadata", ignoreCase = true))) {
+                taskName = safe
+                nameChanged = taskName != oldName
+            }
+        }
+
+        if (ti != null && ti.isValid) {
+            val metadata = TorrentMetadataParser.fromTorrentInfo(ti)
+            if (oldTi == null && !isCompleted) {
+                val check = TorrentExistingDataDetector.detect(saveDir, metadata)
+                if (check.hasExistingData) {
+                    val handle = getHandle()
+                    if (handle != null && handle.isValid) {
+                        try {
+                            updateState(TorrentTaskState.CHECKING_FILES)
+                            handle.forceRecheck()
+                        } catch (_: Throwable) {}
+                    }
+                }
+            }
+            notifyMetadataReceived(metadata)
+        } else if (nameChanged) {
+            val metadata = getMetadata() ?: TorrentMetadata(
+                name = taskName,
+                infoHash = infoHashHex,
+                totalSize = 0L,
+                pieceLength = 0,
+                numPieces = 0,
+                files = emptyList()
+            )
+            notifyMetadataReceived(metadata)
+        }
+    }
+
+    private fun notifyMetadataReceived(metadata: TorrentMetadata) {
+        for (listener in listeners) {
+            try {
+                listener.onMetadataReceived(this, metadata)
+            } catch (e: Throwable) {
+                Logger.error("Error in onMetadataReceived listener", e)
+            }
         }
     }
 
@@ -167,7 +222,12 @@ class TorrentDownloadTask(
                 }
             }
             is TorrentSource.MagnetUri -> {
-                taskName = FileUtils.sanitizeFileName(source.name)?.takeIf { it.isNotBlank() } ?: "magnet"
+                if (!isCustomName) {
+                    val safeSource = FileUtils.sanitizeFileName(source.name)?.takeIf { it.isNotBlank() }
+                    if (safeSource != null) {
+                        taskName = safeSource
+                    }
+                }
                 try {
                     TorrentNativeLoader.load()
                     val ec = org.libtorrent4j.swig.error_code()
@@ -181,14 +241,17 @@ class TorrentDownloadTask(
                                 infoHashHex = ih.v2.to_hex().lowercase()
                             }
                         }
-                        if (!p.name.isNullOrBlank()) {
+                        if (!p.name.isNullOrBlank() && !isCustomName) {
                             val safe = FileUtils.sanitizeFileName(p.name)?.takeIf { it.isNotBlank() }
-                            if (safe != null) {
+                            if (safe != null && (TorrentMetadataParser.isPlaceholderName(taskName) || taskName.startsWith("Fetching metadata", ignoreCase = true))) {
                                 taskName = safe
                             }
                         }
                     }
                 } catch (_: Throwable) {}
+                if (infoHashHex.isBlank()) {
+                    infoHashHex = TorrentMetadataParser.parseMagnetInfoHash(source.uri).orEmpty()
+                }
             }
         }
     }
@@ -259,6 +322,8 @@ class TorrentDownloadTask(
 
             val sm = engine.sessionManager()
 
+            var willCheckExisting = forceRecheckOnStart
+
             when (source) {
                 is TorrentSource.TorrentFile, is TorrentSource.TorrentBytes -> {
                     val ti = parsedInfo ?: throw TorrentEngineException("TorrentInfo is null; cannot start download")
@@ -277,6 +342,15 @@ class TorrentDownloadTask(
                         else -> null
                     }
 
+                    if (!willCheckExisting && actualResumeFile == null) {
+                        try {
+                            val dataCheck = TorrentExistingDataDetector.detect(saveDir, TorrentMetadataParser.fromTorrentInfo(ti))
+                            if (dataCheck.hasExistingData) {
+                                willCheckExisting = true
+                            }
+                        } catch (_: Throwable) {}
+                    }
+
                     try {
                         sm.download(ti, saveDir, actualResumeFile, priorities, knownPeers.toList(), torrent_flags_t())
                     } catch (e: IllegalArgumentException) {
@@ -284,6 +358,7 @@ class TorrentDownloadTask(
                         if (actualResumeFile != null) {
                             try { actualResumeFile.delete() } catch (_: Throwable) {}
                             this.resumeFile = null
+                            willCheckExisting = true
                             sm.download(ti, saveDir, null, priorities, knownPeers.toList(), torrent_flags_t())
                         } else {
                             throw e
@@ -301,15 +376,28 @@ class TorrentDownloadTask(
 
             val handle = getHandle()
             if (handle != null && handle.isValid) {
+                try {
+                    handle.resume()
+                } catch (_: Throwable) {}
                 if (downloadLimit > 0) {
                     try { handle.downloadLimit = downloadLimit } catch (_: Throwable) {}
                 }
                 if (uploadLimit > 0) {
                     try { handle.uploadLimit = uploadLimit } catch (_: Throwable) {}
                 }
+                if (forceRecheckOnStart) {
+                    try {
+                        handle.forceRecheck()
+                    } catch (_: Throwable) {}
+                    forceRecheckOnStart = false
+                }
             }
 
-            updateState(TorrentTaskState.DOWNLOADING)
+            if (willCheckExisting) {
+                updateState(TorrentTaskState.CHECKING_FILES)
+            } else {
+                updateState(TorrentTaskState.DOWNLOADING)
+            }
 
             host?.onDownloadActivated(id)
             val totalSize = parsedInfo?.totalSize() ?: 0L
@@ -381,12 +469,22 @@ class TorrentDownloadTask(
         val handle = getHandle()
         if (handle != null && handle.isValid) {
             try {
+                handle.flushCache()
                 handle.pause()
             } catch (_: Throwable) {}
         }
         if (cur != TorrentTaskState.FINISHED) {
             updateState(TorrentTaskState.STOPPED)
             host?.onDownloadPaused(id, PauseEvent.PausedByUser)
+        }
+    }
+
+    fun flushCache() {
+        val handle = getHandle()
+        if (handle != null && handle.isValid) {
+            try {
+                handle.flushCache()
+            } catch (_: Throwable) {}
         }
     }
 
@@ -801,6 +899,14 @@ class TorrentDownloadTask(
     @Synchronized
     fun getSnapshot(): TorrentProgressSnapshot {
         val handle = getHandle()
+        if (parsedInfo == null && handle != null && handle.isValid) {
+            try {
+                val ti = handle.torrentFile()
+                if (ti != null && ti.isValid) {
+                    updateMetadata(handle.getName(), ti)
+                }
+            } catch (_: Throwable) {}
+        }
         val st: TorrentStatus? = if (handle != null) {
             try {
                 if (handle.isValid) handle.status(TorrentHandle.QUERY_PIECES) else null
@@ -836,7 +942,15 @@ class TorrentDownloadTask(
         val totalWanted = st.totalWanted()
         val total = parsedInfo?.totalSize() ?: st.total()
 
-        val isDone = isCompleted || st.isFinished || st.isSeeding
+        val isChecking = st.state() == TorrentStatus.State.CHECKING_FILES || st.state() == TorrentStatus.State.CHECKING_RESUME_DATA
+
+        val hasAllData = if (totalWanted > 0) {
+            totalWantedDone >= totalWanted
+        } else if (total > 0) {
+            totalDone >= total
+        } else false
+
+        val isDone = isCompleted || (!isChecking && hasAllData && (st.isFinished || st.isSeeding))
         val effectiveTotal = if (totalWanted > 0) totalWanted else total
         val effectiveDone = if (isDone) {
             if (effectiveTotal > 0) effectiveTotal else totalDone
@@ -881,9 +995,10 @@ class TorrentDownloadTask(
             stateRef.get() == TorrentTaskState.PAUSED -> TorrentTaskState.PAUSED
             stateRef.get() == TorrentTaskState.STOPPED -> TorrentTaskState.STOPPED
             stateRef.get() == TorrentTaskState.ERROR -> TorrentTaskState.ERROR
-            st.isFinished -> TorrentTaskState.FINISHED
-            st.isSeeding -> TorrentTaskState.SEEDING
-            st.state() == TorrentStatus.State.CHECKING_FILES || st.state() == TorrentStatus.State.CHECKING_RESUME_DATA -> TorrentTaskState.CHECKING_FILES
+            isChecking -> TorrentTaskState.CHECKING_FILES
+            isDone && st.isFinished -> TorrentTaskState.FINISHED
+            isDone && st.isSeeding -> TorrentTaskState.SEEDING
+            isDone -> TorrentTaskState.FINISHED
             st.state() == TorrentStatus.State.DOWNLOADING_METADATA -> TorrentTaskState.DOWNLOADING_METADATA
             st.state() == TorrentStatus.State.DOWNLOADING -> TorrentTaskState.DOWNLOADING
             else -> stateRef.get()
@@ -911,9 +1026,13 @@ class TorrentDownloadTask(
             }
         }
 
-        if (st.isFinished && !finishedNotified.getAndSet(true)) {
+        if (isDone && !finishedNotified.getAndSet(true)) {
             onCompleted(effectiveDone)
         }
+
+        val checkingPrg = if (isChecking) {
+            (st.progress() * 100).toInt().coerceIn(0, 100)
+        } else 0
 
         val snapshot = TorrentProgressSnapshot(
             id = id,
@@ -936,10 +1055,41 @@ class TorrentDownloadTask(
             shareRatio = ratio,
             seedingDurationSeconds = seedSecs,
             queuePosition = queuePos,
-            isPrivate = isPrivate
+            isPrivate = isPrivate,
+            checkingProgressPercent = checkingPrg
         )
         listeners.forEach { it.onProgress(this, snapshot) }
         return snapshot
+    }
+
+    internal fun onTorrentChecked() {
+        val handle = getHandle() ?: return
+        try {
+            if (!handle.isValid) return
+            val st = handle.status()
+            val total = parsedInfo?.totalSize() ?: st.total()
+            val totalWanted = st.totalWanted()
+            val totalWantedDone = st.totalWantedDone()
+            val totalDone = st.totalDone()
+
+            val hasAllData = if (totalWanted > 0) {
+                totalWantedDone >= totalWanted
+            } else if (total > 0) {
+                totalDone >= total
+            } else false
+
+            if (hasAllData && (st.isFinished || st.isSeeding)) {
+                val finalSize = if (totalWantedDone > 0) totalWantedDone else totalDone
+                onCompleted(finalSize)
+                saveResumeDataSync(1000)
+            } else {
+                val cur = stateRef.get()
+                if (cur == TorrentTaskState.CHECKING_FILES) {
+                    updateState(TorrentTaskState.DOWNLOADING)
+                }
+            }
+            getSnapshot()
+        } catch (_: Throwable) {}
     }
 
     internal fun onPieceFinished(pieceIndex: Int) {
@@ -987,7 +1137,7 @@ class TorrentDownloadTask(
         listeners.remove(listener)
     }
 
-    private fun updateState(newState: TorrentTaskState) {
+    fun updateState(newState: TorrentTaskState) {
         val old = stateRef.getAndSet(newState)
         if (old != newState) {
             listeners.forEach { it.onStateChanged(this, old, newState) }

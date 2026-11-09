@@ -57,6 +57,7 @@ object TorrentMetadataParser {
         val fileEntries = ArrayList<TorrentFileEntry>(numFiles)
 
         for (i in 0 until numFiles) {
+            if (filesStorage.padFileAt(i)) continue
             val rawPath = filesStorage.filePath(i)
             val sanitizedPath = sanitizeTorrentFilePath(rawPath, i)
             val size = filesStorage.fileSize(i)
@@ -124,6 +125,38 @@ object TorrentMetadataParser {
         } catch (_: Throwable) {
             parseMagnetInfoHashRegex(trimmed)
         }
+    }
+
+    /**
+     * Extracts display name (dn parameter) from a magnet URI, URL decoded and sanitized.
+     */
+    fun parseMagnetDisplayName(uri: String): String? {
+        val trimmed = uri.trim()
+        if (!trimmed.startsWith("magnet:?", ignoreCase = true)) return null
+        return try {
+            val match = Regex("[?&]dn=([^&]+)", RegexOption.IGNORE_CASE).find(trimmed) ?: return null
+            val raw = match.groupValues[1]
+            val decoded = java.net.URLDecoder.decode(raw.replace("+", "%20"), java.nio.charset.StandardCharsets.UTF_8.name())
+            FileUtils.sanitizeFileName(decoded)?.takeIf { it.isNotBlank() }
+        } catch (_: Throwable) {
+            null
+        }
+    }
+
+    /**
+     * Checks if a torrent name is a temporary, placeholder, or generic identifier.
+     */
+    fun isPlaceholderName(name: String?): Boolean {
+        if (name.isNullOrBlank()) return true
+        val trimmed = name.trim()
+        if (trimmed.equals("Magnet Download", ignoreCase = true)) return true
+        if (trimmed.equals("torrent", ignoreCase = true)) return true
+        if (trimmed.equals("magnet", ignoreCase = true)) return true
+        if (trimmed.startsWith("Fetching metadata", ignoreCase = true)) return true
+        if (trimmed.startsWith("magnet:?", ignoreCase = true)) return true
+        if (trimmed.matches(Regex("^[a-fA-F0-9]{40}$"))) return true
+        if (trimmed.matches(Regex("^[a-fA-F0-9]{64}$"))) return true
+        return false
     }
 
     private fun parseMagnetInfoHashRegex(uri: String): String? {

@@ -149,6 +149,7 @@ interface IAppConfig : EngineConfig {
      */
     var swingFileChooser: Boolean
     var listSelectionMode: ListSelectionMode
+    var tableHiddenColumns: String
     /** Play a sound when a download finishes or fails; ignored while [downloadCompleteNotification] is NONE. */
     var playSound: Boolean
     /** A user-chosen WAV played when a download finishes; blank means the built-in one. */
@@ -179,6 +180,10 @@ interface IAppConfig : EngineConfig {
     var clearFailed: Boolean
     var clearAge: Int
     var clearDeleteFiles: Boolean
+
+    // --- Sidebar & Layout Preferences ---
+    var showCategoriesSidebar: Boolean
+    var sidebarDividerLocation: Int
 
     fun applyAuthConfig()
 
@@ -275,6 +280,9 @@ private const val F_CLEAR_AGE = 77
 private const val F_CLEAR_DELETE_FILES = 78
 private const val F_POST_DOWNLOAD_RULES = 79
 private const val F_COMPLETION_ACTION = 80
+private const val F_SHOW_CATEGORIES_SIDEBAR = 81
+private const val F_SIDEBAR_DIVIDER_LOCATION = 82
+private const val F_TABLE_HIDDEN_COLUMNS = 83
 
 // Inside F_POST_DOWNLOAD_RULES: one F_RULE record per rule, in order.
 private const val F_RULE = 1
@@ -450,6 +458,7 @@ class AppConfig(private val configDir: String) : IAppConfig {
     override var nativeWayland: Boolean = true
     override var swingFileChooser: Boolean = false
     override var listSelectionMode: ListSelectionMode = ListSelectionMode.CLASSIC
+    override var tableHiddenColumns: String = ""
 
     override var torrentDownloadLimit: Int = 0
     override var torrentUploadLimit: Int = 0
@@ -472,6 +481,9 @@ class AppConfig(private val configDir: String) : IAppConfig {
     override var clearFailed: Boolean = true
     override var clearAge: Int = 0
     override var clearDeleteFiles: Boolean = false
+
+    override var showCategoriesSidebar: Boolean = true
+    override var sidebarDividerLocation: Int = 210
 
     override fun applyAuthConfig() {
         Authenticator.setDefault(DefaultAuthenticator())
@@ -592,6 +604,9 @@ class AppConfig(private val configDir: String) : IAppConfig {
         w.bool(F_CLEAR_DELETE_FILES, clearDeleteFiles)
         w.message(F_POST_DOWNLOAD_RULES) { postDownloadRules.forEach { writeRule(this, it) } }
         w.int(F_COMPLETION_ACTION, completionAction.id)
+        w.bool(F_SHOW_CATEGORIES_SIDEBAR, showCategoriesSidebar)
+        w.int(F_SIDEBAR_DIVIDER_LOCATION, sidebarDividerLocation)
+        w.string(F_TABLE_HIDDEN_COLUMNS, tableHiddenColumns)
         w.raw(unknownFields)
     }
 
@@ -692,6 +707,9 @@ class AppConfig(private val configDir: String) : IAppConfig {
                 F_CLEAR_DELETE_FILES -> clearDeleteFiles = r.bool()
                 F_POST_DOWNLOAD_RULES -> postDownloadRules = readRules(r.message())
                 F_COMPLETION_ACTION -> completionAction = CompletionAction.fromId(r.int())
+                F_SHOW_CATEGORIES_SIDEBAR -> showCategoriesSidebar = r.bool()
+                F_SIDEBAR_DIVIDER_LOCATION -> sidebarDividerLocation = r.int()
+                F_TABLE_HIDDEN_COLUMNS -> tableHiddenColumns = r.string()
                 else -> unknown.raw(r.rawField())
             }
         }

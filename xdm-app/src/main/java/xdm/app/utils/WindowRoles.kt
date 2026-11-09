@@ -47,9 +47,13 @@ fun bringToFront(window: Window) {
 object SingleWindows {
     private val open = HashMap<Any, Window>()
 
-    /** Brings forward the window open under [key], or shows the one [create] makes. */
-    fun show(key: Any, create: () -> Window) {
-        open[key]?.takeIf { it.isDisplayable }?.let { bringToFront(it); return }
+    /** Brings forward the window open under [key], or shows the one [create] makes. Returns the window instance. */
+    fun <T : Window> show(key: Any, create: () -> T): T {
+        val existing = open[key]?.takeIf { it.isDisplayable } as? T
+        if (existing != null) {
+            bringToFront(existing)
+            return existing
+        }
         val window = create()
         open[key] = window
         window.addWindowListener(object : WindowAdapter() {
@@ -58,5 +62,6 @@ object SingleWindows {
             }
         })
         window.isVisible = true
+        return window
     }
 }

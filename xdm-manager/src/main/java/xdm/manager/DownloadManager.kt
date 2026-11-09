@@ -23,6 +23,7 @@ import xdm.core.media.muxer.impl.TransmuxingMuxer
 import xdm.core.media.subtitle.Subtitles
 import xdm.core.network.http.CertExceptions
 import xdm.core.network.http.HeaderMap
+import xdm.core.network.http.Range
 import xdm.core.network.http.impl.HttpClientImpl
 import xdm.core.storage.PlatformFiles
 import xdm.core.storage.Storage
@@ -88,6 +89,8 @@ interface IDownloadManager {
     fun retryFailedFiles(id: Long)
     fun updateDownloadInfo(id: Long, task: HttpDownloadTaskInfo)
     fun updateDownloadLink(id: Long, url: String, headers: HeaderMap?, cookie: String?)
+    fun validateReplacement(id: Long, url: String, headers: HeaderMap?, cookie: String?): LinkValidationResult
+    fun restartDownloadWithNewLink(id: Long, url: String, headers: HeaderMap?, cookie: String?)
     fun getOriginPage(id: Long): String?
 
     /**
@@ -102,6 +105,9 @@ interface IDownloadManager {
 
     /** Moves a stopped download to [folder] in the background; [done] runs on the moving thread when it ends. */
     fun changeFolder(id: Long, folder: String, done: (ChangeFolderResult) -> Unit)
+
+    /** Changes the category of download [id] and marks it as manually categorized. */
+    fun changeCategory(id: Long, newCategoryId: String?)
 
     /** True while Change folder is moving [id]; it cannot be deleted or resumed meanwhile. */
     fun isMoving(id: Long): Boolean
@@ -199,6 +205,19 @@ class DownloadManager(
                                 //TODO: Check if only ext to be updated
                                 e.fileName = newFileName
                                 t.fileName = newFileName
+                                if (!t.respectFileName) {
+                                    val matched = CategoryRules.match(
+                                        newFileName,
+                                        data.url,
+                                        t.origin,
+                                        contentType = data.contentType,
+                                        contentDisposition = data.contentDisposition
+                                    )
+                                    if (matched != null && matched.id != t.categoryId) {
+                                        t.categoryId = matched.id
+                                        e.categoryId = matched.id
+                                    }
+                                }
                                 data.fileSize?.let { e.size = it }
                                 taskInfoDB.saveHttpTask(t)
                             }
@@ -1118,6 +1137,154 @@ class DownloadManager(
     override fun updateDownloadLink(id: Long, url: String, headers: HeaderMap?, cookie: String?) =
         applyLinkUpdate(id, url, headers, cookie)
 
+    override fun validateReplacement(
+        id: Long,
+        url: String,
+        headers: HeaderMap?,
+        cookie: String?
+    ): LinkValidationResult {
+        val task = taskInfoDB.getHttpTask(id)
+            ?: return LinkValidationResult.Incompatible(
+                LinkValidationResult.IncompatibleReason.NOT_FOUND,
+                "Download task not found",
+                null, null
+            )
+        val rec = store.getById(id)
+        val expectedSize = rec?.size?.takeIf { it > 0 } ?: task.knownFileSize
+
+        // Read context to see if there is progress on disk
+        val contextRes = AtomicIO.readTransacted("$id.state", configDir) { fs ->
+            readContext(fs, downloadHost, "", "")
+        }
+        val context = contextRes.getOrNull()
+        val downloadedBytes = maxOf(context?.downloaded?.get() ?: 0L, rec?.downloaded ?: 0L)
+        val savedValidator = context?.validator
+
+        val client = newHttpClient(id)
+        try {
+            // First probe with Range(0, 0) if partially downloaded, to verify range support and retrieve total size
+            val range = if (downloadedBytes > 0) Range(0, 0) else null
+            val reqHeaders = if (savedValidator != null && downloadedBytes > 0) {
+                (headers ?: emptyMap()) + ("If-Range" to listOf(savedValidator))
+            } else headers
+
+            val res = client.getResponse(url, reqHeaders, cookie, range)
+            return res.fold(
+                onSuccess = { response ->
+                    response.use { r ->
+                        val code = r.statusCode
+                        if (code == 404) {
+                            return@fold LinkValidationResult.Incompatible(
+                                LinkValidationResult.IncompatibleReason.NOT_FOUND,
+                                "Server returned HTTP 404 Not Found",
+                                null, expectedSize
+                            )
+                        }
+                        if (code in 400..599) {
+                            return@fold LinkValidationResult.Incompatible(
+                                LinkValidationResult.IncompatibleReason.SERVER_ERROR,
+                                "Server returned HTTP $code ${r.statusMessage}",
+                                null, expectedSize
+                            )
+                        }
+
+                        // Determine content length and range support
+                        val acceptsRanges = code == 206 || r.getHeader("Accept-Ranges").equals("bytes", ignoreCase = true)
+                        val contentRange = r.getHeader("Content-Range")
+                        val totalLen = if (contentRange != null) {
+                            contentRange.substringAfterLast('/').trim().toLongOrNull() ?: r.contentLength
+                        } else {
+                            r.contentLength
+                        }
+
+                        // Check If-Range validator if sent: If-Range mismatch causes server to return 200 OK instead of 206
+                        if (savedValidator != null && downloadedBytes > 0 && code == 200 && range != null) {
+                            return@fold LinkValidationResult.Incompatible(
+                                LinkValidationResult.IncompatibleReason.CONTENT_CHANGED,
+                                "File on server was modified since the download started.",
+                                totalLen, expectedSize
+                            )
+                        }
+
+                        // If bytes are already downloaded (> 0), range support is mandatory for safe resume
+                        if (downloadedBytes > 0 && !acceptsRanges && code != 206) {
+                            return@fold LinkValidationResult.Incompatible(
+                                LinkValidationResult.IncompatibleReason.NO_RANGE_SUPPORT,
+                                "Server does not support byte ranges for resuming. Resuming would corrupt the file.",
+                                totalLen, expectedSize
+                            )
+                        }
+
+                        // Check size consistency if known
+                        if (expectedSize != null && totalLen != null && expectedSize != totalLen) {
+                            return@fold LinkValidationResult.Incompatible(
+                                LinkValidationResult.IncompatibleReason.SIZE_MISMATCH,
+                                "File size mismatch: original was $expectedSize bytes, replacement is $totalLen bytes.",
+                                totalLen, expectedSize
+                            )
+                        }
+
+                        LinkValidationResult.Compatible(
+                            finalUrl = r.finalUrl ?: url,
+                            contentLength = totalLen,
+                            lastModified = r.getHeader("Last-Modified"),
+                            eTag = r.getHeader("ETag"),
+                            acceptsRanges = acceptsRanges,
+                            headers = headers,
+                            cookie = cookie
+                        )
+                    }
+                },
+                onFailure = { err ->
+                    LinkValidationResult.Incompatible(
+                        LinkValidationResult.IncompatibleReason.NETWORK_ERROR,
+                        err.message ?: "Failed to connect to replacement URL",
+                        null, expectedSize
+                    )
+                }
+            )
+        } finally {
+            client.close()
+        }
+    }
+
+    override fun restartDownloadWithNewLink(id: Long, url: String, headers: HeaderMap?, cookie: String?) {
+        stopDownload(id)
+
+        taskInfoDB.getHttpTask(id)?.let { task ->
+            val updated = task.copy(
+                url = url,
+                headers = headers,
+                cookie = cookie,
+                knownFileSize = null
+            )
+            taskInfoDB.saveHttpTask(updated)
+            duplicates.updateUrl(id, url)
+
+            val partFile = File(task.targetFolder, partFileName(id))
+            if (partFile.exists()) {
+                partFile.delete()
+                Logger.info("Deleted stale part file for restarted download $id")
+            }
+            File(task.targetFolder, "$id.xdmpart").takeIf { it.exists() }?.delete()
+            File(task.targetFolder, "$id.part").takeIf { it.exists() }?.delete()
+        }
+
+        val stateFile = File(configDir, "$id.state")
+        if (stateFile.exists()) {
+            stateFile.delete()
+            Logger.info("Deleted stale state file for restarted download $id")
+        }
+
+        store.getById(id)?.let { rec ->
+            rec.downloaded = 0
+            rec.progress = 0
+            rec.status = RecordStatus.PAUSED
+            store.update(rec)
+            ui.downloadUpdated(id)
+        }
+    }
+
     /** Writes a refreshed link to both the task info and the resume state of a paused download. */
     private fun applyLinkUpdate(id: Long, url: String, headers: HeaderMap?, cookie: String?) {
         taskInfoDB.getHttpTask(id)?.let {
@@ -1134,10 +1301,19 @@ class DownloadManager(
                 context.url = url
                 context.headers = headers
                 context.cookie = cookie
+                context.finalUrl = null
                 saveState(context, configDir)
                 Logger.info("Context ${context.id} updated")
             }
             .onFailure { Logger.error(it) }
+
+        store.getById(id)?.let { rec ->
+            if (rec.status == RecordStatus.ERROR) {
+                rec.status = RecordStatus.PAUSED
+                store.update(rec)
+                ui.downloadUpdated(id)
+            }
+        }
     }
 
     override fun isMoving(id: Long): Boolean = id in moving
@@ -1195,6 +1371,33 @@ class DownloadManager(
             ui.downloadUpdated(id)
             done(result)
         }.apply { name = "change-folder-$id" }.start()
+    }
+
+    override fun changeCategory(id: Long, newCategoryId: String?) {
+        synchronized(store) {
+            val rec = store.getById(id) ?: return
+            rec.categoryId = newCategoryId
+            store.update(rec)
+            when (rec.downloadType) {
+                DownloadType.Http -> taskInfoDB.getHttpTask(id)?.let { t ->
+                    t.categoryId = newCategoryId
+                    t.respectFileName = true
+                    taskInfoDB.saveHttpTask(t)
+                }
+                DownloadType.Hls -> taskInfoDB.getHlsTask(id)?.let { t ->
+                    t.categoryId = newCategoryId
+                    t.respectFileName = true
+                    taskInfoDB.saveHlsTask(t)
+                }
+                DownloadType.Dash -> taskInfoDB.getDashTask(id)?.let { t ->
+                    t.categoryId = newCategoryId
+                    t.respectFileName = true
+                    taskInfoDB.saveDashTask(t)
+                }
+                else -> {}
+            }
+        }
+        ui.downloadUpdated(id)
     }
 
     /**

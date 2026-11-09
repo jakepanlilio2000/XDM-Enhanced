@@ -76,7 +76,8 @@ class DestinationPicker(
     private var populating = false
 
     /** Set once the user touched the Category combo: file-name edits stop re-matching. */
-    private var userPicked = false
+    var userPicked = false
+        private set
 
     /** A folder chosen by hand for this download only; null means the category's (or None's) folder. */
     private var override: String? = null
@@ -119,8 +120,8 @@ class DestinationPicker(
         get() = override ?: folderFor(selectedCategory)
 
     /**
-     * Starts the rows for a new download of [fileName] from [url] (found on [pageUrl]): a browser
-     * capture is preselected by the rules, anything else starts at None.
+     * Starts the rows for a new download of [fileName] from [url] (found on [pageUrl]):
+     * Preselects the category by the rules (unless None is remembered); hand-picking None remembers it.
      */
     fun reset(fileName: String?, url: String?, pageUrl: String?) {
         this.fileName = fileName
@@ -128,16 +129,28 @@ class DestinationPicker(
         this.pageUrl = pageUrl
         userPicked = false
         override = null
-        refillCategories(if (capture) captureCategory(fileName, url, pageUrl) else null)
+        refillCategories(captureCategory(fileName, url, pageUrl))
         refillFolders()
         onChanged()
     }
 
-    /** The file name was edited: a capture re-runs the rules until the user picks a category. */
+    /** The file name was edited: re-runs the rules until the user picks a category. */
     fun fileNameChanged(name: String?) {
         fileName = name
-        if (!capture || userPicked || AppContext.config.rememberNone) return
+        if (userPicked || AppContext.config.rememberNone) return
         val match = captureCategory(name, url, pageUrl)
+        if (match?.id == selectedCategory?.id) return
+        refillCategories(match)
+        override = null
+        refillFolders()
+        onChanged()
+    }
+
+    /** The URL was edited: re-runs the rules until the user picks a category. */
+    fun urlChanged(newUrl: String?) {
+        url = newUrl
+        if (userPicked || AppContext.config.rememberNone) return
+        val match = captureCategory(fileName, newUrl, pageUrl)
         if (match?.id == selectedCategory?.id) return
         refillCategories(match)
         override = null
