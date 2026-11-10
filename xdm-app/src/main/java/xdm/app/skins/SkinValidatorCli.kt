@@ -52,6 +52,7 @@ object SkinValidatorCli {
             val m = result.manifest
             println("==================================================")
             println("VALIDATION PASSED: ${m?.name} (${m?.id})")
+            println("Schema:      Version ${m?.schemaVersion ?: 1}")
             println("Version:     ${m?.version}")
             println("Author:      ${m?.author}")
             println("Min App:     ${m?.minAppVersion}")
@@ -61,6 +62,7 @@ object SkinValidatorCli {
             println("Sidebar W:   ${m?.geometry?.sidebarWidth}px")
             println("Toolbar Pos: ${m?.layout?.toolbarPosition}")
             println("Sidebar Pos: ${m?.layout?.sidebarPosition}")
+            println("Regions:     ${m?.regions?.size ?: 0} declared (${m?.regions?.keys?.joinToString(", ") ?: "none"})")
             println("==================================================")
             if (result.warnings.isNotEmpty()) {
                 println("Warnings:")

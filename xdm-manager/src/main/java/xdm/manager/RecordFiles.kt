@@ -42,6 +42,12 @@ fun getFileFolder(ent: DbRecord): Pair<String?, String?>? {
             folder = md?.targetFolder
             fileName = md?.name ?: ent.fileName
         }
+
+        DownloadType.Plugin -> {
+            val md = EngineContext.taskInfoDB.getPluginTask(ent.id)
+            folder = md?.targetFolder
+            fileName = md?.fileName ?: ent.fileName
+        }
     }
 
     return Pair(fileName, folder)

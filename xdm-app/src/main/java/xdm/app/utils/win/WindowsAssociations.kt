@@ -21,6 +21,7 @@ object WindowsAssociations {
     const val MAGNET_KEY = "Software\\Classes\\magnet"
     const val TORRENT_EXT_KEY = "Software\\Classes\\.torrent"
     const val TORRENT_PROGID_KEY = "Software\\Classes\\xdm.torrent"
+    const val XDM_APP_PROTOCOL_KEY = "Software\\Classes\\xdm-app"
 
     val isWindows: Boolean get() = detectOS() == OS.Windows
 
@@ -46,11 +47,29 @@ object WindowsAssociations {
     }
 
     /**
+     * Extracts and validates the executable path from a shell open command string.
+     * Returns true if the path is relative/unqualified or points to an existing file on disk.
+     */
+    fun isCommandExecutableValid(command: String): Boolean {
+        val trimmed = command.trim()
+        if (trimmed.isEmpty()) return false
+        val exePath = if (trimmed.startsWith("\"")) {
+            val endQuote = trimmed.indexOf('"', 1)
+            if (endQuote > 1) trimmed.substring(1, endQuote) else trimmed.removePrefix("\"")
+        } else {
+            trimmed.substringBefore(" ")
+        }
+        val file = File(exePath)
+        return !file.isAbsolute || file.exists()
+    }
+
+    /**
      * Checks if the `magnet:` protocol is registered to XDM in HKCU.
      */
     fun isMagnetRegistered(): Boolean {
         if (!isWindows) return false
         val cmd = Win32Registry.getString("$MAGNET_KEY\\shell\\open\\command", "") ?: return false
+        if (!isCommandExecutableValid(cmd)) return false
         val launcher = AppLauncher.command()?.firstOrNull() ?: "xdm"
         return cmd.contains("xdm", ignoreCase = true) ||
                 (launcher.isNotBlank() && cmd.contains(File(launcher).name, ignoreCase = true))
@@ -93,6 +112,7 @@ object WindowsAssociations {
         val progId = Win32Registry.getString(TORRENT_EXT_KEY, "")
         if (progId != "xdm.torrent") return false
         val cmd = Win32Registry.getString("$TORRENT_PROGID_KEY\\shell\\open\\command", "") ?: return false
+        if (!isCommandExecutableValid(cmd)) return false
         val launcher = AppLauncher.command()?.firstOrNull() ?: "xdm"
         return cmd.contains("xdm", ignoreCase = true) ||
                 (launcher.isNotBlank() && cmd.contains(File(launcher).name, ignoreCase = true))
@@ -128,6 +148,47 @@ object WindowsAssociations {
         }
         val ok = Win32Registry.deleteTree(TORRENT_PROGID_KEY)
         Logger.info("WindowsAssociations: unregistered .torrent file association ($ok)")
+        return ok
+    }
+
+    /**
+     * Checks if the `xdm-app:` protocol is registered to XDM in HKCU.
+     */
+    fun isProtocolRegistered(): Boolean {
+        if (!isWindows) return false
+        val cmd = Win32Registry.getString("$XDM_APP_PROTOCOL_KEY\\shell\\open\\command", "") ?: return false
+        if (!isCommandExecutableValid(cmd)) return false
+        val launcher = AppLauncher.command()?.firstOrNull() ?: "xdm"
+        return cmd.contains("xdm", ignoreCase = true) ||
+                (launcher.isNotBlank() && cmd.contains(File(launcher).name, ignoreCase = true))
+    }
+
+    /**
+     * Registers XDM as the `xdm-app:` URL protocol handler in HKCU.
+     */
+    fun registerProtocol(): Boolean {
+        if (!isWindows) return false
+        val cmd = openCommand() ?: return false
+        val launcherPath = AppLauncher.command()?.firstOrNull().orEmpty()
+        val icon = if (launcherPath.isNotBlank()) "$launcherPath,0" else ""
+
+        val ok1 = Win32Registry.setString(XDM_APP_PROTOCOL_KEY, "", "URL:XDM Enhanced Protocol")
+        val ok2 = Win32Registry.setString(XDM_APP_PROTOCOL_KEY, "URL Protocol", "")
+        if (icon.isNotBlank()) {
+            Win32Registry.setString("$XDM_APP_PROTOCOL_KEY\\DefaultIcon", "", icon)
+        }
+        val ok3 = Win32Registry.setString("$XDM_APP_PROTOCOL_KEY\\shell\\open\\command", "", cmd)
+        Logger.info("WindowsAssociations: registered xdm-app protocol handler ($ok1, $ok2, $ok3)")
+        return ok1 && ok3
+    }
+
+    /**
+     * Unregisters the `xdm-app:` URL protocol handler in HKCU.
+     */
+    fun unregisterProtocol(): Boolean {
+        if (!isWindows) return false
+        val ok = Win32Registry.deleteTree(XDM_APP_PROTOCOL_KEY)
+        Logger.info("WindowsAssociations: unregistered xdm-app protocol handler ($ok)")
         return ok
     }
 

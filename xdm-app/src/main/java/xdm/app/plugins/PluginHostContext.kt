@@ -10,6 +10,8 @@ import xdm.plugin.api.PluginConfig
 import xdm.plugin.api.PluginContext
 import xdm.plugin.api.commands.PluginCommand
 import xdm.plugin.api.download.DownloadProvider
+import xdm.plugin.api.download.PluginDownloadTask
+import xdm.plugin.api.events.PluginEventListener
 import xdm.plugin.api.events.PostDownloadHook
 import xdm.plugin.api.format.FormatDetector
 import xdm.plugin.api.media.MediaProvider
@@ -21,7 +23,11 @@ import xdm.plugin.api.ui.SettingsPanelContributor
 import xdm.plugin.api.ui.ToolbarContributor
 import xdm.plugin.api.url.UrlRecognizer
 import java.io.File
+import java.util.concurrent.Callable
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.ForkJoinPool
+import javax.swing.SwingUtilities
 
 /**
  * Host execution context provided to an active plugin.
@@ -173,8 +179,70 @@ class PluginHostContext(
         AppContext.downloader.startHttpDownload(task, true)
     }
 
+    override fun submitPluginTask(request: PluginDownloadRequest?, task: PluginDownloadTask?): Long {
+        if (request == null || task == null || !AppContext.hasDownloader) return -1L
+        return PluginDownloadBridge.registerPluginTask(plugin, request, task)
+    }
+
+    override fun <T : Any?> subscribe(topic: String?, listener: PluginEventListener<T>?) {
+        if (topic != null && listener != null) {
+            PluginEventBus.subscribe(hostMetadata.id, topic, listener)
+        }
+    }
+
+    override fun <T : Any?> unsubscribe(topic: String?, listener: PluginEventListener<T>?) {
+        if (topic != null && listener != null) {
+            PluginEventBus.unsubscribe(hostMetadata.id, topic, listener)
+        }
+    }
+
+    override fun <T : Any?> publish(topic: String?, eventData: T) {
+        if (topic != null) {
+            PluginEventBus.publish(topic, eventData)
+        }
+    }
+
+    override fun <T : Any?> executeAsync(task: Callable<T>?): CompletableFuture<T> {
+        val future = CompletableFuture<T>()
+        if (task == null) {
+            future.completeExceptionally(IllegalArgumentException("Task must not be null"))
+            return future
+        }
+        ForkJoinPool.commonPool().execute {
+            try {
+                future.complete(task.call())
+            } catch (t: Throwable) {
+                logError("Asynchronous plugin task execution failed", t)
+                future.completeExceptionally(t)
+            }
+        }
+        return future
+    }
+
+    override fun runOnUIThread(action: Runnable?) {
+        if (action == null) return
+        if (SwingUtilities.isEventDispatchThread()) {
+            try {
+                action.run()
+            } catch (t: Throwable) {
+                logError("Plugin UI action failed on EDT", t)
+            }
+        } else {
+            SwingUtilities.invokeLater {
+                try {
+                    action.run()
+                } catch (t: Throwable) {
+                    logError("Plugin UI action failed on EDT", t)
+                }
+            }
+        }
+    }
+
     fun clearRegistrations() {
+        PluginEventBus.clearForPlugin(hostMetadata.id)
+        PluginDownloadBridge.cancelTasksForPlugin(hostMetadata.id)
         downloadProviders.clear()
+        mediaProviders.clear()
         urlRecognizers.clear()
         formatDetectors.clear()
         postDownloadHooks.clear()

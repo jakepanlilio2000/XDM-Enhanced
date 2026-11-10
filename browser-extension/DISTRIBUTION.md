@@ -26,7 +26,7 @@ For enterprise networks deploying XDM Enhanced via Windows Active Directory GPO 
 <?xml version='1.0' encoding='UTF-8'?>
 <gupdate xmlns='http://www.google.com/update2/response' protocol='2.0'>
   <app appid='xdmenhancedchromebrowserintegration0'>
-    <updatecheck codebase='https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.0.0-beta.5/XDM-Enhanced-Extension-Chromium-v1.0.0-beta.5.crx' version='3.5.3' />
+    <updatecheck codebase='https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.0.0-beta.6/XDM-Enhanced-Extension-Chromium-v1.0.0-beta.6.crx' version='3.5.4' />
   </app>
 </gupdate>
 ```
@@ -82,8 +82,8 @@ Hosted in repository at:
     "xdm-enhanced-browser-monitor@jakepanlilio2000.github.io": {
       "updates": [
         {
-          "version": "1.1.3",
-          "update_link": "https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.0.0-beta.5/XDM-Enhanced-Extension-Firefox-v1.0.0-beta.5.xpi",
+          "version": "1.1.4",
+          "update_link": "https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.0.0-beta.6/XDM-Enhanced-Extension-Firefox-v1.0.0-beta.6.xpi",
           "applications": {
             "gecko": {
               "strict_min_version": "109.0"

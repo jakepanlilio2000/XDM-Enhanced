@@ -110,6 +110,7 @@ Pre-compiled packages and release assets are available on the [GitHub Releases p
 ### Browser Extension Setup
 - **Chromium Browsers:** Extract `XDM-Enhanced-Extension-Chromium-v<version>.zip`, navigate to `chrome://extensions`, enable **Developer mode**, and select **Load unpacked**.
 - **Firefox Browsers:** Navigate to `about:debugging#/runtime/this-firefox`, click **Load Temporary Add-on…**, and select the downloaded archive. For persistent installation, use Firefox Developer Edition with `xpinstall.signatures.required = false`.
+- **Troubleshooting & Connection Self-Diagnostics:** If the extension indicates disconnected or cannot reach the desktop application, refer to the [Browser Connection Troubleshooting & Self-Diagnostics Guide](docs/BROWSER_CONNECTION_TROUBLESHOOTING.md).
 
 ### System Requirements
 - **Operating System:** Windows 10 (Build 17134+) or Windows 11 (64-bit); Linux x64 with GLIBC 2.27+; macOS 11+.

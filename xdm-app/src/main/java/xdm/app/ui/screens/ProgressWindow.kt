@@ -3,6 +3,8 @@ package xdm.app.ui.screens
 import com.formdev.flatlaf.FlatClientProperties
 import xdm.app.AppContext
 import xdm.app.I8N.text
+import xdm.app.skins.SkinRegion
+import xdm.app.skins.SkinStyleResolver
 import xdm.app.ui.components.AppMenuHandler
 import xdm.app.ui.components.CategoryStyle
 import xdm.app.ui.components.CircularProgress
@@ -10,6 +12,8 @@ import xdm.app.ui.components.MessageBox
 import xdm.app.ui.components.SegmentDetailTable
 import xdm.app.ui.components.SegmentPanel
 import xdm.app.ui.components.SegmentVisualizationBar
+import xdm.app.ui.components.SkinBackgroundPanel
+import xdm.app.ui.components.ThemeManager
 import xdm.app.utils.FontIcon
 import xdm.app.utils.RemixIcon
 import xdm.app.utils.ScaledEmptyBorder
@@ -64,6 +68,10 @@ class ProgressWindow(val id: Long) : JFrame() {
 
     private var isError: Boolean = false
     private val textBuf = StringBuilder(100)
+    private val themeListener = ThemeManager.ThemeChangeListener {
+        applySkinStyles()
+        repaint()
+    }
 
     val lblFileName = JLabel("---").apply {
         font = font.deriveFont(Font.BOLD, 13f.px)
@@ -274,12 +282,38 @@ class ProgressWindow(val id: Long) : JFrame() {
         })
     }
 
-    private fun initUI() {
-        val root = JPanel(BorderLayout(0, 0))
+    lateinit var tabbedPane: JTabbedPane
+        private set
 
-        val tabbedPane = JTabbedPane().apply {
+    override fun dispose() {
+        ThemeManager.removeThemeListener(themeListener)
+        super.dispose()
+    }
+
+    private fun applySkinStyles() {
+        val barArc = SkinStyleResolver.resolveProgressBarArc(SkinRegion.PROGRESS_MODAL)
+        val btnArc = SkinStyleResolver.resolveButtonArc(SkinRegion.PROGRESS_MODAL)
+        val cornerArc = SkinStyleResolver.resolveCornerArc(SkinRegion.PROGRESS_MODAL)
+        progressBar.putClientProperty("ProgressBar.arc", barArc)
+        btnPauseResume.putClientProperty("Button.arc", btnArc)
+        btnCancel.putClientProperty("Button.arc", btnArc)
+        btnOpenFile.putClientProperty("Button.arc", btnArc)
+        btnOpenFolder.putClientProperty("Button.arc", btnArc)
+        btnHide.putClientProperty("Button.arc", btnArc)
+        btnDetailsToggle.putClientProperty("Button.arc", btnArc)
+        btnTorrentDetails.putClientProperty("Button.arc", btnArc)
+        if (::tabbedPane.isInitialized) {
+            tabbedPane.putClientProperty(FlatClientProperties.STYLE, "tabArc: $cornerArc")
+        }
+    }
+
+    private fun initUI() {
+        val root = JPanel(BorderLayout(0, 0)).apply { isOpaque = false }
+
+        tabbedPane = JTabbedPane().apply {
             font = font.deriveFont(11.5f.px)
-            putClientProperty(FlatClientProperties.STYLE, "tabArc: 8")
+            isOpaque = false
+            putClientProperty(FlatClientProperties.STYLE, "tabArc: ${SkinStyleResolver.resolveCornerArc(SkinRegion.PROGRESS_MODAL)}")
         }
 
         // Tab 1: Download Status (Reference A)
@@ -296,7 +330,11 @@ class ProgressWindow(val id: Long) : JFrame() {
 
         root.add(tabbedPane, BorderLayout.CENTER)
 
-        contentPane.add(root)
+        contentPane = SkinBackgroundPanel(BorderLayout(), region = SkinRegion.PROGRESS_MODAL).apply {
+            add(root)
+        }
+        ThemeManager.addThemeListener(themeListener)
+        applySkinStyles()
         rootPane.defaultButton = btnPauseResume
         pack()
         size = scaledSize(580, 520)
@@ -306,13 +344,14 @@ class ProgressWindow(val id: Long) : JFrame() {
     private fun buildDownloadStatusTab(): JPanel {
         val panel = JPanel(BorderLayout(0, 8.px)).apply {
             border = ScaledEmptyBorder(10, 14, 10, 14)
+            isOpaque = false
         }
 
         // Top info card
         val topBox = Box.createVerticalBox()
 
         // File/Source rows
-        val urlPanel = JPanel(GridBagLayout())
+        val urlPanel = JPanel(GridBagLayout()).apply { isOpaque = false }
         val uGbc = GridBagConstraints().apply {
             fill = GridBagConstraints.HORIZONTAL
             insets = Insets(2.px, 4.px, 2.px, 4.px)
@@ -340,6 +379,7 @@ class ProgressWindow(val id: Long) : JFrame() {
 
         val headerCard = JPanel(BorderLayout(8.px, 0)).apply {
             border = ScaledEmptyBorder(2, 2, 2, 2)
+            isOpaque = false
             add(lblCategoryIcon, BorderLayout.WEST)
             add(urlPanel, BorderLayout.CENTER)
         }
@@ -349,6 +389,7 @@ class ProgressWindow(val id: Long) : JFrame() {
         // Transfer statistics grid (Reference A layout)
         val statsGrid = JPanel(GridBagLayout()).apply {
             border = ScaledEmptyBorder(4, 4, 4, 4)
+            isOpaque = false
         }
         val sGbc = GridBagConstraints().apply {
             fill = GridBagConstraints.HORIZONTAL
@@ -392,6 +433,7 @@ class ProgressWindow(val id: Long) : JFrame() {
         // Action buttons row (Reference A: Hide details | Pause | Cancel)
         val actionRow = JPanel(BorderLayout()).apply {
             border = ScaledEmptyBorder(4, 4, 4, 4)
+            isOpaque = false
             val leftButtons = Box.createHorizontalBox().apply {
                 add(btnDetailsToggle)
                 add(Box.createHorizontalStrut(6.px))
@@ -425,6 +467,7 @@ class ProgressWindow(val id: Long) : JFrame() {
     private fun buildSpeedLimiterTab(): JPanel {
         val panel = JPanel(BorderLayout()).apply {
             border = ScaledEmptyBorder(16, 20, 16, 20)
+            isOpaque = false
         }
         val box = Box.createVerticalBox()
 
@@ -478,6 +521,7 @@ class ProgressWindow(val id: Long) : JFrame() {
     private fun buildOptionsTab(): JPanel {
         val panel = JPanel(BorderLayout()).apply {
             border = ScaledEmptyBorder(16, 20, 16, 20)
+            isOpaque = false
         }
         val box = Box.createVerticalBox()
 
@@ -539,15 +583,21 @@ class ProgressWindow(val id: Long) : JFrame() {
                 }
             }
         } else {
-            val httpTask = AppContext.taskInfoDB.getHttpTask(id)
-            if (httpTask != null) {
-                lblUrlOrSource.text = httpTask.url
-                lblUrlOrSource.toolTipText = httpTask.url
+            val url = when (rec.downloadType) {
+                DownloadType.Plugin -> xdm.app.plugins.PluginDownloadBridge.getTaskUrl(id)
+                else -> AppContext.taskInfoDB.getHttpTask(id)?.url
+            }
+            if (!url.isNullOrBlank()) {
+                lblUrlOrSource.text = url
+                lblUrlOrSource.toolTipText = url
             } else {
                 lblUrlOrSource.text = rec.fileName
                 lblUrlOrSource.toolTipText = rec.fileName
             }
-            lblResumeCap.text = text("DWN_RESUME_CAPABILITY") + ": " + text("DWN_YES")
+            val canResume = if (rec.downloadType == DownloadType.Plugin) {
+                xdm.app.plugins.PluginDownloadBridge.getTask(id)?.canResume() ?: true
+            } else true
+            lblResumeCap.text = text("DWN_RESUME_CAPABILITY") + ": " + (if (canResume) text("DWN_YES") else text("DWN_NO"))
             if (rec.status == RecordStatus.PAUSED) {
                 showPaused()
             } else if (rec.status == RecordStatus.FINISHED) {

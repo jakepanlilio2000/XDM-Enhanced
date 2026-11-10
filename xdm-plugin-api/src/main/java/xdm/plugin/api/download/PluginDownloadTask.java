@@ -31,6 +31,20 @@ public interface PluginDownloadTask {
     default void resume() {}
 
     /**
+     * Whether this provider task supports pausing.
+     */
+    default boolean canPause() {
+        return true;
+    }
+
+    /**
+     * Whether this provider task supports resuming.
+     */
+    default boolean canResume() {
+        return true;
+    }
+
+    /**
      * Cancels the download and terminates associated processes or network connections.
      */
     void cancel();

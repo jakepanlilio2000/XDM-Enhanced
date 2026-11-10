@@ -111,6 +111,7 @@ class PropertiesDialog(private val owner: Window?, ent: DbRecord) : JDialog(owne
             DownloadType.Dash -> "DASH"
             DownloadType.Batch -> text("BATCH_TYPE").format("%,d".format(batch?.task?.items?.size ?: 0))
             DownloadType.Torrent -> "Torrent"
+            DownloadType.Plugin -> "Plugin"
         }
         val sizeText = if (ent.size > 0) FormatHelper.formatSize(ent.size.toDouble()) else text("PROP_UNKNOWN")
         val dateText = if (ent.date > 0)
@@ -234,6 +235,13 @@ class PropertiesDialog(private val owner: Window?, ent: DbRecord) : JDialog(owne
 
             // No task info is written for these yet; the record's own fields still show.
             DownloadType.Torrent -> null
+
+            DownloadType.Plugin -> db.getPluginTask(ent.id)?.let {
+                Details(
+                    it.url, it.targetFolder.takeIf { f -> f.isNotBlank() },
+                    it.fileName, null, null, null
+                )
+            }
         } ?: Details(null, null, null, null, null, null)
     }
 

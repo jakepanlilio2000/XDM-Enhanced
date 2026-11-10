@@ -24,7 +24,7 @@ import java.util.zip.ZipFile
  * Manages discovery, isolated class loading, user trust verification, fault isolation, and event dispatching.
  */
 object PluginManager {
-    const val API_VERSION = "1.0.0"
+    const val API_VERSION = "1.1.0"
 
     var pluginsDir: File = File(AppDirs.root, "plugins")
     var isSafeMode: Boolean = false
@@ -102,13 +102,13 @@ object PluginManager {
                         isLenient = true
                     }.decodeFromString<PluginManifest>(rawJson)
 
+                    val sha = runCatching {
+                        val jar = dir.listFiles { f -> f.name.endsWith(".jar") }?.firstOrNull()
+                        if (jar != null) PluginManifestValidator.computeSha256(jar) else ""
+                    }.getOrDefault("")
+
                     val validation = PluginManifestValidator.validateManifest(manifest)
                     if (validation.isValid) {
-                        val sha = runCatching {
-                            val jar = dir.listFiles { f -> f.name.endsWith(".jar") }?.firstOrNull()
-                            if (jar != null) PluginManifestValidator.computeSha256(jar) else ""
-                        }.getOrDefault("")
-
                         val loaded = LoadedPlugin(
                             manifest = manifest,
                             pluginDir = dir,
@@ -118,7 +118,21 @@ object PluginManager {
                         )
                         installedPlugins.add(loaded)
                     } else {
-                        Logger.info("[WARN] Discovered plugin at ${dir.name} is invalid: ${validation.errors}")
+                        val status = if (validation.errors.any { it.contains("API version") || it.contains("application version") }) {
+                            PluginStatus.INCOMPATIBLE
+                        } else {
+                            PluginStatus.FAULTED
+                        }
+                        val loaded = LoadedPlugin(
+                            manifest = manifest,
+                            pluginDir = dir,
+                            archiveFile = dir.listFiles { f -> f.name.endsWith(".jar") }?.firstOrNull(),
+                            status = status,
+                            faultReason = validation.errors.joinToString("; "),
+                            sha256 = sha
+                        )
+                        installedPlugins.add(loaded)
+                        Logger.info("[WARN] Discovered plugin at ${dir.name} is ${status.displayName.lowercase()}: ${validation.errors}")
                     }
                 } catch (e: Exception) {
                     Logger.error("Failed to load plugin manifest from ${dir.absolutePath}", e)
@@ -235,6 +249,15 @@ object PluginManager {
 
         val manifest = validation.manifest
         val targetDir = File(pluginsDir, manifest.id)
+        val dataDir = File(targetDir, "data")
+        val dataBackup = if (dataDir.exists() && dataDir.isDirectory) {
+            val tmp = File.createTempFile("xdm-plugin-data-${manifest.id}", ".bak")
+            tmp.delete()
+            tmp.mkdirs()
+            dataDir.copyRecursively(tmp, overwrite = true)
+            tmp
+        } else null
+
         if (targetDir.exists()) {
             // If already installed, shut it down before overwriting
             installedPlugins.firstOrNull { it.manifest.id == manifest.id }?.let { existing ->
@@ -267,12 +290,21 @@ object PluginManager {
                     }
                 }
             }
+
+            // Restore preserved configuration and plugin data directory on upgrade
+            if (dataBackup != null && dataBackup.exists()) {
+                val restoredData = File(targetDir, "data")
+                restoredData.mkdirs()
+                dataBackup.copyRecursively(restoredData, overwrite = true)
+            }
         } catch (e: Exception) {
             targetDir.deleteRecursively()
             return PluginManifestValidator.ValidationResult(
                 false,
                 listOf("Failed to extract plugin package: ${e.message}")
             )
+        } finally {
+            dataBackup?.deleteRecursively()
         }
 
         val loaded = LoadedPlugin(

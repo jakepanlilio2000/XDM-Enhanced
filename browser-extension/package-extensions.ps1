@@ -7,7 +7,7 @@
     clean release zip archives for both Chromium (Manifest V3) and Firefox (Manifest V2).
 
 .PARAMETER Version
-    The release version tag to package (default: reads from xdm-app/src/main/resources/app-version.json or '1.0.0-beta.5').
+    The release version tag to package (default: reads from xdm-app/src/main/resources/app-version.json or '1.0.0-beta.6').
 
 .PARAMETER OutDir
     Target directory for distribution artifacts (default: build/dist/extensions).
@@ -30,7 +30,7 @@ if (-not $Version) {
         } catch {}
     }
     if (-not $Version) {
-        $Version = "1.0.0-beta.5"
+        $Version = "1.0.0-beta.6"
     }
 }
 

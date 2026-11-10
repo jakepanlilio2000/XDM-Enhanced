@@ -7,27 +7,47 @@ import javax.swing.UIManager
 /**
  * Upstream-style appearance preset recreating the classic XDM look and feel.
  * Uses original GPL-covered toolbar PNGs, category icons, compact near-square borders,
- * and classic dark/light palettes.
+ * zero-arc components, and classic dark/light palettes.
  */
 class BuiltInClassicXdmSkin : Skin {
     override val id: String = SkinManager.SKIN_ORIGINAL_XDM
     override val name: String = "Original XDM"
     override val description: String =
-        "Classic upstream XDM appearance preset recreating the traditional toolbar icons, category styling, and compact dark palette."
+        "Classic upstream XDM appearance preset recreating traditional toolbar icons, category styling, zero-arc corners, and compact dark palette."
     override val author: String = "XDM Community (Upstream preset)"
     override val version: String = "1.0.0"
     override val isBuiltIn: Boolean = true
     override val attributionNotice: String =
         "Upstream-style appearance preset. Original XDM created by Subhra Das Gupta. Independent fork preset; not officially endorsed."
 
-    override val componentArc: Int = 2
-    override val buttonArc: Int = 2
+    override val componentArc: Int = 0
+    override val buttonArc: Int = 0
     override val rowHeight: Int = 44
     override val sidebarWidth: Int = 200
     override val useClassicIcons: Boolean = true
 
     override val defaultDarkAccent: Color = Color(0x00, 0x78, 0xD7)
     override val defaultLightAccent: Color = Color(0x00, 0x78, 0xD7)
+
+    private val classicRegions: Map<SkinRegion, SkinRegionConfig> by lazy {
+        mapOf(
+            SkinRegion.MAIN_FRAME to SkinRegionConfig(cornerArc = 0, buttonArc = 0),
+            SkinRegion.TOOLBAR to SkinRegionConfig(height = 38, buttonArc = 0, cornerArc = 0),
+            SkinRegion.SIDEBAR to SkinRegionConfig(width = 200, cornerArc = 0),
+            SkinRegion.DOWNLOAD_LIST to SkinRegionConfig(height = 44, cardArc = 0, cornerArc = 0),
+            SkinRegion.DOWNLOAD_MODAL to SkinRegionConfig(cornerArc = 0, buttonArc = 0),
+            SkinRegion.VIDEO_DOWNLOAD_MODAL to SkinRegionConfig(cornerArc = 0, buttonArc = 0),
+            SkinRegion.PROGRESS_MODAL to SkinRegionConfig(cornerArc = 0, buttonArc = 0, progressBarArc = 0),
+            SkinRegion.TORRENT_MODAL to SkinRegionConfig(cornerArc = 0, buttonArc = 0),
+            SkinRegion.SETTINGS to SkinRegionConfig(cornerArc = 0, buttonArc = 0),
+            SkinRegion.PLUGIN_MANAGER to SkinRegionConfig(cornerArc = 0, buttonArc = 0, cardArc = 0),
+            SkinRegion.ABOUT to SkinRegionConfig(cornerArc = 0, buttonArc = 0),
+            SkinRegion.DIALOGS to SkinRegionConfig(cornerArc = 0, buttonArc = 0),
+            SkinRegion.TOOLTIPS_POPUPS to SkinRegionConfig(cornerArc = 0)
+        )
+    }
+
+    override fun getRegionConfig(region: SkinRegion): SkinRegionConfig? = classicRegions[region]
 
     private val darkCategoryColors = mapOf(
         "CAT_DOCUMENTS" to Color(0x8E, 0x92, 0x9C),
@@ -92,11 +112,16 @@ class BuiltInClassicXdmSkin : Skin {
     }
 
     override fun applyCustomDefaults(isDark: Boolean) {
-        UIManager.put("Component.arc", componentArc)
-        UIManager.put("Button.arc", buttonArc)
-        UIManager.put("TextComponent.arc", componentArc)
-        UIManager.put("ProgressBar.arc", componentArc)
-        UIManager.put("CheckBox.arc", componentArc)
+        UIManager.put("Component.arc", 0)
+        UIManager.put("Button.arc", 0)
+        UIManager.put("TextComponent.arc", 0)
+        UIManager.put("ProgressBar.arc", 0)
+        UIManager.put("CheckBox.arc", 0)
+        UIManager.put("TabbedPane.tabArc", 0)
+        UIManager.put("ScrollBar.thumbArc", 0)
+        UIManager.put("PopupMenu.arc", 0)
+        UIManager.put("ToolTip.arc", 0)
+        UIManager.put("PopupMenu.borderColor", if (isDark) Color(0x3A, 0x3D, 0x45) else Color(0xCF, 0xD2, 0xD8))
 
         UIManager.put("XDM.skin.id", id)
         UIManager.put("XDM.skin.rowHeight", rowHeight)
@@ -114,6 +139,9 @@ class BuiltInClassicXdmSkin : Skin {
             UIManager.put("XDM.list.titleForeground", Color(0xDC, 0xDF, 0xE6))
             UIManager.put("Table.background", Color(0x14, 0x15, 0x18))
             UIManager.put("Panel.background", Color(0x1A, 0x1B, 0x1F))
+            UIManager.put("OptionPane.background", Color(0x1A, 0x1B, 0x1F))
+            UIManager.put("ToolTip.background", Color(0x22, 0x24, 0x2A))
+            UIManager.put("ToolTip.foreground", Color(0xDC, 0xDF, 0xE6))
             darkCategoryColors.forEach { (cat, col) ->
                 UIManager.put("XDM.category.$cat", col)
             }
@@ -128,10 +156,19 @@ class BuiltInClassicXdmSkin : Skin {
             UIManager.put("XDM.list.titleForeground", Color(0x20, 0x22, 0x26))
             UIManager.put("Table.background", Color(0xFF, 0xFF, 0xFF))
             UIManager.put("Panel.background", Color(0xF1, 0xF3, 0xF4))
+            UIManager.put("OptionPane.background", Color(0xF1, 0xF3, 0xF4))
+            UIManager.put("ToolTip.background", Color(0xFF, 0xFF, 0xFF))
+            UIManager.put("ToolTip.foreground", Color(0x20, 0x22, 0x25))
             lightCategoryColors.forEach { (cat, col) ->
                 UIManager.put("XDM.category.$cat", col)
             }
         }
+
+        classicRegions.forEach { (region, cfg) ->
+            UIManager.put("XDM.region.${region.slotId}.cornerArc", cfg.cornerArc ?: 0)
+            UIManager.put("XDM.region.${region.slotId}.buttonArc", cfg.buttonArc ?: 0)
+            cfg.cardArc?.let { UIManager.put("XDM.region.${region.slotId}.cardArc", it) }
+            cfg.progressBarArc?.let { UIManager.put("XDM.region.${region.slotId}.progressBarArc", it) }
+        }
     }
 }
-

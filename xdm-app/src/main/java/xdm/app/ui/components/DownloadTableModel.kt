@@ -79,6 +79,7 @@ class DownloadTableModel : AbstractTableModel(), ListChangeListener {
 
     private fun resolveType(rec: DbRecord): String {
         if (rec.downloadType == DownloadType.Torrent) return "Torrent"
+        if (rec.downloadType == DownloadType.Plugin) return "Plugin"
         val categoryId = rec.categoryId
         if (categoryId != null) {
             val cat = AppContext.config.categories.firstOrNull { it.id == categoryId }

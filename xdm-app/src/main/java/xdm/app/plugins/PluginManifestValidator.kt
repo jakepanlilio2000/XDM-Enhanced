@@ -192,15 +192,30 @@ object PluginManifestValidator {
             }
         }
 
-        // 5. Minimum API Version compatibility
+        // 5. API Version compatibility and range handling
         val currentApiVersion = PluginManager.API_VERSION
         if (manifest.minApiVersion.isNotBlank()) {
             try {
                 if (UpdateChecker.compareVersions(currentApiVersion, manifest.minApiVersion) < 0) {
-                    errors.add("Plugin requires API version '${manifest.minApiVersion}', but host API version is '$currentApiVersion'.")
+                    errors.add("Plugin requires API version '>=${manifest.minApiVersion}', but host API version is '$currentApiVersion'.")
                 }
             } catch (_: Throwable) {
                 warnings.add("Could not parse minimum API version '${manifest.minApiVersion}'.")
+            }
+        }
+        if (!manifest.maxApiVersion.isNullOrBlank()) {
+            try {
+                if (UpdateChecker.compareVersions(currentApiVersion, manifest.maxApiVersion) > 0) {
+                    errors.add("Plugin is incompatible with API version '$currentApiVersion' (maximum supported API is '${manifest.maxApiVersion}').")
+                }
+            } catch (_: Throwable) {
+                warnings.add("Could not parse maximum API version '${manifest.maxApiVersion}'.")
+            }
+        }
+        if (!manifest.apiCompatibility.isNullOrBlank()) {
+            val rangeCheck = evaluateVersionRange(currentApiVersion, manifest.apiCompatibility)
+            if (!rangeCheck.first) {
+                errors.add(rangeCheck.second ?: "Plugin API compatibility constraint '${manifest.apiCompatibility}' is not satisfied by host API version '$currentApiVersion'.")
             }
         }
 
@@ -213,5 +228,95 @@ object PluginManifestValidator {
         }
 
         return ValidationResult(errors.isEmpty(), errors, warnings, manifest)
+    }
+
+    /**
+     * Evaluates a version string against semver/range expressions such as "[1.0.0, 2.0.0)", ">=1.0.0 <2.0.0", "^1.0.0", or "~1.0.0".
+     */
+    fun evaluateVersionRange(currentVersion: String, rangeExpr: String): Pair<Boolean, String?> {
+        val trimmed = rangeExpr.trim()
+        try {
+            // Interval notation: e.g. [1.0.0, 2.0.0) or (1.0.0, 2.0.0]
+            if ((trimmed.startsWith("[") || trimmed.startsWith("(")) && (trimmed.endsWith("]") || trimmed.endsWith(")"))) {
+                val includeStart = trimmed.startsWith("[")
+                val includeEnd = trimmed.endsWith("]")
+                val parts = trimmed.substring(1, trimmed.length - 1).split(",").map { it.trim() }
+                if (parts.size == 2) {
+                    val start = parts[0]
+                    val end = parts[1]
+                    if (start.isNotBlank()) {
+                        val cmp = UpdateChecker.compareVersions(currentVersion, start)
+                        if (if (includeStart) cmp < 0 else cmp <= 0) {
+                            return Pair(false, "API version '$currentVersion' is below required range '$trimmed'.")
+                        }
+                    }
+                    if (end.isNotBlank()) {
+                        val cmp = UpdateChecker.compareVersions(currentVersion, end)
+                        if (if (includeEnd) cmp > 0 else cmp >= 0) {
+                            return Pair(false, "API version '$currentVersion' exceeds required range '$trimmed'.")
+                        }
+                    }
+                    return Pair(true, null)
+                }
+            }
+
+            // Comparison tokens e.g. ">=1.0.0 <2.0.0" or "^1.0.0"
+            val tokens = trimmed.split(Regex("\\s+"))
+            for (token in tokens) {
+                when {
+                    token.startsWith(">=") -> {
+                        val v = token.removePrefix(">=")
+                        if (UpdateChecker.compareVersions(currentVersion, v) < 0) {
+                            return Pair(false, "API version '$currentVersion' is lower than required '$token'.")
+                        }
+                    }
+                    token.startsWith("<=") -> {
+                        val v = token.removePrefix("<=")
+                        if (UpdateChecker.compareVersions(currentVersion, v) > 0) {
+                            return Pair(false, "API version '$currentVersion' exceeds required '$token'.")
+                        }
+                    }
+                    token.startsWith(">") -> {
+                        val v = token.removePrefix(">")
+                        if (UpdateChecker.compareVersions(currentVersion, v) <= 0) {
+                            return Pair(false, "API version '$currentVersion' is not greater than '$token'.")
+                        }
+                    }
+                    token.startsWith("<") -> {
+                        val v = token.removePrefix("<")
+                        if (UpdateChecker.compareVersions(currentVersion, v) >= 0) {
+                            return Pair(false, "API version '$currentVersion' is not less than '$token'.")
+                        }
+                    }
+                    token.startsWith("^") -> {
+                        val v = token.removePrefix("^")
+                        val (core, _) = UpdateChecker.splitVersion(v)
+                        val major = core.getOrNull(0) ?: 1
+                        val nextMajor = "${major + 1}.0.0"
+                        if (UpdateChecker.compareVersions(currentVersion, v) < 0 || UpdateChecker.compareVersions(currentVersion, nextMajor) >= 0) {
+                            return Pair(false, "API version '$currentVersion' does not satisfy caret range '$token' (expected >=$v <$nextMajor).")
+                        }
+                    }
+                    token.startsWith("~") -> {
+                        val v = token.removePrefix("~")
+                        val (core, _) = UpdateChecker.splitVersion(v)
+                        val major = core.getOrNull(0) ?: 1
+                        val minor = core.getOrNull(1) ?: 0
+                        val nextMinor = "$major.${minor + 1}.0"
+                        if (UpdateChecker.compareVersions(currentVersion, v) < 0 || UpdateChecker.compareVersions(currentVersion, nextMinor) >= 0) {
+                            return Pair(false, "API version '$currentVersion' does not satisfy tilde range '$token' (expected >=$v <$nextMinor).")
+                        }
+                    }
+                    else -> {
+                        if (UpdateChecker.compareVersions(currentVersion, token) < 0) {
+                            return Pair(false, "API version '$currentVersion' does not satisfy required '$token'.")
+                        }
+                    }
+                }
+            }
+            return Pair(true, null)
+        } catch (e: Exception) {
+            return Pair(false, "Failed to parse API compatibility expression '$rangeExpr': ${e.message}")
+        }
     }
 }

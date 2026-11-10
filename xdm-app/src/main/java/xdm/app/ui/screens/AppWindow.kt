@@ -276,6 +276,7 @@ class AppWindow(image: Image, startHidden: Boolean = false) : JFrame(), ActionLi
         val oldSelectedIds = listView.selectedItems.map { it.id }.toSet()
         listView = createListView(MainListViewFilter(old.filterState, old.filterCategory, old.searchText))
         wireListView()
+        listView.updateTheme()
         if (oldSelectedIds.isNotEmpty()) {
             listView.selectByIds(oldSelectedIds)
         }
@@ -558,6 +559,21 @@ class AppWindow(image: Image, startHidden: Boolean = false) : JFrame(), ActionLi
             add(JMenuItem("Language...", FontIcon(RemixIcon.GLOBAL_LINE, 16.px)).apply {
                 addActionListener { AppMenuHandler.showLanguageDlg(this@AppWindow) }
             })
+            addSeparator()
+            val chkMonitor = JCheckBoxMenuItem("Monitor Clipboard Links", AppContext.config.monitorClipboard).apply {
+                addActionListener {
+                    AppContext.config.monitorClipboard = isSelected
+                    AppContext.config.save()
+                    if (isSelected) xdm.app.preflight.ClipboardMonitor.start() else xdm.app.preflight.ClipboardMonitor.stop()
+                }
+            }
+            val chkPause = JCheckBoxMenuItem("Pause Clipboard Monitoring", xdm.app.preflight.ClipboardMonitor.isPaused).apply {
+                addActionListener {
+                    xdm.app.preflight.ClipboardMonitor.isPaused = isSelected
+                }
+            }
+            add(chkMonitor)
+            add(chkPause)
         }
 
         // 5. Help Menu

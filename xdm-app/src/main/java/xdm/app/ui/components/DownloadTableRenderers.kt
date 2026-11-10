@@ -24,7 +24,23 @@ object DownloadTableRenderers {
 
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm")
 
-    class FileNameCellRenderer : DefaultTableCellRenderer() {
+    open class SkinAwareCellRenderer : DefaultTableCellRenderer() {
+        override fun getTableCellRendererComponent(
+            table: JTable,
+            value: Any?,
+            isSelected: Boolean,
+            hasFocus: Boolean,
+            row: Int,
+            column: Int
+        ): Component {
+            val comp = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column)
+            val hasWallpaper = xdm.app.skins.SkinManager.currentSkin.hasWallpaper()
+            isOpaque = isSelected || !hasWallpaper
+            return comp
+        }
+    }
+
+    class FileNameCellRenderer : SkinAwareCellRenderer() {
         init {
             border = ScaledEmptyBorder(0, 6, 0, 6)
         }
@@ -56,6 +72,9 @@ object DownloadTableRenderers {
             if (rec.downloadType == DownloadType.Torrent) {
                 return FontIcon(RemixIcon.DOWNLOAD_2_LINE, 16.px, Color(56, 139, 253))
             }
+            if (rec.downloadType == DownloadType.Plugin) {
+                return FontIcon(RemixIcon.PUZZLE_LINE, 16.px, Color(0x7C, 0x4D, 0xFF))
+            }
             val ext = rec.fileName.substringAfterLast('.', "").lowercase()
             return when {
                 ext in setOf("mp4", "mkv", "avi", "mov", "flv", "webm", "ts") ->
@@ -73,7 +92,7 @@ object DownloadTableRenderers {
         }
     }
 
-    class SizeCellRenderer : DefaultTableCellRenderer() {
+    class SizeCellRenderer : SkinAwareCellRenderer() {
         init {
             horizontalAlignment = SwingConstants.RIGHT
             border = ScaledEmptyBorder(0, 6, 0, 8)
@@ -94,7 +113,7 @@ object DownloadTableRenderers {
         }
     }
 
-    class TypeCellRenderer : DefaultTableCellRenderer() {
+    class TypeCellRenderer : SkinAwareCellRenderer() {
         init {
             horizontalAlignment = SwingConstants.LEFT
             border = ScaledEmptyBorder(0, 6, 0, 6)
@@ -114,7 +133,7 @@ object DownloadTableRenderers {
         }
     }
 
-    class StatusCellRenderer : DefaultTableCellRenderer() {
+    class StatusCellRenderer : SkinAwareCellRenderer() {
         init {
             horizontalAlignment = SwingConstants.LEFT
             border = ScaledEmptyBorder(0, 6, 0, 6)
@@ -221,6 +240,8 @@ object DownloadTableRenderers {
                 }
             }
 
+            val hasWallpaper = xdm.app.skins.SkinManager.currentSkin.hasWallpaper()
+            panel.isOpaque = isSelected || !hasWallpaper
             if (isSelected) {
                 panel.background = table.selectionBackground
             } else {
@@ -230,7 +251,7 @@ object DownloadTableRenderers {
         }
     }
 
-    class TimeLeftCellRenderer : DefaultTableCellRenderer() {
+    class TimeLeftCellRenderer : SkinAwareCellRenderer() {
         init {
             horizontalAlignment = SwingConstants.CENTER
             border = ScaledEmptyBorder(0, 6, 0, 6)
@@ -251,7 +272,7 @@ object DownloadTableRenderers {
         }
     }
 
-    class TransferRateCellRenderer : DefaultTableCellRenderer() {
+    class TransferRateCellRenderer : SkinAwareCellRenderer() {
         init {
             horizontalAlignment = SwingConstants.RIGHT
             border = ScaledEmptyBorder(0, 6, 0, 8)
@@ -272,7 +293,7 @@ object DownloadTableRenderers {
         }
     }
 
-    class DateAddedCellRenderer : DefaultTableCellRenderer() {
+    class DateAddedCellRenderer : SkinAwareCellRenderer() {
         init {
             horizontalAlignment = SwingConstants.LEFT
             border = ScaledEmptyBorder(0, 6, 0, 6)
@@ -293,7 +314,7 @@ object DownloadTableRenderers {
         }
     }
 
-    class SwarmCellRenderer : DefaultTableCellRenderer() {
+    class SwarmCellRenderer : SkinAwareCellRenderer() {
         init {
             horizontalAlignment = SwingConstants.CENTER
             border = ScaledEmptyBorder(0, 6, 0, 6)

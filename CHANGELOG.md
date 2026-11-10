@@ -5,6 +5,48 @@ All notable changes to the XDM Enhanced project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0-beta.6] - 2026-11-11
+
+### Added
+
+- **Skin Background & Modal Customization System:**
+  - Extended the skinning engine to support declarative custom background images and colors for main windows, panels, sidebars, toolbars, and modal dialogs via `skin.json`.
+  - Added `SkinBackgroundPanel` with support for image tiling, scaling, centering, and adjustable opacity.
+  - Modal dialog backdrop customization with automatic contrast and legibility preservation.
+  - Component-level styling resolver (`SkinStyleResolver`) for consistent button arc, border radiuses, and padding across all dialogs.
+  - Live skin hot-reloading with regression coverage in `SkinEngineTest` and `FullUiSkinContractTest`.
+- **User-Controlled Clipboard Monitoring & Non-Intrusive Link Preflight:**
+  - Strict privacy protections for clipboard monitoring: only single HTTP/HTTPS URLs under 2,048 characters are parsed. Credentials, multi-line blocks, unrelated text, and secret tokens are discarded immediately without logging.
+  - Non-intrusive metadata preflight: performs lightweight HTTP `HEAD` (with `Range: bytes=0-0` fallback) to discover file name, Content-Length, Content-Type, and server resume capability.
+  - Zero-payload guarantee: absolutely no payload data or segmented chunks are downloaded prior to explicit user initiation ("Download Now" or approved auto-start).
+  - Preflight cancellation: cleanly cancels in-flight socket requests when users dismiss the New Download dialog.
+- **Public Plugin API v2 & Task Adapter Bridge:**
+  - Introduced semantic version-range compatibility matching (`[1.0.0, 2.0.0)`) for plugins, ensuring minor application updates do not break installed plugins.
+  - Decoupled Plugin Event Bus (`PluginEventBus`) supporting publish-subscribe event dispatching (`PluginEventListener`, `PluginProgressEvent`).
+  - Implemented public task adapter bridge (`PluginDownloadBridge`) routing plugin tasks into XDM Enhanced's central download scheduler without tight coupling to internal engine classes.
+- **Central Download List Integration for yt-dlp Plugin:**
+  - Fixed yt-dlp plugin downloads missing from the main download table/cards by routing tasks through the public task adapter bridge with stable IDs, proper metadata, and `CAT_VIDEOS` categorization.
+  - Real-time download progress, speed, ETA, and state synchronization across initializing, downloading, paused, cancelled, completed, and error states.
+  - Subprocess execution isolation: invoked via `ProcessBuilder` with strict list argument passing to eliminate shell injection vulnerabilities.
+- **Browser Connection Self-Diagnostics & Troubleshooting:**
+  - Added self-diagnostics panel in extension options and error pages displaying live connection state, detected issues (`host_missing`, `permission_denied`, `app_not_running`), and a "Check Connection" retry button.
+  - Safe desktop repair utility in Settings > General: checks and repairs Windows native messaging manifest paths and protocol handler registrations (`xdm-app://`), validating that executables exist on disk.
+  - Comprehensive technical troubleshooting guide: [`docs/BROWSER_CONNECTION_TROUBLESHOOTING.md`](docs/BROWSER_CONNECTION_TROUBLESHOOTING.md).
+
+### Fixed
+
+- **False "XDM Enhanced Disconnected" Warnings:**
+  - Resolved spurious disconnect warnings in Chromium and Firefox extensions with exponential backoff retry mechanisms and resilient loopback handshake verification.
+  - Prevented event dispatch thread (EDT) freezes by shifting integration diagnostics and repair routines to background daemon threads with responsive UI progress indicators.
+  - Fixed stale registry protocol handler detection when application binary paths are relocated or deleted.
+
+### Security
+
+- **Clipboard Privacy Guard:** Enforced strict length limits (<= 2048 chars) and single-URL validation; never inspects, captures, or transmits passwords, clipboard history, or non-URL data.
+- **Preflight Isolation:** Enforced that preflight requests only fetch HTTP headers; never pre-downloads payload content before user confirmation.
+- **Subprocess Argument Hardening:** Enforced explicit array/list arguments for yt-dlp executions, rejecting command-line shell string concatenation.
+- **Loopback Origin & Header Verification:** Strict host and origin verification on `127.0.0.1:8597` rejecting DNS rebinding with HTTP 403 Forbidden.
+
 ## [1.0.0-beta.5] - 2026-11-10
 
 ### Added

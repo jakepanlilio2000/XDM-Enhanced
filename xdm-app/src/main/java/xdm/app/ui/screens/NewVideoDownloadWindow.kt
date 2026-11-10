@@ -4,11 +4,14 @@ import com.formdev.flatlaf.FlatClientProperties
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import xdm.app.AppContext
 import xdm.app.I8N.text
+import xdm.app.skins.SkinRegion
+import xdm.app.skins.SkinStyleResolver
 import xdm.app.ui.components.CategoryStyle
 import xdm.app.ui.components.DestinationPicker
 import xdm.app.ui.components.MessageBox
 import xdm.app.ui.components.StorageStatusLabel
 import xdm.app.ui.components.TempFolderCards
+import xdm.app.ui.components.ThemeManager
 import xdm.app.ui.screens.settings.count
 import xdm.app.ui.screens.settings.segmentsSpinner
 import xdm.app.utils.RemixIcon
@@ -47,7 +50,7 @@ import kotlin.math.max
  */
 class NewVideoDownloadWindow : JDialog(null as Window?) {
     private lateinit var txtFileName: JTextField
-    private lateinit var btnDownload: JButton
+    internal lateinit var btnDownload: JButton
     private lateinit var picker: DestinationPicker
     private lateinit var lblFileInfo: JLabel
     private lateinit var spnSegments: JSpinner
@@ -64,11 +67,25 @@ class NewVideoDownloadWindow : JDialog(null as Window?) {
 
     private var taskInfo: StreamingDownloadTaskInfo? = null
 
+    internal lateinit var btnCancel: JButton
+
+    private val themeListener = ThemeManager.ThemeChangeListener {
+        applySkinStyles()
+        repaint()
+    }
+
+    private fun applySkinStyles() {
+        val btnArc = SkinStyleResolver.resolveButtonArc(SkinRegion.VIDEO_DOWNLOAD_MODAL)
+        if (::btnDownload.isInitialized) btnDownload.putClientProperty("Button.arc", btnArc)
+        if (::btnCancel.isInitialized) btnCancel.putClientProperty("Button.arc", btnArc)
+    }
+
     init {
         initUI()
         // After the form is built: its content pane becomes the first card.
-        tempFolderCards = TempFolderCards(this, fitMain = ::adjustSize, onSaved = { storageStatus.refreshNow() })
+        tempFolderCards = TempFolderCards(this, fitMain = ::adjustSize, onSaved = { storageStatus.refreshNow() }, region = SkinRegion.VIDEO_DOWNLOAD_MODAL)
         attachFileNameChangeListener()
+        ThemeManager.addThemeListener(themeListener)
         defaultCloseOperation = DISPOSE_ON_CLOSE
     }
 
@@ -230,7 +247,7 @@ class NewVideoDownloadWindow : JDialog(null as Window?) {
         val rigidArea1 = Box.createRigidArea(scaledSize(10, 20))
         panel.add(rigidArea1)
 
-        val btnCancel = JButton(text("ND_CANCEL"))
+        btnCancel = JButton(text("ND_CANCEL"))
         btnCancel.addActionListener { e: ActionEvent? -> dispose() }
         panel.add(btnCancel)
 
@@ -240,6 +257,8 @@ class NewVideoDownloadWindow : JDialog(null as Window?) {
         btnDownload = JButton(text("ND_DOWNLOAD"))
         btnDownload.addActionListener { _ -> downloadNow() }
         panel.add(btnDownload)
+
+        applySkinStyles()
 
         getRootPane().defaultButton = btnDownload
 
@@ -298,6 +317,7 @@ class NewVideoDownloadWindow : JDialog(null as Window?) {
     }
 
     override fun dispose() {
+        ThemeManager.removeThemeListener(themeListener)
         if (::picker.isInitialized) picker.dispose()
         super.dispose()
     }

@@ -118,6 +118,10 @@ class PhaseC1VisualSkinScreenshotTest : DownloadManagerTestBase() {
             window.updateDownloadInView(0)
             captureComponent(window, 1040, 640, File(artifactDir, "screenshot-skin-enhanced-dark.png"))
             window.dispose()
+
+            val progEnhanced = xdm.app.ui.screens.ProgressWindow(rec1.id)
+            captureComponent(progEnhanced, 580, 520, File(artifactDir, "screenshot-dialog-progress-enhanced.png"))
+            progEnhanced.dispose()
         }
 
         // 2. Built-in Skin: XDM Enhanced in Light Mode
@@ -196,6 +200,39 @@ class PhaseC1VisualSkinScreenshotTest : DownloadManagerTestBase() {
                 settings.selectPage("SETTINGS_SEC_APPEARANCE")
                 captureComponent(settings, 780, 560, File(artifactDir, "screenshot-settings-custom-skins.png"))
                 settings.dispose()
+
+                // 9. About Dialog with Custom Skin & Wallpaper
+                val about = xdm.app.ui.screens.AboutDialog(null)
+                captureComponent(about, 500, 480, File(artifactDir, "screenshot-dialog-about-cyber-neon.png"))
+                about.dispose()
+
+                // 10. New Download Window with Custom Skin & Wallpaper
+                val newDwn = xdm.app.ui.screens.NewDownloadWindow()
+                captureComponent(newDwn, 620, 260, File(artifactDir, "screenshot-dialog-new-download-cyber-neon.png"))
+                newDwn.dispose()
+
+                // 10b. Progress Window with Custom Skin & Wallpaper
+                val progCyber = xdm.app.ui.screens.ProgressWindow(rec1.id)
+                captureComponent(progCyber, 580, 520, File(artifactDir, "screenshot-dialog-progress-cyber-neon.png"))
+                progCyber.dispose()
+            }
+
+            // 11. Modal dialogs with Original XDM skin
+            runOnEdt {
+                SkinManager.applySkin(SkinManager.SKIN_ORIGINAL_XDM, saveConfig = false)
+                ThemeManager.applyTheme("dark", null, 100, saveConfig = false)
+
+                val aboutClassic = xdm.app.ui.screens.AboutDialog(null)
+                captureComponent(aboutClassic, 500, 480, File(artifactDir, "screenshot-dialog-about-classic-xdm.png"))
+                aboutClassic.dispose()
+
+                val newDwnClassic = xdm.app.ui.screens.NewDownloadWindow()
+                captureComponent(newDwnClassic, 620, 260, File(artifactDir, "screenshot-dialog-new-download-classic-xdm.png"))
+                newDwnClassic.dispose()
+
+                val progClassic = xdm.app.ui.screens.ProgressWindow(rec1.id)
+                captureComponent(progClassic, 580, 520, File(artifactDir, "screenshot-dialog-progress-classic-xdm.png"))
+                progClassic.dispose()
             }
         }
 

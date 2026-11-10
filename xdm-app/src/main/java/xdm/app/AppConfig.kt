@@ -194,6 +194,7 @@ interface IAppConfig : EngineConfig {
     var enabledPlugins: List<String>
     var trustedPlugins: List<String>
     var safeMode: Boolean
+    var monitorClipboard: Boolean
 
     fun applyAuthConfig()
 
@@ -300,6 +301,7 @@ private const val F_SKIN_ID = 87
 private const val F_ENABLED_PLUGINS = 88
 private const val F_TRUSTED_PLUGINS = 89
 private const val F_SAFE_MODE = 90
+private const val F_MONITOR_CLIPBOARD = 91
 
 // Inside F_POST_DOWNLOAD_RULES: one F_RULE record per rule, in order.
 private const val F_RULE = 1
@@ -510,6 +512,7 @@ class AppConfig(private val configDir: String) : IAppConfig {
     override var enabledPlugins: List<String> = emptyList()
     override var trustedPlugins: List<String> = emptyList()
     override var safeMode: Boolean = false
+    override var monitorClipboard: Boolean = false
 
     override fun applyAuthConfig() {
         Authenticator.setDefault(DefaultAuthenticator())
@@ -640,6 +643,7 @@ class AppConfig(private val configDir: String) : IAppConfig {
         w.strings(F_ENABLED_PLUGINS, enabledPlugins)
         w.strings(F_TRUSTED_PLUGINS, trustedPlugins)
         w.bool(F_SAFE_MODE, safeMode)
+        w.bool(F_MONITOR_CLIPBOARD, monitorClipboard)
         w.raw(unknownFields)
     }
 
@@ -750,6 +754,7 @@ class AppConfig(private val configDir: String) : IAppConfig {
                 F_ENABLED_PLUGINS -> enabledPlugins = r.strings()
                 F_TRUSTED_PLUGINS -> trustedPlugins = r.strings()
                 F_SAFE_MODE -> safeMode = r.bool()
+                F_MONITOR_CLIPBOARD -> monitorClipboard = r.bool()
                 else -> unknown.raw(r.rawField())
             }
         }

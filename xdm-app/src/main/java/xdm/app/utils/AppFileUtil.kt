@@ -50,11 +50,24 @@ fun captureCategory(
     contentType: String? = null,
     contentDisposition: String? = null,
 ): DownloadCategory? =
-    if (config.rememberNone) null else CategoryRules.match(
-        fileName, url, pageUrl,
-        contentType = contentType,
-        contentDisposition = contentDisposition
-    )
+    if (config.rememberNone) null else {
+        val matched = CategoryRules.match(
+            fileName, url, pageUrl,
+            contentType = contentType,
+            contentDisposition = contentDisposition
+        )
+        if (matched != null) {
+            matched
+        } else if (url != null) {
+            val pluginCat = runCatching {
+                val raw = xdm.app.plugins.PluginManager.findUrlRecognizer(url)?.second?.analyze(url)?.suggestedCategory
+                if (raw == "CAT_VIDEO") "CAT_VIDEOS" else raw
+            }.getOrNull()
+            if (pluginCat != null) {
+                config.categories.firstOrNull { it.id == pluginCat }
+            } else null
+        } else null
+    }
 
 /**
  * Where a browser capture goes when it starts without a dialog: the category the rules pick (none if

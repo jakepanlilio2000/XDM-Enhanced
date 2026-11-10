@@ -3,6 +3,7 @@ package xdm.app.ui.components
 import com.formdev.flatlaf.FlatClientProperties
 import xdm.app.AppContext
 import xdm.app.I8N.text
+import xdm.app.skins.SkinManager
 import xdm.app.ui.screens.ClearDownloadsDialog
 import xdm.app.utils.FontIcon
 import xdm.app.utils.RemixIcon
@@ -252,6 +253,7 @@ class DownloadTableView(
         }
 
         updateCardView()
+        updateTheme()
     }
 
     private fun updateCardView() {
@@ -292,7 +294,8 @@ class DownloadTableView(
         }
 
         if (selected.size == 1 && (first.status.isStopped || first.status == RecordStatus.FINISHED) &&
-            first.downloadType != DownloadType.Torrent && first.downloadType != DownloadType.Batch
+            first.downloadType != DownloadType.Torrent && first.downloadType != DownloadType.Batch &&
+            first.downloadType != DownloadType.Plugin
         ) {
             menu.add(JMenuItem("Restart", FontIcon(RemixIcon.ARROW_UP_DOWN_FILL, 16.px)).apply {
                 addActionListener { AppMenuHandler.restartDownload(first) }
@@ -510,6 +513,16 @@ class DownloadTableView(
 
     override fun updateTheme() {
         val isDark = com.formdev.flatlaf.FlatLaf.isLafDark()
+        val hasWallpaper = SkinManager.currentSkin.hasWallpaper(isDark)
+
+        isOpaque = !hasWallpaper
+        cardPanel.isOpaque = !hasWallpaper
+        scrollPane.isOpaque = !hasWallpaper
+        scrollPane.viewport.isOpaque = !hasWallpaper
+        table.isOpaque = !hasWallpaper
+        emptyPanel.isOpaque = !hasWallpaper
+
+        table.background = AppTheme.listBackground
         table.gridColor = UIManager.getColor("Table.gridColor") ?: if (isDark) Color(0x2A, 0x2D, 0x34) else Color(0xDC, 0xDE, 0xE3)
         emptyPanel.background = table.background
         emptyIconLabel.icon = FontIcon(RemixIcon.BOOK_SHELF_LINE, 72.px, AppTheme.sidebarIcon)

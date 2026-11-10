@@ -132,7 +132,7 @@ class YtDlpPluginIntegrationTest : DownloadManagerTestBase() {
 
         val meta = recognizer.analyze("https://www.youtube.com/watch?v=test12345")
         assertNotNull(meta)
-        assertEquals("CAT_VIDEO", meta.suggestedCategory)
+        assertEquals("CAT_VIDEOS", meta.suggestedCategory)
         assertEquals("ytdlp", meta.extraData["provider"])
     }
 

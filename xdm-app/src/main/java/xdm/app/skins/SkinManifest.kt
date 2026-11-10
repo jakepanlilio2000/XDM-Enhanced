@@ -4,15 +4,17 @@ import kotlinx.serialization.Serializable
 
 /**
  * Root specification for a portable .xdmskin package manifest (skin.json).
+ * Supports Schema Version 1 (legacy single-view styling) and Version 2 (Full-UI regional contract).
  */
 @Serializable
 data class SkinManifest(
+    val schemaVersion: Int = 1,
     val id: String,
     val name: String,
     val version: String,
     val author: String = "",
     val description: String = "",
-    val minAppVersion: String = "1.0.0",
+    val minAppVersion: String = "1.0.0-beta.1",
     val license: String = "MIT",
     val homepage: String? = null,
     val attributionNotice: String? = null,
@@ -23,6 +25,7 @@ data class SkinManifest(
     val font: SkinFontConfig? = null,
     val layout: SkinLayoutConfig = SkinLayoutConfig(),
     val icons: SkinIconsConfig = SkinIconsConfig(),
+    val regions: Map<String, SkinRegionConfig> = emptyMap(),
     val uiDefaults: Map<String, String> = emptyMap()
 )
 
@@ -97,3 +100,38 @@ data class SkinIconsConfig(
     val categories: Map<String, String> = emptyMap()
 )
 
+/**
+ * Region-specific declarative styling contract for Schema Version 2.
+ * Allows targeting specific application regions (main frame, toolbar, sidebar,
+ * tables/cards, modals, settings, about dialog, and popups).
+ */
+@Serializable
+data class SkinRegionConfig(
+    val background: String? = null,
+    val foreground: String? = null,
+    val mutedForeground: String? = null,
+    val border: String? = null,
+    val borderWidth: Int? = null,
+    val cornerArc: Int? = null,
+    val buttonArc: Int? = null,
+    val cardArc: Int? = null,
+    val progressBarArc: Int? = null,
+    val padding: SkinPaddingConfig? = null,
+    val wallpaper: SkinWallpaperConfig? = null,
+    val customIcon: String? = null,
+    val height: Int? = null,
+    val width: Int? = null,
+    val selectionBackground: String? = null,
+    val selectionForeground: String? = null,
+    val hoverBackground: String? = null,
+    val layoutPosition: String? = null,
+    val extraProperties: Map<String, String> = emptyMap()
+)
+
+@Serializable
+data class SkinPaddingConfig(
+    val top: Int = 0,
+    val left: Int = 0,
+    val bottom: Int = 0,
+    val right: Int = 0
+)

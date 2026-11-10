@@ -19,6 +19,7 @@ import xdm.app.utils.createIcon
 import xdm.app.utils.px
 import xdm.app.utils.scaledSize
 import xdm.integration.BrowserIntegration
+import xdm.integration.BrowserIntegrationRepair
 import java.awt.BasicStroke
 import java.awt.BorderLayout
 import java.awt.Color
@@ -96,6 +97,23 @@ class BrowserExtensionPanel : JPanel() {
         add(Box.createRigidArea(scaledSize(0, 8)))
         add(hint)
         add(link)
+
+        val guideLink = JLabel(I8N.text("BTN_VIEW_TROUBLESHOOTING") ?: "Troubleshooting Guide →").apply {
+            alignmentX = Component.LEFT_ALIGNMENT
+            foreground = settingsAccentColor()
+            font = font.deriveFont(11.5f.px)
+            cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+            toolTipText = BrowserIntegrationRepair.TROUBLESHOOTING_URL
+            border = ScaledEmptyBorder(6, 2, 0, 0)
+            addMouseListener(object : MouseAdapter() {
+                override fun mouseClicked(e: MouseEvent) {
+                    if (SwingUtilities.isLeftMouseButton(e)) {
+                        BrowserLauncher.launch(BrowserIntegrationRepair.TROUBLESHOOTING_URL)
+                    }
+                }
+            })
+        }
+        add(guideLink)
         show(OTHER_BROWSERS.first())
     }
 

@@ -14,7 +14,7 @@ const CAPTURE_STREAMS_KEY = "captureStreams";
 
 const DEFAULT_EXTENSIONS = ".mp4, .m3u8, .mpd, .ts, .webm, .mkv, .flv, .avi, .zip, .rar, .7z, .tar, .gz, .iso, .exe, .msi, .apk, .dmg, .pkg, .pdf";
 const GITHUB_RELEASES_API = "https://api.github.com/repos/jakepanlilio2000/XDM-Enhanced/releases?per_page=5";
-const PROJECT_BASELINE_VERSION = "1.0.0-beta.5";
+const PROJECT_BASELINE_VERSION = "1.0.0-beta.6";
 
 function parseSemVer(v) {
     if (!v) return { major: 0, minor: 0, patch: 0, pre: [], isPre: false };
@@ -148,14 +148,14 @@ class ExtensionOptions {
         // Load monitoring status and diagnostics from background
         chrome.runtime.sendMessage({ type: "stat" }, response => {
             if (chrome.runtime.lastError || !response) {
-                this.updateDiagnostics(false, null, false);
+                this.updateDiagnostics(false, null, false, "desktop_unavailable", "Could not contact background service worker");
                 return;
             }
             if (response.enabled !== undefined) {
                 const monToggle = document.getElementById("optMonitoring");
                 if (monToggle) monToggle.checked = response.enabled;
             }
-            this.updateDiagnostics(response.connected === true, response.xdmVersion, response.outdated === true);
+            this.updateDiagnostics(response.connected === true, response.xdmVersion, response.outdated === true, response.status, response.statusDetails);
         });
 
         // Load storage values
@@ -308,6 +308,41 @@ class ExtensionOptions {
             this.persistKeywords();
         });
 
+        // Recheck connection action
+        const recheckConnBtn = document.getElementById("recheckConnBtn");
+        if (recheckConnBtn) {
+            recheckConnBtn.addEventListener("click", () => {
+                recheckConnBtn.disabled = true;
+                recheckConnBtn.textContent = "Checking…";
+                chrome.runtime.sendMessage({ type: "recheck" }, res => {
+                    recheckConnBtn.disabled = false;
+                    recheckConnBtn.textContent = "Recheck Connection";
+                    if (!chrome.runtime.lastError && res) {
+                        this.updateDiagnostics(res.connected === true, res.xdmVersion, res.outdated === true, res.status, res.statusDetails);
+                    }
+                });
+            });
+        }
+
+        // Launch desktop app action
+        const launchAppBtn = document.getElementById("launchAppBtn");
+        if (launchAppBtn) {
+            launchAppBtn.addEventListener("click", () => {
+                launchAppBtn.disabled = true;
+                launchAppBtn.textContent = "Launching…";
+                chrome.runtime.sendMessage({ type: "launch" });
+                setTimeout(() => {
+                    chrome.runtime.sendMessage({ type: "recheck" }, res => {
+                        launchAppBtn.disabled = false;
+                        launchAppBtn.textContent = "Launch Desktop App";
+                        if (!chrome.runtime.lastError && res) {
+                            this.updateDiagnostics(res.connected === true, res.xdmVersion, res.outdated === true, res.status, res.statusDetails);
+                        }
+                    });
+                }, 1500);
+            });
+        }
+
         // Check for Updates action
         const checkBtn = document.getElementById("checkUpdatesBtn");
         const statusSpan = document.getElementById("updateCheckStatus");
@@ -340,7 +375,7 @@ class ExtensionOptions {
         }
     }
 
-    updateDiagnostics(connected, appVersion, outdated) {
+    updateDiagnostics(connected, appVersion, outdated, status, statusDetails) {
         const manifest = chrome.runtime.getManifest();
         const extVer = document.getElementById("diagExtVersion");
         if (extVer) {
@@ -349,21 +384,47 @@ class ExtensionOptions {
 
         const conn = document.getElementById("diagConnStatus");
         if (conn) {
-            conn.textContent = connected ? "Connected (127.0.0.1:8597)" : "Disconnected (Desktop app not running)";
-            conn.style.color = connected ? "#22c55e" : "var(--warn-border)";
+            if (connected) {
+                conn.textContent = "Connected (127.0.0.1:8597)";
+                conn.style.color = "#22c55e";
+            } else if (status === "connecting") {
+                conn.textContent = "Connecting to desktop app…";
+                conn.style.color = "#3b82f6";
+            } else if (status === "recovering") {
+                conn.textContent = "Recovering connection (Retrying…)";
+                conn.style.color = "#f59e0b";
+            } else if (status === "connection_timeout") {
+                conn.textContent = "Connection timed out (127.0.0.1:8597)";
+                conn.style.color = "#ef4444";
+            } else if (status === "permission_denied") {
+                conn.textContent = "Permission denied (HTTP 403 / Host withheld)";
+                conn.style.color = "#ef4444";
+            } else if (status === "incompatible_version") {
+                conn.textContent = "Incompatible Desktop App (v1.0.0+ required)";
+                conn.style.color = "#ef4444";
+            } else if (status === "host_missing") {
+                conn.textContent = "Endpoint not found (HTTP 404)";
+                conn.style.color = "#ef4444";
+            } else if (status === "launch_failure") {
+                conn.textContent = "Launch failed (Protocol handler error)";
+                conn.style.color = "#ef4444";
+            } else {
+                conn.textContent = "Disconnected (Desktop app not running)";
+                conn.style.color = "var(--warn-border)";
+            }
         }
 
         const appVer = document.getElementById("diagAppVersion");
         if (appVer) {
             appVer.textContent = connected
-                ? (appVersion ? `v${appVersion}` : "v1.0.0-beta.5")
+                ? (appVersion ? `v${appVersion}` : "v1.0.0-beta.6")
                 : "Not connected";
         }
 
         const proto = document.getElementById("diagProtocol");
         if (proto) {
             if (!connected) {
-                proto.textContent = "Standby (Awaiting desktop connection)";
+                proto.textContent = status ? `Standby (${status})` : "Standby (Awaiting desktop connection)";
                 proto.style.color = "var(--text-muted)";
             } else if (outdated) {
                 proto.textContent = "Incompatible / Outdated Desktop (v1.0.0+ required)";
@@ -371,6 +432,58 @@ class ExtensionOptions {
             } else {
                 proto.textContent = "v1 (Compatible)";
                 proto.style.color = "#22c55e";
+            }
+        }
+
+        const hostAcc = document.getElementById("diagHostAccess");
+        if (hostAcc) {
+            hostAcc.textContent = status === "permission_denied"
+                ? "Permission Withheld (HTTP 403)"
+                : "Granted (127.0.0.1)";
+            hostAcc.style.color = status === "permission_denied" ? "#ef4444" : "#22c55e";
+        }
+
+        const launchHnd = document.getElementById("diagLaunchHandler");
+        if (launchHnd) {
+            launchHnd.textContent = status === "launch_failure"
+                ? "xdm-app:// (Handler Error / Missing)"
+                : "xdm-app:// (Registered)";
+            launchHnd.style.color = status === "launch_failure" ? "#ef4444" : "#22c55e";
+        }
+
+        const troubleNotice = document.getElementById("connTroubleNotice");
+        const troubleTitle = document.getElementById("connTroubleTitle");
+        const troubleDetails = document.getElementById("connTroubleDetails");
+        if (troubleNotice && troubleTitle && troubleDetails) {
+            if (connected) {
+                troubleNotice.hidden = true;
+            } else {
+                troubleNotice.hidden = false;
+                if (status === "connecting") {
+                    troubleTitle.textContent = "Connecting to XDM Enhanced…";
+                    troubleDetails.textContent = statusDetails || "Attempting to reach desktop integration service on 127.0.0.1:8597.";
+                } else if (status === "recovering") {
+                    troubleTitle.textContent = "Reconnecting to XDM Enhanced…";
+                    troubleDetails.textContent = statusDetails || "Connection dropped. Automatically retrying with exponential backoff…";
+                } else if (status === "connection_timeout") {
+                    troubleTitle.textContent = "Connection Timed Out";
+                    troubleDetails.textContent = "Requests to 127.0.0.1:8597 timed out after 3 seconds. The desktop application may be busy or temporarily unresponsive.";
+                } else if (status === "permission_denied") {
+                    troubleTitle.textContent = "Local Loopback Permission Denied";
+                    troubleDetails.textContent = "Local network requests to 127.0.0.1:8597 were blocked by browser policy. Check browser extension host permissions.";
+                } else if (status === "incompatible_version") {
+                    troubleTitle.textContent = "Incompatible Desktop Version";
+                    troubleDetails.textContent = "The running desktop app is older than this extension requires (v1.0.0+). Update XDM Enhanced from GitHub releases.";
+                } else if (status === "host_missing") {
+                    troubleTitle.textContent = "Integration Endpoint Not Found (HTTP 404)";
+                    troubleDetails.textContent = "Another local service is listening on port 8597 and does not recognize XDM Enhanced API paths.";
+                } else if (status === "launch_failure") {
+                    troubleTitle.textContent = "Application Launch Failed";
+                    troubleDetails.textContent = "The xdm-app:// URL handler could not launch XDM. Open XDM Enhanced Settings -> Browser -> Diagnostics and click 'Repair Integration'.";
+                } else {
+                    troubleTitle.textContent = "Desktop Application Not Detected";
+                    troubleDetails.textContent = "XDM Enhanced is not running or port 8597 is unreachable. Launch XDM Enhanced using the button above or start it from your system menu.";
+                }
             }
         }
 

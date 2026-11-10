@@ -98,8 +98,10 @@ Every plugin package **must** include a valid `plugin.json` file in its root dir
 | `version` | String | Yes | Semantic version string (e.g. `1.0.0`). |
 | `author` | String | Yes | Author or organization name. |
 | `description` | String | No | Description displayed in the Plugins Settings view. |
-| `minAppVersion` | String | No | Minimum compatible XDM Enhanced version (e.g. `1.0.0-beta.4`). |
+| `minAppVersion` | String | No | Minimum compatible XDM Enhanced version (e.g. `1.0.0-beta.6`). |
 | `minApiVersion` | String | No | Minimum compatible plugin API version (`1.0.0`). |
+| `maxApiVersion` | String | No | Maximum compatible plugin API version (e.g. `2.0.0`). |
+| `apiCompatibility` | String | No | Semantic version range specification (e.g. `[1.0.0, 2.0.0)`, `>=1.0.0 <=1.1.0`, `^1.0.0`, `~1.0.0`). |
 | `entryPoint` | String | Yes | Fully-qualified class name implementing `XdmPlugin`. |
 | `capabilities` | Array | No | Declared capabilities for user trust review. |
 | `license` | String | No | Open-source or proprietary software license identifier. |
@@ -107,18 +109,118 @@ Every plugin package **must** include a valid `plugin.json` file in its root dir
 
 ---
 
-## 4. Declared Capabilities
+## 4. API Compatibility & Versioning Matrix
+
+XDM Enhanced adopts semantic versioning for the `xdm-plugin-api`.
+
+### API Version Matrix
+
+| API Version | Application Version | Features Added | Backward Compatible With |
+|---|---|---|---|
+| **1.0.0** | v1.0.0-beta.4 | Initial public plugin SPI (`XdmPlugin`, `DownloadProvider`, `FormatDetector`, `UrlRecognizer`, `PostDownloadHook`, `ContextMenuContributor`, `ToolbarContributor`, `SettingsPanelContributor`, `PluginCommand`). Basic `submitDownload`. | N/A |
+| **1.1.0** | v1.0.0-beta.6 | Central Task Adapter (`submitPluginTask`), Typed Event Bus (`subscribe`, `publish`, `unsubscribe`), Async worker pool (`executeAsync`), UI thread dispatch (`runOnUIThread`), Task pause/resume (`canPause`, `canResume`), Semantic Version Range validation, Upgrade data preservation. | **1.0.0** (100% binary & runtime compatible via default methods) |
+
+### Version Range Syntax
+
+Plugins can specify compatible host API ranges in `plugin.json` using either `minApiVersion`/`maxApiVersion` or the unified `apiCompatibility` property:
+
+- **Bracket / Interval notation:** `[1.0.0, 2.0.0)` (inclusive 1.0.0, exclusive 2.0.0)
+- **Comparison operators:** `>=1.0.0 <=1.1.0` or `>=1.0.0 <2.0.0`
+- **Caret notation (`^`):** `^1.0.0` (compatible with all 1.x.x versions >= 1.0.0)
+- **Tilde notation (`~`):** `~1.0.0` (compatible with patch updates within 1.0.x)
+
+If a plugin requires an API outside the host's supported version, XDM Enhanced sets its status to `INCOMPATIBLE`, records a clear diagnostic explanation in the plugin manager, and disables execution to prevent runtime crashes.
+
+---
+
+## 5. Declared Capabilities
 
 Plugins declare their required capabilities in `plugin.json`. These are shown to the user during the trust confirmation prompt:
 
 - `DOWNLOAD_PROVIDER`: Adds support for custom network protocols and streaming sources.
 - `URL_RECOGNITION`: Inspects and recognizes specialized URLs and links.
 - `FORMAT_DETECTION`: Analyzes media streams and custom MIME types.
+- `MEDIA_METADATA`: Queries and parses stream media metadata and format trees.
+- `TASK_ADAPTER`: Submits and bridges custom download tasks into the central download engine.
+- `EVENT_BUS`: Subscribes to and dispatches typed inter-plugin and system events.
 - `POST_DOWNLOAD_HOOK`: Receives notifications when downloads finish (e.g. checksum calculation, file conversion, tagging).
 - `CONTEXT_MENU`: Adds right-click menu actions to download rows.
 - `TOOLBAR`: Adds custom action buttons to the main download toolbar.
 - `SETTINGS_PANEL`: Provides a custom settings configuration interface in XDM Enhanced.
 - `COMMANDS`: Registers custom CLI or internal commands.
+
+---
+
+## 6. Central Download Task Adapter (`submitPluginTask`)
+
+In API 1.0.0, `submitDownload(PluginDownloadRequest)` was limited to standard HTTP tasks handled internally.
+In **API 1.1.0**, plugins can manage their own download mechanics (e.g. subprocesses, custom network protocols) while fully integrating into the XDM Enhanced user experience via `PluginContext.submitPluginTask`:
+
+### Key Task Adapter Features
+1. **Central UI Visibility:** Tasks appear immediately in the main window download list, table/card views, and the Category sidebar under the **Plugin** category.
+2. **Real-Time Progress & Progress Dialogs:** Emitting `DownloadProgressEvent` updates speed, ETA, percent, and progress dialogs exactly like native downloads.
+3. **Pause & Resume Integration:** When the user clicks Pause or Resume in the toolbar, table context menu, or progress window, the host invokes `task.pause()` or `task.resume()`.
+4. **Complete Persistence:** Task state and metadata are saved to `AppDB` and `TaskInfoDB`.
+5. **Post-Download Notifications:** Upon completion, the task triggers native completion dialogs and `onDownloadCompleted` hooks.
+
+```java
+// Submitting a plugin-managed task into the host engine:
+PluginDownloadRequest request = new PluginDownloadRequest(url, targetFolder, fileName);
+PluginDownloadTask task = new MyCustomDownloadTask(request);
+
+long taskId = context.submitPluginTask(request, task);
+if (taskId < 0) {
+    // Fallback for older API 1.0.0 hosts: run task standalone
+    task.start();
+}
+```
+
+---
+
+## 7. Typed Event Bus & Asynchronous Execution
+
+API 1.1.0 introduces a typed event bus and managed worker utilities on `PluginContext`:
+
+### Subscribing and Publishing Events
+```java
+// Subscribe to a typed event topic
+context.subscribe("media.stream.detected", (topic, data) -> {
+    context.logInfo("Received event on " + topic + ": " + data);
+});
+
+// Publish a typed event payload
+context.publish("media.stream.detected", new StreamInfo("https://example.com/stream.m3u8", "1080p"));
+```
+
+### Asynchronous Computation & UI Thread Dispatch
+Plugins should never block Swing's Event Dispatch Thread (EDT) or monopolize worker threads:
+```java
+// Execute non-blocking background task using host daemon thread pool
+context.executeAsync(() -> {
+    return analyzeRemoteStream(url);
+}).thenAccept(result -> {
+    // Dispatch UI updates safely to the Swing EDT
+    context.runOnUIThread(() -> {
+        statusLabel.setText("Analysis complete: " + result);
+    });
+});
+```
+
+### Lifecycle Cleanup
+When a plugin is disabled or reloaded:
+- All topic subscriptions registered by that plugin are automatically unsubscribed.
+- Active plugin download tasks are safely paused or canceled.
+- All toolbar and menu contributors are cleared.
+
+---
+
+## 8. Data & Configuration Persistence Across Upgrades
+
+Every plugin is allocated a dedicated, persistent directory via `context.getDataDirectory()` (pointing to `<plugin-dir>/data/`).
+When a plugin package (`.xdmplugin`) is updated to a newer version:
+1. The host backs up `<plugin-dir>/data/`.
+2. The plugin code is cleanly replaced.
+3. The `<plugin-dir>/data/` folder and `config.properties` are restored without data loss.
 
 ---
 

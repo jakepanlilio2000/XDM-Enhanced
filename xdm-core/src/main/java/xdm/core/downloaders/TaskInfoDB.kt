@@ -56,6 +56,9 @@ private const val TORRENT_DOWNLOAD_LIMIT = 26
 private const val TORRENT_UPLOAD_LIMIT = 27
 private const val TORRENT_SEEDING_MODE = 28
 
+private const val PLUGIN_ID_STR = 20
+private const val PLUGIN_TOTAL_SIZE = 21
+
 private const val BATCH_ID = 1
 private const val BATCH_NAME = 2
 private const val BATCH_FOLDER = 3
@@ -618,6 +621,50 @@ class TaskInfoDB(private val configDir: String) {
                 }
             }
         }.onFailure { Logger.error("XDM", "Error saving torrent task info ${task.id}", it) }.isSuccess
+
+    fun getPluginTask(id: Long): PluginDownloadTaskInfo? {
+        AtomicIO.readTransacted("task-$id.info", configDir) { input ->
+            val r = TaggedFile.read(input)
+            val c = CommonFields()
+            var pluginId = ""
+            var totalSize = -1L
+            while (true) {
+                val no = r.next()
+                if (no == -1) break
+                if (c.read(no, r)) continue
+                when (no) {
+                    PLUGIN_ID_STR -> pluginId = r.string()
+                    PLUGIN_TOTAL_SIZE -> totalSize = r.long()
+                    else -> r.skip()
+                }
+            }
+            if (c.type != DownloadType.Plugin.id) return null
+            return PluginDownloadTaskInfo(
+                id = c.id,
+                pluginId = pluginId,
+                url = c.url,
+                fileName = c.fileName,
+                targetFolder = c.targetFolder,
+                categoryId = c.categoryId,
+                totalSize = totalSize
+            )
+        }
+        return null
+    }
+
+    @Synchronized
+    fun savePluginTask(task: PluginDownloadTaskInfo): Boolean =
+        AtomicIO.writeTransacted("task-${task.id}.info", configDir, ownerOnly = true) { out ->
+            TaggedFile.write(out) {
+                common(
+                    DownloadType.Plugin,
+                    task.id, task.url, task.fileName, false, task.categoryId,
+                    task.targetFolder, 0, null, null, null
+                )
+                string(PLUGIN_ID_STR, task.pluginId)
+                long(PLUGIN_TOTAL_SIZE, task.totalSize)
+            }
+        }.onFailure { Logger.error("XDM", "Error saving plugin task info ${task.id}", it) }.isSuccess
 
     fun deleteRecord(id: Long) {
         SensitiveHeaders.forget(id)

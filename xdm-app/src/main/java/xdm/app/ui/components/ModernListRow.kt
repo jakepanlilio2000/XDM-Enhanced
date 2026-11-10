@@ -146,7 +146,13 @@ class ModernListRow(
 
     private fun getComp(table: JTable?, value: DbRecord?, isSelected: Boolean): Component {
         value?.let { updateLabelText(it, isSelected) }
-        table?.let { row.root.background = it.background }
+        val hasWp = xdm.app.skins.SkinManager.currentSkin.hasWallpaper()
+        row.root.isOpaque = isSelected || !hasWp
+        if (isSelected) {
+            row.root.background = AppTheme.listSelectionBackground
+        } else {
+            table?.let { row.root.background = it.background }
+        }
         return row.root
     }
 

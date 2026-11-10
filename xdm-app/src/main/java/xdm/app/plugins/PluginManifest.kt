@@ -14,6 +14,8 @@ data class PluginManifest(
     val description: String = "",
     val minAppVersion: String = "1.0.0-beta.1",
     val minApiVersion: String = "1.0.0",
+    val maxApiVersion: String? = null,
+    val apiCompatibility: String? = null,
     val entryPoint: String,
     val capabilities: List<String> = emptyList(),
     val dependencies: List<String> = emptyList(),

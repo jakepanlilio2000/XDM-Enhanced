@@ -29,43 +29,56 @@ class SampleSkinGeneratorTest {
         val toolbarIconDir = File(cyberNeonDir, "icons/toolbar").apply { mkdirs() }
         val categoryIconDir = File(cyberNeonDir, "icons/categories").apply { mkdirs() }
 
-        // 1. Write skin.json
+        // 1. Write skin.json (Schema Version 2)
         val skinJson = """
         {
+          "schemaVersion": 2,
           "id": "cyber-neon",
           "name": "Cyber Neon",
           "version": "1.0.0",
           "author": "XDM Enhanced Team",
-          "description": "High-contrast cyberpunk visual theme with glowing neon cyan and emerald accents, custom category icons, wallpapers, and dark grid aesthetics.",
+          "description": "High-contrast cyberpunk visual theme with glowing neon cyan and emerald accents, custom category icons, wallpapers, full-UI modal styling, and dark grid aesthetics.",
           "minAppVersion": "1.0.0-beta.4",
           "license": "GPL-3.0-or-later",
           "homepage": "https://github.com/jakepanlilio2000/XDM-Enhanced",
           "geometry": {
             "componentArc": 12,
             "buttonArc": 10,
-            "popupArc": 12
+            "rowHeight": 28,
+            "sidebarWidth": 220
           },
           "accents": {
             "dark": "#00F0FF",
-            "light": "#0284C7",
-            "selection": "#00F0FF"
+            "light": "#0284C7"
           },
           "colors": {
             "dark": {
-              "background": "#0B0E14",
-              "sidebar": "#07090D",
-              "card": "#131720",
-              "text": "#E0F7FA",
-              "mutedText": "#546E7A",
-              "border": "#1E293B"
+              "windowBackground": "#0B0E14",
+              "panelBackground": "#0E121A",
+              "sidebarBackground": "#07090D",
+              "sidebarBorder": "#1E293B",
+              "sidebarForeground": "#E0F7FA",
+              "sidebarSelectedForeground": "#00F0FF",
+              "sidebarSelectionBackground": "#162338",
+              "sidebarHoverBackground": "#101826",
+              "listBackground": "#0B0E14",
+              "listTitleForeground": "#E0F7FA",
+              "listSelectionBackground": "#162338",
+              "listHoverBackground": "#101826"
             },
             "light": {
-              "background": "#F0F4F8",
-              "sidebar": "#E2E8F0",
-              "card": "#FFFFFF",
-              "text": "#0F172A",
-              "mutedText": "#64748B",
-              "border": "#CBD5E1"
+              "windowBackground": "#F0F4F8",
+              "panelBackground": "#FFFFFF",
+              "sidebarBackground": "#E2E8F0",
+              "sidebarBorder": "#CBD5E1",
+              "sidebarForeground": "#0F172A",
+              "sidebarSelectedForeground": "#0284C7",
+              "sidebarSelectionBackground": "#BAE6FD",
+              "sidebarHoverBackground": "#E0F2FE",
+              "listBackground": "#FFFFFF",
+              "listTitleForeground": "#0F172A",
+              "listSelectionBackground": "#E0F2FE",
+              "listHoverBackground": "#F0F9FF"
             }
           },
           "wallpaper": {
@@ -99,10 +112,79 @@ class SampleSkinGeneratorTest {
               "SETTINGS": "icons/toolbar/settings.png"
             }
           },
+          "regions": {
+            "main_frame": {
+              "background": "#0B0E14",
+              "cornerArc": 12,
+              "buttonArc": 10
+            },
+            "toolbar": {
+              "height": 42,
+              "buttonArc": 10,
+              "cornerArc": 10
+            },
+            "sidebar": {
+              "width": 220,
+              "background": "#07090D",
+              "cornerArc": 10
+            },
+            "download_list": {
+              "height": 32,
+              "cardArc": 10,
+              "background": "#0B0E14"
+            },
+            "download_modal": {
+              "background": "#0E121A",
+              "cornerArc": 14,
+              "buttonArc": 10
+            },
+            "video_download_modal": {
+              "background": "#0E121A",
+              "cornerArc": 14,
+              "buttonArc": 10
+            },
+            "progress_modal": {
+              "background": "#0E121A",
+              "cornerArc": 14,
+              "buttonArc": 10,
+              "progressBarArc": 10
+            },
+            "torrent_modal": {
+              "background": "#0E121A",
+              "cornerArc": 14,
+              "buttonArc": 10
+            },
+            "settings": {
+              "background": "#0B0E14",
+              "cornerArc": 14,
+              "buttonArc": 10
+            },
+            "plugin_manager": {
+              "cornerArc": 14,
+              "buttonArc": 10,
+              "cardArc": 10
+            },
+            "about": {
+              "background": "#0B0E14",
+              "cornerArc": 16,
+              "buttonArc": 10
+            },
+            "dialogs": {
+              "background": "#131720",
+              "cornerArc": 12,
+              "buttonArc": 10
+            },
+            "tooltips_popups": {
+              "cornerArc": 10,
+              "background": "#131720",
+              "foreground": "#00F0FF"
+            }
+          },
           "uiDefaults": {
             "Component.arc": 12,
             "Button.arc": 10,
-            "TextComponent.arc": 12
+            "TextComponent.arc": 12,
+            "ScrollBar.thumbArc": 6
           }
         }
         """.trimIndent()
@@ -206,6 +288,8 @@ class SampleSkinGeneratorTest {
         // 6. Validate the exported package
         val validation = SkinPackageValidator.validateArchive(packageArchive)
         assertTrue(validation.isValid, "Exported package must be valid: ${validation.errors}")
+        assertEquals(2, validation.manifest?.schemaVersion, "Schema version must be 2")
+        assertEquals(13, validation.manifest?.regions?.size, "Must declare all 13 regions")
 
         // 7. Test CLI Validator
         val cliResult = SkinValidatorCli.validateTarget(packageArchive)

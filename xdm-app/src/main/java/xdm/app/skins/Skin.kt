@@ -6,6 +6,13 @@ import javax.swing.Icon
 /**
  * Definition of a visual skin preset for XDM Enhanced.
  * Defines geometry metrics, icon sets, category colors, default accents, and custom UIManager defaults.
+ *
+ * Theme and Style Resolution Precedence Hierarchy:
+ * 1. Platform Accessibility Constraints (High Contrast, accessibility overrides, system antialiasing)
+ * 2. Component State (Selected, Hovered, Pressed, Disabled, Focused)
+ * 3. User Active Skin Tokens (Manifest colors, metrics, custom UIManager defaults, wallpaper)
+ * 4. Selected Light/Dark Palette (FlatLaf theme mode, accent presets)
+ * 5. Fallback Defaults (Hardcoded safe platform defaults)
  */
 interface Skin {
     /** Unique persistent identifier (e.g. "enhanced", "classic_xdm"). */
@@ -74,6 +81,27 @@ interface Skin {
      * Returns true if a wallpaper was painted, false otherwise.
      */
     fun paintWallpaper(g: java.awt.Graphics, width: Int, height: Int, isDark: Boolean): Boolean = false
+
+    /**
+     * Whether this skin defines an active wallpaper for the specified theme mode.
+     */
+    fun hasWallpaper(isDark: Boolean = com.formdev.flatlaf.FlatLaf.isLafDark()): Boolean = false
+
+    /**
+     * Returns region-specific declarative configuration if defined by this skin.
+     */
+    fun getRegionConfig(region: SkinRegion): SkinRegionConfig? = null
+
+    /**
+     * Paints a region-specific background wallpaper on [g] if defined.
+     * Returns true if a region wallpaper was painted, false otherwise.
+     */
+    fun paintRegionWallpaper(g: java.awt.Graphics, width: Int, height: Int, region: SkinRegion, isDark: Boolean): Boolean = false
+
+    /**
+     * Whether this skin defines an active wallpaper for the specified region and theme mode.
+     */
+    fun hasRegionWallpaper(region: SkinRegion, isDark: Boolean = com.formdev.flatlaf.FlatLaf.isLafDark()): Boolean = false
 
     /**
      * Releases any cached images, fonts, or resources associated with this skin.

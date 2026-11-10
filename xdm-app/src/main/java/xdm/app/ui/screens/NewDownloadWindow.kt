@@ -4,12 +4,17 @@ import com.formdev.flatlaf.FlatClientProperties
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import xdm.app.AppContext
 import xdm.app.I8N.text
+import xdm.app.preflight.LinkPreflightService
+import xdm.app.preflight.PreflightHandle
+import xdm.app.skins.SkinRegion
+import xdm.app.skins.SkinStyleResolver
 import xdm.app.ui.components.AppMenuHandler
 import xdm.app.ui.components.CategoryStyle
 import xdm.app.ui.components.DestinationPicker
 import xdm.app.ui.components.MessageBox
 import xdm.app.ui.components.StorageStatusLabel
 import xdm.app.ui.components.TempFolderCards
+import xdm.app.ui.components.ThemeManager
 import xdm.app.ui.screens.settings.count
 import xdm.app.ui.screens.settings.segmentsSpinner
 import xdm.app.utils.RemixIcon
@@ -52,8 +57,8 @@ class NewDownloadWindow : JDialog(null as Window?) {
         putClientProperty(FlatClientProperties.STYLE, "arc: 10")
         toolTipText = "Optional description or tags for this download"
     }
-    private lateinit var btnDownload: JButton
-    private lateinit var btnLater: JButton
+    internal lateinit var btnDownload: JButton
+    internal lateinit var btnLater: JButton
     private lateinit var lblIgnore: JLabel
     lateinit var spnSegments: JSpinner
     lateinit var picker: DestinationPicker
@@ -65,12 +70,32 @@ class NewDownloadWindow : JDialog(null as Window?) {
 
     private var taskInfo: HttpDownloadTaskInfo? = null
 
+    internal lateinit var btnCancel: JButton
+
+    internal var activeProbe: PreflightHandle? = null
+    internal var userModifiedFileName: Boolean = false
+    private var updatingProgrammatically: Boolean = false
+    private var debounceTimer: javax.swing.Timer? = null
+
+    private val themeListener = ThemeManager.ThemeChangeListener {
+        applySkinStyles()
+        repaint()
+    }
+
+    private fun applySkinStyles() {
+        val btnArc = SkinStyleResolver.resolveButtonArc(SkinRegion.DOWNLOAD_MODAL)
+        if (::btnDownload.isInitialized) btnDownload.putClientProperty("Button.arc", btnArc)
+        if (::btnLater.isInitialized) btnLater.putClientProperty("Button.arc", btnArc)
+        if (::btnCancel.isInitialized) btnCancel.putClientProperty("Button.arc", btnArc)
+    }
+
     init {
         initUI()
         // After the form is built: its content pane becomes the first card.
         tempFolderCards = TempFolderCards(this, fitMain = ::adjustSize, onSaved = { storageStatus.refreshNow() })
         attachUrlChangeListener()
         attachFileNameChangeListener()
+        ThemeManager.addThemeListener(themeListener)
         defaultCloseOperation = DISPOSE_ON_CLOSE
     }
 
@@ -240,7 +265,7 @@ class NewDownloadWindow : JDialog(null as Window?) {
         val rigidArea1 = Box.createRigidArea(scaledSize(10, 20))
         panel.add(rigidArea1)
 
-        val btnCancel = JButton(text("ND_CANCEL"))
+        btnCancel = JButton(text("ND_CANCEL"))
         btnCancel.addActionListener { dispose() }
         panel.add(btnCancel)
 
@@ -256,6 +281,8 @@ class NewDownloadWindow : JDialog(null as Window?) {
         btnDownload = JButton(text("ND_DOWNLOAD"))
         btnDownload.addActionListener { addDownload(now = true) }
         panel.add(btnDownload)
+
+        applySkinStyles()
 
         getRootPane().defaultButton = btnDownload
         rootPane.registerKeyboardAction(
@@ -291,6 +318,11 @@ class NewDownloadWindow : JDialog(null as Window?) {
     }
 
     override fun dispose() {
+        activeProbe?.cancel()
+        activeProbe = null
+        debounceTimer?.stop()
+        debounceTimer = null
+        ThemeManager.removeThemeListener(themeListener)
         if (::picker.isInitialized) picker.dispose()
         super.dispose()
     }
@@ -470,7 +502,7 @@ class NewDownloadWindow : JDialog(null as Window?) {
      * Validates the form and registers the download, started right away when [now] is set and left
      * paused otherwise. Returns the new download id, or null if the form is incomplete.
      */
-    private fun createDownload(now: Boolean): Long? {
+    internal fun createDownload(now: Boolean): Long? {
         val url = txtUrl.text
         val file = txtFileName.text
         if (StringUtils.isNullOrEmptyOrBlank(url)) {
@@ -485,6 +517,43 @@ class NewDownloadWindow : JDialog(null as Window?) {
         if (StringUtils.isNullOrEmptyOrBlank(file)) {
             MessageBox.show(this, null, text("MSG_NO_FILE"))
             return null
+        }
+
+        // Check if an active plugin provider can handle this URL (e.g. yt-dlp)
+        val pluginProviderMatch = xdm.app.plugins.PluginManager.findDownloadProvider(url)
+        if (pluginProviderMatch != null) {
+            val (loadedPlugin, provider) = pluginProviderMatch
+            val headerMap = mutableMapOf<String, String>()
+            taskInfo?.headers?.forEach { (k, v) ->
+                headerMap[k] = v.joinToString(", ")
+            }
+            val cookieMap = mutableMapOf<String, String>()
+            taskInfo?.cookie?.let { c ->
+                c.split(";").forEach { part ->
+                    val eq = part.indexOf('=')
+                    if (eq > 0) {
+                        cookieMap[part.substring(0, eq).trim()] = part.substring(eq + 1).trim()
+                    }
+                }
+            }
+            val req = xdm.plugin.api.models.PluginDownloadRequest(
+                url,
+                picker.targetFolder,
+                file,
+                headerMap.ifEmpty { null },
+                cookieMap.ifEmpty { null },
+                null
+            )
+            val pluginTask = provider.createDownloadTask(req)
+            if (pluginTask != null) {
+                val taskId = xdm.app.plugins.PluginDownloadBridge.registerPluginTask(
+                    loadedPlugin,
+                    req,
+                    pluginTask,
+                    startNow = now
+                )
+                return taskId
+            }
         }
 
         val userOverrode = !StringUtils.equalsIgnoreCase(txtFileName.text, originalFileName) || picker.userPicked
@@ -582,23 +651,113 @@ class NewDownloadWindow : JDialog(null as Window?) {
         dispose()
     }
 
+    internal fun triggerPreflight(url: String, headers: Map<String, List<String>>? = null, cookie: String? = null) {
+        activeProbe?.cancel()
+        activeProbe = null
+        if (!validateURL(url)) return
+
+        val checkingText = text("BATCH_VIDEO_CHECKING") ?: "Checking..."
+        if (taskInfo?.url != url) {
+            taskInfo = taskInfo?.copy(knownFileSize = null, etag = null)
+            if (::lblFileInfo.isInitialized) {
+                lblFileInfo.text = checkingText
+            }
+        } else if (taskInfo?.knownFileSize == null && ::lblFileInfo.isInitialized) {
+            lblFileInfo.text = checkingText
+        }
+
+        activeProbe = LinkPreflightService.preflight(url, headers, cookie) { result ->
+            SwingUtilities.invokeLater {
+                if (!isDisplayable) return@invokeLater
+                val currentText = txtUrl.text.trim()
+                if (currentText != url.trim() && currentText != result.finalUrl.trim()) return@invokeLater
+
+                val isPlugin = runCatching {
+                    xdm.app.plugins.PluginManager.findDownloadProvider(currentText) != null ||
+                    xdm.app.plugins.PluginManager.findUrlRecognizer(currentText) != null
+                }.getOrDefault(false)
+
+                if (!userModifiedFileName && result.fileName.isNotBlank()) {
+                    val isHtml = result.fileName.endsWith(".html", ignoreCase = true) || result.fileName.endsWith(".htm", ignoreCase = true)
+                    if (!isPlugin || !isHtml) {
+                        updatingProgrammatically = true
+                        try {
+                            txtFileName.text = result.fileName
+                            originalFileName = result.fileName
+                            fileNameChanged()
+                        } finally {
+                            updatingProgrammatically = false
+                        }
+                    }
+                }
+
+                val currentTask = taskInfo
+                taskInfo = currentTask?.copy(
+                    knownFileSize = result.fileSize,
+                    etag = result.etag ?: currentTask.etag
+                ) ?: HttpDownloadTaskInfo(
+                    id = uniqueId(),
+                    url = currentText,
+                    fileName = txtFileName.text,
+                    respectFileName = userModifiedFileName || picker.userPicked,
+                    cookie = cookie,
+                    headers = headers,
+                    origin = null,
+                    categoryId = picker.selectedCategory?.id,
+                    targetFolder = picker.targetFolder,
+                    maxPiece = spnSegments.count,
+                    authInfo = null,
+                    knownFileSize = result.fileSize,
+                    etag = result.etag
+                )
+
+                if (result.fileSize != null) {
+                    lblFileInfo.text = FormatHelper.formatSize(result.fileSize.toDouble())
+                } else {
+                    lblFileInfo.text = text("LBL_UNKNOWN_SIZE") ?: "Unknown size"
+                }
+                updateStorageStatus()
+            }
+        }
+    }
+
     fun showWindow(taskInfo: HttpDownloadTaskInfo?) {
         lblIgnore.isVisible = taskInfo != null
         spnSegments.count = if (taskInfo != null && taskInfo.maxPiece > 0) taskInfo.maxPiece else AppContext.config.maxSegments
+        userModifiedFileName = false
         if (taskInfo == null) {
             val url = getClipBoardText()
-            if (url != null && validateURL(url)) {
-                txtUrl.text = url
-            }
             this.taskInfo = null
+            if (url != null && validateURL(url)) {
+                val candidate = CategoryRules.extractCandidateFileName(url) ?: FileUtils.getFileName(url)
+                updatingProgrammatically = true
+                try {
+                    txtUrl.text = url
+                    txtFileName.text = candidate
+                    originalFileName = candidate
+                } finally {
+                    updatingProgrammatically = false
+                }
+                triggerPreflight(url)
+            }
         } else {
             this.taskInfo = taskInfo
-            this.txtUrl.text = taskInfo.url
-            this.txtFileName.text = taskInfo.fileName
-            this.originalFileName = taskInfo.fileName
+            updatingProgrammatically = true
+            try {
+                this.txtUrl.text = taskInfo.url
+                this.txtFileName.text = taskInfo.fileName
+                this.originalFileName = taskInfo.fileName
+            } finally {
+                updatingProgrammatically = false
+            }
             this.lblFileInfo.text = taskInfo.knownFileSize?.let {
                 FormatHelper.formatSize(it.toDouble())
-            } ?: "---"
+            } ?: (text("LBL_UNKNOWN_SIZE") ?: "Unknown size")
+
+            // If browser-captured download had no known size, probe server for metadata
+            if (taskInfo.knownFileSize == null && validateURL(taskInfo.url)) {
+                triggerPreflight(taskInfo.url, taskInfo.headers, taskInfo.cookie)
+            }
         }
 
         // A browser capture is preselected by the category rules; an address typed by hand starts at None.
@@ -627,17 +786,36 @@ class NewDownloadWindow : JDialog(null as Window?) {
     }
 
     private fun urlUpdated(e: DocumentEvent) {
+        if (updatingProgrammatically) return
         try {
             val doc = e.document
             val len = doc.length
             val text = doc.getText(0, len)
             val candidate = CategoryRules.extractCandidateFileName(text) ?: FileUtils.getFileName(text)
-            txtFileName.text = candidate
-            originalFileName = txtFileName.text
+            if (!userModifiedFileName) {
+                updatingProgrammatically = true
+                try {
+                    txtFileName.text = candidate
+                    originalFileName = txtFileName.text
+                } finally {
+                    updatingProgrammatically = false
+                }
+            }
             if (::picker.isInitialized) {
                 picker.urlChanged(text)
             }
             updateCategoryAndFileIcon()
+
+            // Debounce preflight probe on URL changes
+            debounceTimer?.stop()
+            if (validateURL(text)) {
+                debounceTimer = javax.swing.Timer(400) {
+                    triggerPreflight(text.trim())
+                }.apply {
+                    isRepeats = false
+                    start()
+                }
+            }
         } catch (err: Exception) {
             Logger.info(err)
         }
@@ -645,11 +823,20 @@ class NewDownloadWindow : JDialog(null as Window?) {
 
     private fun attachFileNameChangeListener() {
         txtFileName.document.addDocumentListener(object : DocumentListener {
-            override fun insertUpdate(e: DocumentEvent) = fileNameChanged()
+            override fun insertUpdate(e: DocumentEvent) {
+                if (!updatingProgrammatically) userModifiedFileName = true
+                fileNameChanged()
+            }
 
-            override fun removeUpdate(e: DocumentEvent) = fileNameChanged()
+            override fun removeUpdate(e: DocumentEvent) {
+                if (!updatingProgrammatically) userModifiedFileName = true
+                fileNameChanged()
+            }
 
-            override fun changedUpdate(e: DocumentEvent) = fileNameChanged()
+            override fun changedUpdate(e: DocumentEvent) {
+                if (!updatingProgrammatically) userModifiedFileName = true
+                fileNameChanged()
+            }
         })
     }
 

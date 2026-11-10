@@ -73,6 +73,9 @@ object BrowserLauncher {
         else -> launchLinux(browser, url)
     }
 
+    /** Opens [url] in the system's default browser. */
+    fun launch(url: String) = openInDefaultBrowser(url)
+
     /** Non-blocking check for whether [browser] appears to be installed on the system. */
     fun isInstalled(browser: Browser): Boolean = runCatching {
         when (detectOS()) {

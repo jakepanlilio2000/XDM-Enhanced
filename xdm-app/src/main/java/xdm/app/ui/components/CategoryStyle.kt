@@ -83,6 +83,7 @@ object CategoryStyle {
      */
     fun glyphForCategory(categoryId: String?, fileName: String? = null, downloadType: DownloadType? = null): RemixIcon {
         if (downloadType == DownloadType.Torrent) return RemixIcon.MAGNET_LINE
+        if (downloadType == DownloadType.Plugin) return RemixIcon.PUZZLE_LINE
         return when (categoryId) {
             "CAT_DOCUMENTS" -> RemixIcon.FILE_TEXT_LINE
             "CAT_COMPRESSED" -> RemixIcon.FILE_ZIP_LINE
@@ -106,6 +107,7 @@ object CategoryStyle {
      */
     fun colorForCategory(categoryId: String?, downloadType: DownloadType? = null): Color {
         if (downloadType == DownloadType.Torrent) return EMERALD
+        if (downloadType == DownloadType.Plugin) return Color(0x7C, 0x4D, 0xFF)
         val skinColor = categoryId?.let { SkinManager.currentSkin.categoryColor(it, com.formdev.flatlaf.FlatLaf.isLafDark()) }
         if (skinColor != null) return skinColor
         val themeColor = categoryId?.let { UIManager.getColor("XDM.category.$it") }
@@ -126,15 +128,20 @@ object CategoryStyle {
      */
     fun displayNameForCategory(categoryId: String?, downloadType: DownloadType? = null): String {
         if (downloadType == DownloadType.Torrent) return "Torrents"
-        return when (categoryId) {
-            "CAT_DOCUMENTS" -> "Documents"
-            "CAT_COMPRESSED" -> "Compressed"
-            "CAT_MUSIC" -> "Music"
-            "CAT_VIDEOS" -> "Videos"
-            "CAT_PROGRAMS" -> "Programs"
-            "CAT_IMAGES" -> "Images"
-            else -> "Other"
+        if (categoryId != null) {
+            val name = when (categoryId) {
+                "CAT_DOCUMENTS" -> "Documents"
+                "CAT_COMPRESSED" -> "Compressed"
+                "CAT_MUSIC" -> "Music"
+                "CAT_VIDEOS", "CAT_VIDEO" -> "Videos"
+                "CAT_PROGRAMS" -> "Programs"
+                "CAT_IMAGES" -> "Images"
+                else -> null
+            }
+            if (name != null) return name
         }
+        if (downloadType == DownloadType.Plugin) return "Plugin"
+        return "Other"
     }
 
     /**

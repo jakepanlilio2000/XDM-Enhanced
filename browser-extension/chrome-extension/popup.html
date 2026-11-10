@@ -28,10 +28,15 @@
       <line x1="12" y1="8" x2="12" y2="12" />
       <line x1="12" y1="16" x2="12.01" y2="16" />
     </svg>
-    <div>
-      <strong>XDM Enhanced Disconnected</strong>
-      <div style="font-size: 11.5px; opacity: 0.9; margin-top: 2px;">
+    <div style="flex: 1;">
+      <strong id="disconnectedTitle">XDM Enhanced Disconnected</strong>
+      <div id="disconnectedDetail" style="font-size: 11.5px; opacity: 0.9; margin-top: 2px;">
         Desktop application is not running. Launch XDM Enhanced to enable browser monitoring and downloads.
+      </div>
+      <div class="disconnected-actions" style="margin-top: 8px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+        <button class="primary-button btn-small" id="recheckBtn" type="button" style="padding: 3px 10px; font-size: 11.5px;">Recheck Connection</button>
+        <button class="secondary-button btn-small" id="launchDesktopBtn" type="button" style="padding: 3px 10px; font-size: 11.5px;">Launch XDM</button>
+        <a class="troubleshoot-link" id="troubleshootLink" href="https://github.com/jakepanlilio2000/XDM-Enhanced/blob/master/docs/BROWSER_CONNECTION_TROUBLESHOOTING.md" target="_blank" rel="noopener" style="font-size: 11px; color: inherit; text-decoration: underline; margin-left: auto;">Troubleshooting Guide →</a>
       </div>
     </div>
   </div>

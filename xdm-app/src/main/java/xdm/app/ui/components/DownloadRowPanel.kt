@@ -306,6 +306,13 @@ class DownloadRowPanel(val root: JPanel = JPanel()) {
             icon.icon = tileIcon(glyph, tile.glyph)
             return
         }
+        if (ent.downloadType == DownloadType.Plugin) {
+            tileHue = Color(0x7C, 0x4D, 0xFF)
+            val tile = AppTheme.tile(tileHue)
+            iconBadge.background = tile.background
+            icon.icon = tileIcon(RemixIcon.PUZZLE_LINE, tile.glyph)
+            return
+        }
         tileHue = AppTheme.tileHue(categoryById(ent.categoryId))
         val tile = AppTheme.tile(tileHue)
         iconBadge.background = tile.background

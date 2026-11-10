@@ -3,8 +3,12 @@ package xdm.app.ui.screens
 import com.formdev.flatlaf.FlatClientProperties
 import xdm.app.AppContext
 import xdm.app.I8N.text
+import xdm.app.skins.SkinRegion
+import xdm.app.skins.SkinStyleResolver
 import xdm.app.ui.components.CategoryStyle
 import xdm.app.ui.components.MessageBox
+import xdm.app.ui.components.SkinBackgroundPanel
+import xdm.app.ui.components.ThemeManager
 import xdm.app.utils.FontIcon
 import xdm.app.utils.RemixIcon
 import xdm.app.utils.ScaledEmptyBorder
@@ -50,6 +54,17 @@ class NewTorrentDownloadWindow(
 
     private var metadata: TorrentMetadata? = initialMetadata
     private val fileList = mutableListOf<SelectableFileEntry>()
+    private val themeListener = ThemeManager.ThemeChangeListener {
+        applySkinStyles()
+        repaint()
+    }
+
+    private fun applySkinStyles() {
+        val btnArc = SkinStyleResolver.resolveButtonArc(SkinRegion.TORRENT_MODAL)
+        btnStart.putClientProperty("Button.arc", btnArc)
+        btnQueue.putClientProperty("Button.arc", btnArc)
+        btnCancel.putClientProperty("Button.arc", btnArc)
+    }
 
     private val txtSource = JTextField().apply {
         isEditable = false
@@ -174,6 +189,11 @@ class NewTorrentDownloadWindow(
     private var populatingCategory = false
     private var userPickedCategory = false
 
+    override fun dispose() {
+        ThemeManager.removeThemeListener(themeListener)
+        super.dispose()
+    }
+
     private fun autoSelectCategory(name: String) {
         if (userPickedCategory) return
         val matched = captureCategory(name, null, null) ?: return
@@ -198,10 +218,13 @@ class NewTorrentDownloadWindow(
     private fun initUI() {
         val root = JPanel(BorderLayout(0, 10.px)).apply {
             border = ScaledEmptyBorder(12, 16, 12, 16)
+            isOpaque = false
         }
 
         // Top Form Panel
-        val formPanel = JPanel(GridBagLayout())
+        val formPanel = JPanel(GridBagLayout()).apply {
+            isOpaque = false
+        }
         val gbc = GridBagConstraints().apply {
             fill = GridBagConstraints.HORIZONTAL
             insets = Insets(3.px, 4.px, 3.px, 4.px)
@@ -352,7 +375,11 @@ class NewTorrentDownloadWindow(
         }
         root.add(bottomBar, BorderLayout.SOUTH)
 
-        contentPane.add(root)
+        contentPane = SkinBackgroundPanel(BorderLayout(), region = SkinRegion.TORRENT_MODAL).apply {
+            add(root)
+        }
+        applySkinStyles()
+        ThemeManager.addThemeListener(themeListener)
         rootPane.defaultButton = btnStart
         rootPane.registerKeyboardAction(
             { dispose() },

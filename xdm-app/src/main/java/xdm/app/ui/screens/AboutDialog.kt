@@ -4,7 +4,11 @@ import com.formdev.flatlaf.FlatClientProperties
 import com.formdev.flatlaf.util.UIScale
 import xdm.app.AppContext
 import xdm.app.I8N.text
+import xdm.app.skins.SkinRegion
+import xdm.app.skins.SkinStyleResolver
 import xdm.app.ui.components.AppTheme
+import xdm.app.ui.components.SkinBackgroundPanel
+import xdm.app.ui.components.ThemeManager
 import xdm.app.update.UpdateChecker
 import xdm.app.utils.FontIcon
 import xdm.app.utils.RemixIcon
@@ -32,6 +36,26 @@ import javax.swing.*
  */
 class AboutDialog constructor(owner: Window?) : JDialog(owner) {
 
+    val btnClose = JButton("Close").apply {
+        putClientProperty("JButton.buttonType", "roundRect")
+        addActionListener { dispose() }
+    }
+
+    private val themeListener = ThemeManager.ThemeChangeListener {
+        applySkinStyles()
+        repaint()
+    }
+
+    override fun dispose() {
+        ThemeManager.removeThemeListener(themeListener)
+        super.dispose()
+    }
+
+    private fun applySkinStyles() {
+        val btnArc = SkinStyleResolver.resolveButtonArc(SkinRegion.ABOUT)
+        btnClose.putClientProperty(FlatClientProperties.STYLE, "arc: $btnArc")
+    }
+
     companion object {
         /** Opens About, or brings the open one forward. Owned by [parent]'s window while that is on screen. EDT only. */
         fun open(parent: Component?) = SingleWindows.show(AboutDialog::class) { AboutDialog(shownWindow(parent)) }
@@ -48,13 +72,14 @@ class AboutDialog constructor(owner: Window?) : JDialog(owner) {
         isModal = false
         isResizable = false
 
-        val rawVersion = UpdateChecker.loadConfig()?.currentVersion ?: "1.0.0-beta.5"
-        val version = rawVersion.ifBlank { "1.0.0-beta.5" }
+        val rawVersion = UpdateChecker.loadConfig()?.currentVersion ?: "1.0.0-beta.6"
+        val version = rawVersion.ifBlank { "1.0.0-beta.6" }
         val isPreRelease = version.contains("beta", ignoreCase = true) || version.contains("alpha", ignoreCase = true) || version.contains("rc", ignoreCase = true)
         val releaseChannel = if (isPreRelease) "Beta Channel" else "Stable Channel"
 
         val root = JPanel(BorderLayout(0, 10.px)).apply {
             border = ScaledEmptyBorder(16, 20, 16, 20)
+            isOpaque = false
         }
 
         // ==========================================
@@ -202,17 +227,16 @@ class AboutDialog constructor(owner: Window?) : JDialog(owner) {
             foreground = UIManager.getColor("Label.disabledForeground") ?: Color.GRAY
         }
 
-        val btnClose = JButton("Close").apply {
-            putClientProperty("JButton.buttonType", "roundRect")
-            putClientProperty(FlatClientProperties.STYLE, "arc: 8")
-            addActionListener { dispose() }
-        }
+        applySkinStyles()
 
         footerPanel.add(lblCopyright, BorderLayout.WEST)
         footerPanel.add(btnClose, BorderLayout.EAST)
         root.add(footerPanel, BorderLayout.SOUTH)
 
-        contentPane.add(root)
+        contentPane = SkinBackgroundPanel(BorderLayout(), region = SkinRegion.ABOUT).apply {
+            add(root)
+        }
+        ThemeManager.addThemeListener(themeListener)
         setSize(500.px, 480.px)
         setLocationRelativeTo(owner)
 

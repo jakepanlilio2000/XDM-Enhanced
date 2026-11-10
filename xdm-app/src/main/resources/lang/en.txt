@@ -365,6 +365,13 @@ SETTINGS_AUTO_CAT_SUB=Downloads from the browser start in the category whose rul
 CAT_EMPTY=No categories yet. Every download goes to the download folder.
 CAT_TYPE_COUNT=%d file types
 SETTINGS_SEC_BROWSERS_SUB=Install the XDM extension in the browsers you download from.
+SETTINGS_SEC_DIAGNOSTICS=Integration Diagnostics & Repair
+LBL_REPAIR_INTEGRATION=Self-Diagnostics & Repair
+DESC_REPAIR_INTEGRATION=Inspects loopback listener (port 8597) and registers the xdm-app:// protocol handler in your user account.
+BTN_REPAIR_INTEGRATION=Repair Integration
+BTN_VIEW_TROUBLESHOOTING=Troubleshooting Guide
+MSG_REPAIR_SUCCESS=Browser integration repaired successfully.
+MSG_REPAIR_DETAILS=Protocol handler registered and loopback service verified.
 BROWSER_EXT_OTHER=Using other browsers?
 BROWSER_EXT_OPEN_IN=Open this link in %s to install.
 BROWSER_EXT_OTHER_CHROMIUM_BASED=Chromium derivative
@@ -653,5 +660,10 @@ PLUGINS_CONFIGURE=Configure
 PLUGINS_UNINSTALL=Uninstall
 PLUGINS_ENABLE=Enable
 PLUGINS_DISABLE=Disable
+SETTINGS_SEC_CLIPBOARD=Clipboard Monitoring
+LBL_MONITOR_CLIPBOARD=Monitor copied download links
+LBL_MONITOR_CLIPBOARD_SUB=Automatically detect copied download URLs and prepare the download modal. Unrelated clipboard text is never stored or transmitted.
+LBL_UNKNOWN_SIZE=Unknown size
+
 
 

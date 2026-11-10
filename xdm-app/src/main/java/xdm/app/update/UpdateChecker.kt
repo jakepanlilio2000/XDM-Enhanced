@@ -32,7 +32,7 @@ object UpdateChecker {
 
     private val json = Json { ignoreUnknownKeys = true }
 
-    const val DEFAULT_VERSION = "1.0.0-beta.5"
+    const val DEFAULT_VERSION = "1.0.0-beta.6"
     const val DEFAULT_UPDATE_URL = "https://api.github.com/repos/jakepanlilio2000/XDM-Enhanced/releases?per_page=20"
     const val DEFAULT_DOWNLOAD_URL = "https://github.com/jakepanlilio2000/XDM-Enhanced/releases"
 

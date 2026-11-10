@@ -331,7 +331,7 @@
             <div>
               <h2 style="margin: 0; font-size: 16px;">XDM Enhanced Browser Integration</h2>
               <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
-                Extension Version: <strong>3.5.3 (Enhanced)</strong> • Compatible with Desktop XDM Enhanced <strong>v1.0.0-beta.5</strong>
+                Extension Version: <strong>3.5.4 (1.0.0-beta.6)</strong> • Compatible with Desktop XDM Enhanced <strong>v1.0.0-beta.6</strong>
               </div>
             </div>
           </div>
@@ -362,7 +362,7 @@
           <div class="diag-grid">
             <div class="diag-item">
               <span class="diag-label">Extension Version</span>
-              <span class="diag-value" id="diagExtVersion">3.5.3 (1.0.0-beta.5)</span>
+              <span class="diag-value" id="diagExtVersion">3.5.4 (1.0.0-beta.6)</span>
             </div>
             <div class="diag-item">
               <span class="diag-label">Manifest Specification</span>
@@ -381,15 +381,31 @@
               <span class="diag-value" id="diagProtocol">v1 (Compatible)</span>
             </div>
             <div class="diag-item">
+              <span class="diag-label">Loopback Host Access</span>
+              <span class="diag-value" id="diagHostAccess">Granted (127.0.0.1)</span>
+            </div>
+            <div class="diag-item">
+              <span class="diag-label">Launch Handler</span>
+              <span class="diag-value" id="diagLaunchHandler">xdm-app:// (Registered)</span>
+            </div>
+            <div class="diag-item">
               <span class="diag-label">Update Source</span>
               <span class="diag-value">GitHub Releases (Fork)</span>
             </div>
           </div>
 
           <div style="margin-top: 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+            <button id="recheckConnBtn" class="secondary-button btn-small" type="button">Recheck Connection</button>
+            <button id="launchAppBtn" class="secondary-button btn-small" type="button">Launch Desktop App</button>
             <button id="checkUpdatesBtn" class="primary-button btn-small" type="button">Check for Updates</button>
+            <a href="https://github.com/jakepanlilio2000/XDM-Enhanced/blob/master/docs/BROWSER_CONNECTION_TROUBLESHOOTING.md" target="_blank" rel="noopener" id="optionsTroubleshootLink" class="secondary-button btn-small" style="text-decoration: none; display: inline-flex; align-items: center;">Troubleshooting Guide →</a>
             <a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases" target="_blank" rel="noopener" class="secondary-button btn-small" style="text-decoration: none; display: inline-flex; align-items: center;">View Releases on GitHub →</a>
             <span id="updateCheckStatus" style="font-size: 12px; color: var(--text-muted);"></span>
+          </div>
+
+          <div id="connTroubleNotice" class="notice warn" style="margin-top: 14px;" hidden>
+            <strong id="connTroubleTitle">Desktop Connection Required</strong>
+            <div id="connTroubleDetails" style="font-size: 12px; margin-top: 4px; line-height: 1.5;"></div>
           </div>
 
           <div id="updateResultBox" class="notice ok" style="margin-top: 14px;" hidden>

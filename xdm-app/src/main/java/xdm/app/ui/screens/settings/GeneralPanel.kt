@@ -71,6 +71,16 @@ class GeneralPanel : SettingsPanel() {
         )
     )
 
+    private val themeListener = ThemeManager.ThemeChangeListener {
+        val curTheme = ThemeManager.currentTheme
+        if (themeCodes.contains(curTheme) && optTheme.selected != curTheme) {
+            optTheme.selected = curTheme
+        }
+        optTheme.updateTheme()
+        optListMode.updateTheme()
+        accentChooser.updateSelection(ThemeManager.currentAccent)
+    }
+
     private val langModel = DefaultComboBoxModel<String>()
     internal val cmbLang = rounded(JComboBox(langModel)).apply {
         preferredSize = Dimension(190.px, preferredSize.height)
@@ -183,15 +193,11 @@ class GeneralPanel : SettingsPanel() {
 
         add(Box.createVerticalGlue())
 
-        ThemeManager.addThemeListener {
-            val curTheme = ThemeManager.currentTheme
-            if (themeCodes.contains(curTheme) && optTheme.selected != curTheme) {
-                optTheme.selected = curTheme
-            }
-            optTheme.updateTheme()
-            optListMode.updateTheme()
-            accentChooser.updateSelection(ThemeManager.currentAccent)
-        }
+        ThemeManager.addThemeListener(themeListener)
+    }
+
+    fun dispose() {
+        ThemeManager.removeThemeListener(themeListener)
     }
 
     fun load() {

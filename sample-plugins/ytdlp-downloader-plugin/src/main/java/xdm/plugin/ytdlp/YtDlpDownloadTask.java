@@ -62,6 +62,26 @@ public class YtDlpDownloadTask implements PluginDownloadTask {
             targetDir.mkdirs();
         }
 
+        String execPath = config.getExecutablePath();
+        if (execPath == null || execPath.trim().isEmpty()) {
+            state = TaskState.FAILED;
+            errorMessage = "Failed to start yt-dlp: executable path is not configured.";
+            notifyProgress(errorMessage);
+            context.logError(errorMessage, null);
+            return;
+        }
+
+        if (execPath.contains("/") || execPath.contains("\\")) {
+            File f = new File(execPath.trim());
+            if (!f.exists() || f.isDirectory()) {
+                state = TaskState.FAILED;
+                errorMessage = "Failed to start yt-dlp: executable not found: " + f.getAbsolutePath();
+                notifyProgress(errorMessage);
+                context.logError(errorMessage, null);
+                return;
+            }
+        }
+
         List<String> command = buildCommand(targetDir);
         context.logInfo("Executing yt-dlp structured command for: " + sanitizeUrl(request.getUrl()));
 
@@ -90,7 +110,7 @@ public class YtDlpDownloadTask implements PluginDownloadTask {
                 downloadedBytes = totalBytes > 0 ? totalBytes : downloadedBytes;
                 transferSpeed = 0f;
                 etaSeconds = 0;
-                notifyProgress("Download completed successfully.");
+                notifyProgress("Download completed successfully.", 100);
                 context.logInfo("yt-dlp download completed successfully for: " + sanitizeUrl(request.getUrl()));
             } else {
                 state = TaskState.FAILED;
@@ -145,15 +165,19 @@ public class YtDlpDownloadTask implements PluginDownloadTask {
         cmd.add("-P");
         cmd.add(targetDir.getAbsolutePath());
 
-        String template = (request.getFileName() != null && !request.getFileName().trim().isEmpty())
-                ? request.getFileName()
-                : "%(title)s.%(ext)s";
+        String fn = request.getFileName();
+        String template;
+        if (fn != null && !fn.trim().isEmpty() && !fn.equalsIgnoreCase("watch") && !fn.endsWith(".html") && !fn.endsWith(".htm") && fn.contains(".")) {
+            template = fn.trim();
+        } else {
+            template = "%(title)s.%(ext)s";
+        }
         cmd.add("-o");
         cmd.add(template);
 
-        // Structured progress template
+        // Structured progress template: percent#total_bytes#speed#eta#downloaded_bytes
         cmd.add("--progress-template");
-        cmd.add("download:%(progress._percent_str)s|%(progress._total_bytes_str)s|%(progress._speed_str)s|%(progress._eta_str)s");
+        cmd.add("download:%(progress._percent_str)s#%(progress._total_bytes_str)s#%(progress._speed_str)s#%(progress._eta_str)s#%(progress._downloaded_bytes_str)s");
 
         // End of options delimiter prevents argument injection
         cmd.add("--");
@@ -173,42 +197,61 @@ public class YtDlpDownloadTask implements PluginDownloadTask {
 
     private void parseOutputLine(String line, File targetDir) {
         if (line.startsWith("download:")) {
-            // Format: download: 45.2%|150.2MiB|12.5MiB/s|00:15
+            // Format: download: 45.2%#150.2MiB#12.5MiB/s#00:15 or with pipes: ...|...
             String payload = line.substring("download:".length()).trim();
-            String[] parts = payload.split("\\|");
+            String delimiter = payload.contains("#") ? "#" : "\\|";
+            String[] parts = payload.split(delimiter);
             if (parts.length >= 4) {
-                String percentStr = parts[0].replace("%", "").trim();
-                String totalStr = parts[1].trim();
-                String speedStr = parts[2].trim();
-                String etaStr = parts[3].trim();
+                String percentStr = parts[0].replace("%", "").replace("~", "").trim();
+                String totalStr = parts[1].replace("~", "").trim();
+                String speedStr = parts[2].replace("~", "").trim();
+                String etaStr = parts[3].replace("~", "").trim();
 
                 try {
                     double pct = Double.parseDouble(percentStr);
+                    int intPct = (int) Math.round(pct);
                     long total = parseBytes(totalStr);
                     if (total > 0) {
                         this.totalBytes = total;
                         this.downloadedBytes = (long) ((pct / 100.0) * total);
                     }
+                    if (parts.length >= 5) {
+                        long dl = parseBytes(parts[4].replace("~", "").trim());
+                        if (dl > 0) {
+                            this.downloadedBytes = dl;
+                        }
+                    } else if (this.downloadedBytes == 0 && total > 0) {
+                        this.downloadedBytes = (long) ((pct / 100.0) * total);
+                    }
                     this.transferSpeed = parseSpeed(speedStr);
                     this.etaSeconds = parseEta(etaStr);
 
-                    notifyProgress("Downloading: " + (int) pct + "%");
+                    notifyProgress("Downloading: " + intPct + "%", intPct);
                 } catch (Exception ignored) {}
             }
-        } else if (line.contains("[download] Destination:") || line.contains("[Merger] Merging formats into")) {
-            // Resolve output filename from stdout
-            String pathPart = line.contains("Destination:")
-                    ? line.substring(line.indexOf("Destination:") + "Destination:".length()).trim()
-                    : line.substring(line.indexOf("into") + "into".length()).replace("\"", "").trim();
-            File resolved = new File(pathPart);
-            if (!resolved.isAbsolute()) {
-                resolved = new File(targetDir, pathPart);
-            }
-            this.outputFile = resolved;
-            notifyProgress("Saving to: " + resolved.getName());
+        } else if (line.contains("Destination:")) {
+            String pathPart = line.substring(line.indexOf("Destination:") + "Destination:".length()).trim();
+            resolveDestination(pathPart, targetDir);
+        } else if (line.contains("Merging formats into")) {
+            String pathPart = line.substring(line.indexOf("into") + "into".length()).replace("\"", "").trim();
+            resolveDestination(pathPart, targetDir);
+        } else if (line.contains("has already been downloaded")) {
+            String pathPart = line.replace("[download]", "").replace("has already been downloaded", "").trim();
+            resolveDestination(pathPart, targetDir);
         } else if (line.startsWith("ERROR:") || line.toLowerCase(Locale.ROOT).contains("error:")) {
             this.errorMessage = line;
         }
+    }
+
+    private void resolveDestination(String pathPart, File targetDir) {
+        if (pathPart == null || pathPart.trim().isEmpty()) return;
+        pathPart = pathPart.trim().replace("\"", "");
+        File resolved = new File(pathPart);
+        if (!resolved.isAbsolute()) {
+            resolved = new File(targetDir, pathPart);
+        }
+        this.outputFile = resolved;
+        notifyProgress("Saving to: " + resolved.getName(), -1);
     }
 
     private File determineTargetDirectory() {
@@ -222,13 +265,18 @@ public class YtDlpDownloadTask implements PluginDownloadTask {
     }
 
     private void notifyProgress(String message) {
+        notifyProgress(message, -1);
+    }
+
+    private void notifyProgress(String message, int explicitPercent) {
         DownloadProgressEvent event = new DownloadProgressEvent(
                 downloadedBytes,
                 totalBytes,
                 transferSpeed,
                 etaSeconds,
                 state,
-                message
+                message,
+                explicitPercent
         );
         for (DownloadProgressListener listener : listeners) {
             try {
@@ -236,6 +284,36 @@ public class YtDlpDownloadTask implements PluginDownloadTask {
             } catch (Throwable t) {
                 context.logError("Error in progress listener: " + t.getMessage(), t);
             }
+        }
+    }
+
+    @Override
+    public boolean canPause() {
+        return true;
+    }
+
+    @Override
+    public boolean canResume() {
+        return true;
+    }
+
+    @Override
+    public synchronized void pause() {
+        if (state == TaskState.DOWNLOADING) {
+            isCancelled.set(true);
+            state = TaskState.PAUSED;
+            cleanupProcess();
+            if (workerThread != null && workerThread.isAlive()) {
+                workerThread.interrupt();
+            }
+            notifyProgress("Paused by user.");
+        }
+    }
+
+    @Override
+    public synchronized void resume() {
+        if (state == TaskState.PAUSED || state == TaskState.READY) {
+            start();
         }
     }
 
@@ -317,8 +395,8 @@ public class YtDlpDownloadTask implements PluginDownloadTask {
 
     public static long parseBytes(String str) {
         if (str == null) return -1;
-        str = str.trim().toUpperCase(Locale.ROOT);
-        if (str.isEmpty() || str.equals("NA") || str.equals("UNKNOWN")) return -1;
+        str = str.replace("~", "").trim().toUpperCase(Locale.ROOT);
+        if (str.isEmpty() || str.equals("NA") || str.equals("UNKNOWN") || str.contains("N/A")) return -1;
         try {
             if (str.endsWith("GIB") || str.endsWith("GB")) {
                 double val = Double.parseDouble(str.replace("GIB", "").replace("GB", "").trim());
@@ -341,8 +419,8 @@ public class YtDlpDownloadTask implements PluginDownloadTask {
 
     public static float parseSpeed(String str) {
         if (str == null) return 0f;
-        str = str.trim().toUpperCase(Locale.ROOT);
-        if (str.isEmpty() || str.equals("NA") || str.equals("UNKNOWN")) return 0f;
+        str = str.replace("~", "").trim().toUpperCase(Locale.ROOT);
+        if (str.isEmpty() || str.equals("NA") || str.equals("UNKNOWN") || str.contains("N/A")) return 0f;
         try {
             if (str.endsWith("/S")) {
                 str = str.substring(0, str.length() - 2).trim();
@@ -356,8 +434,8 @@ public class YtDlpDownloadTask implements PluginDownloadTask {
 
     public static long parseEta(String str) {
         if (str == null) return -1;
-        str = str.trim();
-        if (str.isEmpty() || str.equals("NA") || str.equals("UNKNOWN")) return -1;
+        str = str.replace("~", "").trim();
+        if (str.isEmpty() || str.equals("NA") || str.equals("UNKNOWN") || str.contains("N/A")) return -1;
         try {
             String[] parts = str.split(":");
             if (parts.length == 2) {

@@ -226,6 +226,7 @@ class DownloadManager(
                             DownloadType.Dash -> {}
                             DownloadType.Batch -> {}
                             DownloadType.Torrent -> TODO()
+                            DownloadType.Plugin -> {}
                         }
                         store.update(e)
                     }
@@ -477,7 +478,7 @@ class DownloadManager(
                 }
 
                 // A batch renames each file into place itself; it never commits through here.
-                DownloadType.Batch, DownloadType.Torrent -> {}
+                DownloadType.Batch, DownloadType.Torrent, DownloadType.Plugin -> {}
             }
 
             Logger.error("XDM", "Task not found for commit: $id")
@@ -730,7 +731,7 @@ class DownloadManager(
             }
         }
 
-        DownloadType.Torrent -> null
+        DownloadType.Torrent, DownloadType.Plugin -> null
     }
 
     /**

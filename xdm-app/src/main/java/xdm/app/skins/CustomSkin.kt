@@ -16,6 +16,7 @@ import javax.swing.plaf.FontUIResource
 
 /**
  * Runtime skin implementation backed by a user-installed .xdmskin package.
+ * Supports Schema Version 1 (legacy single-view) and Version 2 (full-UI regional contract).
  */
 class CustomSkin(
     override val skinDir: File,
@@ -44,15 +45,14 @@ class CustomSkin(
         ThemeManager.parseHexColor(manifest.accents.light) ?: Color(0x25, 0x63, 0xEB)
 
     private val iconCache = ConcurrentHashMap<String, Icon>()
+    private val rawWallpaperCache = ConcurrentHashMap<String, BufferedImage>()
     private var cachedCustomFont: Font? = null
 
-    // Wallpaper cache
-    private var lastDarkWallpaperRaw: BufferedImage? = null
-    private var lastLightWallpaperRaw: BufferedImage? = null
+    // Scaled wallpaper cache
     private var cachedScaledWallpaper: BufferedImage? = null
+    private var cachedWallpaperKey: String = ""
     private var cachedWallpaperWidth: Int = -1
     private var cachedWallpaperHeight: Int = -1
-    private var cachedWallpaperDark: Boolean = false
 
     init {
         loadCustomFont()
@@ -90,38 +90,109 @@ class CustomSkin(
         return loadCachedIcon(relPath, size)
     }
 
+    override fun getRegionConfig(region: SkinRegion): SkinRegionConfig? {
+        return manifest.regions[region.slotId]
+            ?: manifest.regions[region.name.lowercase()]
+    }
+
+    private fun resolveAssetFile(relPath: String): File? {
+        val normalized = relPath.trim().trimStart('/', '\\').replace('\\', '/')
+        if (normalized.contains("..") || normalized.contains(":")) return null
+        val file = File(skinDir, normalized)
+        return runCatching {
+            val canonical = file.canonicalFile
+            if (canonical.path.startsWith(skinDir.canonicalPath)) canonical else null
+        }.getOrNull()
+    }
+
     private fun loadCachedIcon(relPath: String, targetSize: Int): Icon? {
         val key = "$relPath@$targetSize"
         val cached = iconCache[key]
         if (cached != null) return cached
 
-        val file = File(skinDir, relPath)
-        if (!file.exists() || !file.isFile) return null
+        val file = resolveAssetFile(relPath)
+        val normalized = relPath.trim().trimStart('/', '\\').replace('\\', '/')
+        val img = if (file != null && file.exists() && file.isFile) {
+            runCatching { ImageIO.read(file) }.getOrNull()
+        } else {
+            val res = javaClass.classLoader.getResourceAsStream(normalized)
+                ?: javaClass.classLoader.getResourceAsStream("skins/$normalized")
+            res?.use { runCatching { ImageIO.read(it) }.getOrNull() }
+        } ?: return null
 
-        val img = runCatching { ImageIO.read(file) }.getOrNull() ?: return null
         val icon = ScaledImageIcon(img, targetSize, targetSize)
         iconCache[key] = icon
         return icon
     }
 
+    private fun loadWallpaperImage(relPath: String): BufferedImage? {
+        val cached = rawWallpaperCache[relPath]
+        if (cached != null) return cached
+
+        val file = resolveAssetFile(relPath)
+        val img = if (file != null && file.exists() && file.isFile) {
+            runCatching { ImageIO.read(file) }.getOrNull()
+        } else {
+            val normalized = relPath.trim().trimStart('/', '\\').replace('\\', '/')
+            val res = javaClass.classLoader.getResourceAsStream(normalized)
+                ?: javaClass.classLoader.getResourceAsStream("skins/$normalized")
+            res?.use { runCatching { ImageIO.read(it) }.getOrNull() }
+        }
+
+        if (img != null) {
+            rawWallpaperCache[relPath] = img
+        }
+        return img
+    }
+
+    override fun hasWallpaper(isDark: Boolean): Boolean {
+        val wp = manifest.wallpaper ?: return false
+        val relPath = if (isDark) wp.dark else wp.light
+        if (relPath.isNullOrBlank()) return false
+        val file = resolveAssetFile(relPath)
+        if (file != null && file.exists() && file.isFile) return true
+        val normalized = relPath.trim().trimStart('/', '\\').replace('\\', '/')
+        return javaClass.classLoader.getResource(normalized) != null ||
+                javaClass.classLoader.getResource("skins/$normalized") != null
+    }
+
+    override fun hasRegionWallpaper(region: SkinRegion, isDark: Boolean): Boolean {
+        val regionCfg = getRegionConfig(region) ?: return false
+        val wp = regionCfg.wallpaper ?: return false
+        val relPath = if (isDark) wp.dark else wp.light
+        if (relPath.isNullOrBlank()) return false
+        val file = resolveAssetFile(relPath)
+        if (file != null && file.exists() && file.isFile) return true
+        val normalized = relPath.trim().trimStart('/', '\\').replace('\\', '/')
+        return javaClass.classLoader.getResource(normalized) != null ||
+                javaClass.classLoader.getResource("skins/$normalized") != null
+    }
+
     override fun paintWallpaper(g: Graphics, width: Int, height: Int, isDark: Boolean): Boolean {
         val wpConfig = manifest.wallpaper ?: return false
+        return paintWallpaperConfig(g, width, height, wpConfig, isDark, "global")
+    }
+
+    override fun paintRegionWallpaper(g: Graphics, width: Int, height: Int, region: SkinRegion, isDark: Boolean): Boolean {
+        val regionCfg = getRegionConfig(region)
+        val wpConfig = regionCfg?.wallpaper ?: manifest.wallpaper ?: return false
+        return paintWallpaperConfig(g, width, height, wpConfig, isDark, region.slotId)
+    }
+
+    private fun paintWallpaperConfig(
+        g: Graphics,
+        width: Int,
+        height: Int,
+        wpConfig: SkinWallpaperConfig,
+        isDark: Boolean,
+        cacheScope: String
+    ): Boolean {
+        if (width <= 0 || height <= 0) return false
         val relPath = if (isDark) wpConfig.dark else wpConfig.light
         if (relPath.isNullOrBlank()) return false
 
-        val rawImage = if (isDark) {
-            if (lastDarkWallpaperRaw == null) {
-                val file = File(skinDir, relPath)
-                if (file.exists()) lastDarkWallpaperRaw = runCatching { ImageIO.read(file) }.getOrNull()
-            }
-            lastDarkWallpaperRaw
-        } else {
-            if (lastLightWallpaperRaw == null) {
-                val file = File(skinDir, relPath)
-                if (file.exists()) lastLightWallpaperRaw = runCatching { ImageIO.read(file) }.getOrNull()
-            }
-            lastLightWallpaperRaw
-        } ?: return false
+        val rawImage = loadWallpaperImage(relPath) ?: return false
+        if (rawImage.width <= 0 || rawImage.height <= 0) return false
 
         val g2 = g.create() as Graphics2D
         try {
@@ -159,7 +230,8 @@ class CustomSkin(
                     }
                 }
                 else -> { // "fill"
-                    if (cachedScaledWallpaper == null || cachedWallpaperWidth != width || cachedWallpaperHeight != height || cachedWallpaperDark != isDark) {
+                    val key = "$cacheScope@$relPath"
+                    if (cachedScaledWallpaper == null || cachedWallpaperWidth != width || cachedWallpaperHeight != height || cachedWallpaperKey != key) {
                         val scaled = BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB)
                         val sg = scaled.createGraphics()
                         sg.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR)
@@ -168,7 +240,7 @@ class CustomSkin(
                         cachedScaledWallpaper = scaled
                         cachedWallpaperWidth = width
                         cachedWallpaperHeight = height
-                        cachedWallpaperDark = isDark
+                        cachedWallpaperKey = key
                     }
                     g2.drawImage(cachedScaledWallpaper, 0, 0, null)
                 }
@@ -185,6 +257,8 @@ class CustomSkin(
         UIManager.put("TextComponent.arc", componentArc)
         UIManager.put("ProgressBar.arc", componentArc)
         UIManager.put("CheckBox.arc", componentArc)
+        UIManager.put("TabbedPane.tabArc", componentArc)
+        UIManager.put("ScrollBar.thumbArc", componentArc)
 
         UIManager.put("XDM.skin.id", id)
         UIManager.put("XDM.skin.rowHeight", rowHeight)
@@ -235,6 +309,52 @@ class CustomSkin(
             ThemeManager.parseHexColor(hex)?.let { UIManager.put("XDM.category.$cat", it) }
         }
 
+        // Apply region overrides to UIManager tokens
+        manifest.regions.forEach { (regionKey, regCfg) ->
+            regCfg.background?.let { ThemeManager.parseHexColor(it) }?.let {
+                UIManager.put("XDM.region.$regionKey.background", it)
+            }
+            regCfg.foreground?.let { ThemeManager.parseHexColor(it) }?.let {
+                UIManager.put("XDM.region.$regionKey.foreground", it)
+            }
+            regCfg.border?.let { ThemeManager.parseHexColor(it) }?.let {
+                UIManager.put("XDM.region.$regionKey.border", it)
+            }
+            regCfg.cornerArc?.let {
+                UIManager.put("XDM.region.$regionKey.cornerArc", it)
+            }
+            regCfg.buttonArc?.let {
+                UIManager.put("XDM.region.$regionKey.buttonArc", it)
+            }
+            regCfg.cardArc?.let {
+                UIManager.put("XDM.region.$regionKey.cardArc", it)
+            }
+            regCfg.progressBarArc?.let {
+                UIManager.put("XDM.region.$regionKey.progressBarArc", it)
+            }
+
+            // Region-specific UIManager standard keys
+            if (regionKey.equals("dialogs", ignoreCase = true)) {
+                regCfg.background?.let { ThemeManager.parseHexColor(it) }?.let {
+                    UIManager.put("OptionPane.background", it)
+                }
+                regCfg.cornerArc?.let {
+                    UIManager.put("PopupMenu.arc", it)
+                }
+            } else if (regionKey.equals("tooltips_popups", ignoreCase = true)) {
+                regCfg.background?.let { ThemeManager.parseHexColor(it) }?.let {
+                    UIManager.put("ToolTip.background", it)
+                }
+                regCfg.foreground?.let { ThemeManager.parseHexColor(it) }?.let {
+                    UIManager.put("ToolTip.foreground", it)
+                }
+                regCfg.cornerArc?.let {
+                    UIManager.put("ToolTip.arc", it)
+                    UIManager.put("PopupMenu.arc", it)
+                }
+            }
+        }
+
         // Apply raw uiDefaults from manifest
         manifest.uiDefaults.forEach { (k, v) ->
             when (v.lowercase()) {
@@ -260,9 +380,12 @@ class CustomSkin(
 
     override fun dispose() {
         iconCache.clear()
-        lastDarkWallpaperRaw = null
-        lastLightWallpaperRaw = null
+        rawWallpaperCache.clear()
         cachedScaledWallpaper = null
+        cachedWallpaperKey = ""
+        cachedWallpaperWidth = -1
+        cachedWallpaperHeight = -1
+        cachedCustomFont = null
     }
 
     private class ScaledImageIcon(
@@ -306,4 +429,3 @@ class CustomSkin(
         }
     }
 }
-

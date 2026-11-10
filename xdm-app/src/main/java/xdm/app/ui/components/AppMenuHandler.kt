@@ -139,6 +139,9 @@ object AppMenuHandler {
             ent.status = RecordStatus.DOWNLOADING
             AppContext.db.update(ent)
             AppContext.app.updateDownloadInView(ent.id)
+        } else if (ent.downloadType == DownloadType.Plugin) {
+            xdm.app.plugins.PluginDownloadBridge.resumeTask(ent.id)
+            AppContext.app.updateDownloadInView(ent.id)
         } else {
             downloader.resumeDownload(ent.id)
         }
@@ -150,6 +153,9 @@ object AppMenuHandler {
             AppContext.torrentManager.getTask(ent.id)?.pause()
             ent.status = RecordStatus.PAUSED
             AppContext.db.update(ent)
+            AppContext.app.updateDownloadInView(ent.id)
+        } else if (ent.downloadType == DownloadType.Plugin) {
+            xdm.app.plugins.PluginDownloadBridge.pauseTask(ent.id)
             AppContext.app.updateDownloadInView(ent.id)
         } else {
             downloader.stopDownload(ent.id)
@@ -183,6 +189,9 @@ object AppMenuHandler {
                 AppContext.torrentManager.removeTask(ent.id, deleteFromDisk)
                 AppContext.db.removeItem(ent.id)
                 AppContext.app.downloadsRemovedInView()
+            } else if (ent.downloadType == DownloadType.Plugin) {
+                xdm.app.plugins.PluginDownloadBridge.deleteTask(ent.id, deleteFromDisk)
+                AppContext.app.downloadsRemovedInView()
             } else {
                 downloader.deleteDownload(ent.id, deleteFromDisk)
             }
@@ -194,17 +203,21 @@ object AppMenuHandler {
         val (approve, deleteFromDisk) = showConfirmDeleteDialog(window)
         if (approve) {
             Logger.info("XDM", "Deleting ${selectedItems.size} selected")
-            val (torrents, http) = selectedItems.partition { it.downloadType == DownloadType.Torrent }
+            val (torrents, nonTorrents) = selectedItems.partition { it.downloadType == DownloadType.Torrent }
+            val (plugins, http) = nonTorrents.partition { it.downloadType == DownloadType.Plugin }
             for (t in torrents) {
                 AppContext.torrentManager.removeTask(t.id, deleteFromDisk)
                 AppContext.db.removeItem(t.id)
+            }
+            for (p in plugins) {
+                xdm.app.plugins.PluginDownloadBridge.deleteTask(p.id, deleteFromDisk)
             }
             val (moving, rest) = http.partition { downloader.isMoving(it.id) }
             if (rest.isNotEmpty()) {
                 downloader.deleteDownloads(rest.map { it.id }, deleteFromDisk)
             }
             if (moving.isNotEmpty()) warnMovingSkipped(window)
-            if (torrents.isNotEmpty()) {
+            if (torrents.isNotEmpty() || plugins.isNotEmpty()) {
                 AppContext.app.downloadsRemovedInView()
             }
         }
@@ -359,10 +372,14 @@ object AppMenuHandler {
         if (finished.isEmpty()) return
         val ret = MessageBox.confirm(window, text("DEL_TITLE"), text("DEL_FINISHED_TEXT"))
         if (ret) {
-            val (torrents, http) = finished.partition { it.downloadType == DownloadType.Torrent }
+            val (torrents, nonTorrents) = finished.partition { it.downloadType == DownloadType.Torrent }
+            val (plugins, http) = nonTorrents.partition { it.downloadType == DownloadType.Plugin }
             for (t in torrents) {
                 AppContext.torrentManager.removeTask(t.id, false)
                 AppContext.db.removeItem(t.id)
+            }
+            for (p in plugins) {
+                xdm.app.plugins.PluginDownloadBridge.deleteTask(p.id, false)
             }
             if (http.isNotEmpty()) {
                 downloader.deleteDownloads(http.map { it.id }, false)
@@ -377,6 +394,7 @@ object AppMenuHandler {
             DownloadType.Hls -> AppContext.taskInfoDB.getHlsTask(record.id)?.url
             DownloadType.Dash -> AppContext.taskInfoDB.getDashTask(record.id)?.url
             DownloadType.Batch -> AppContext.taskInfoDB.getBatchTask(record.id)?.origin
+            DownloadType.Plugin -> xdm.app.plugins.PluginDownloadBridge.getTaskUrl(record.id)
             DownloadType.Torrent -> {
                 val task = AppContext.torrentManager.getTask(record.id)
                 when {

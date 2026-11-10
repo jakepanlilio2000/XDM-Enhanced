@@ -65,8 +65,8 @@ class SkinEngineTest : DownloadManagerTestBase() {
         assertEquals(SkinManager.SKIN_ORIGINAL_XDM, classic.id)
         assertEquals("Original XDM", classic.name)
         assertTrue(classic.isBuiltIn)
-        assertEquals(2, classic.componentArc)
-        assertEquals(2, classic.buttonArc)
+        assertEquals(0, classic.componentArc)
+        assertEquals(0, classic.buttonArc)
         assertEquals(44, classic.rowHeight)
         assertEquals(200, classic.sidebarWidth)
         assertTrue(classic.useClassicIcons)
@@ -89,7 +89,8 @@ class SkinEngineTest : DownloadManagerTestBase() {
                 assertTrue(applied, "Applying classic XDM skin should succeed")
                 assertEquals(SkinManager.SKIN_ORIGINAL_XDM, SkinManager.currentSkin.id)
                 assertEquals(SkinManager.SKIN_ORIGINAL_XDM, notifiedSkin?.id)
-                assertEquals(2, UIManager.getInt("Component.arc"))
+                assertEquals(0, UIManager.getInt("Component.arc"))
+                assertEquals(0, UIManager.getInt("Button.arc"))
                 assertEquals(44, UIManager.getInt("XDM.skin.rowHeight"))
                 assertTrue(UIManager.getBoolean("XDM.skin.useClassicIcons"))
 
@@ -240,6 +241,167 @@ class SkinEngineTest : DownloadManagerTestBase() {
             panel.save()
             assertEquals(SkinManager.SKIN_ORIGINAL_XDM, AppContext.config.skinId)
             panel.dispose()
+        }
+    }
+
+    @Test
+    fun testClassicXdmFidelityTokens() {
+        runOnEdt {
+            SkinManager.applySkin(SkinManager.SKIN_ORIGINAL_XDM, saveConfig = false)
+            ThemeManager.applyTheme("dark", null, 100, saveConfig = false)
+            assertEquals(0, UIManager.getInt("Component.arc"))
+            assertEquals(0, UIManager.getInt("Button.arc"))
+            assertEquals(0, UIManager.getInt("TextComponent.arc"))
+            assertEquals(0, UIManager.getInt("ProgressBar.arc"))
+            assertEquals(0, UIManager.getInt("CheckBox.arc"))
+            assertEquals(0, UIManager.getInt("TabbedPane.tabArc"))
+            assertEquals(0, UIManager.getInt("ScrollBar.thumbArc"))
+            assertEquals(44, UIManager.getInt("XDM.skin.rowHeight"))
+        }
+    }
+
+    @Test
+    fun testSkinWallpaperAndOpacitySwitching() {
+        val repoRoot = java.io.File("..").canonicalFile.let {
+            if (java.io.File(it, "pom.xml").exists()) it else java.io.File(".").canonicalFile
+        }
+        val cyberNeonArchive = java.io.File(repoRoot, "sample-skins/cyber-neon.xdmskin")
+        if (cyberNeonArchive.exists()) {
+            runOnEdt {
+                SkinManager.installSkin(cyberNeonArchive)
+                val skin = SkinManager.getSkin("cyber-neon")
+                assertNotNull(skin, "Installed custom skin should exist")
+                assertTrue(skin!!.hasWallpaper(isDark = true), "Cyber neon should report hasWallpaper = true")
+
+                // Apply skin with wallpaper
+                SkinManager.applySkin("cyber-neon", saveConfig = false)
+                val tableView = xdm.app.ui.components.DownloadTableView()
+                tableView.updateTheme()
+                assertFalse(tableView.isOpaque, "TableView should be non-opaque when skin has wallpaper")
+
+                // Check cell renderer opacity
+                val renderer = xdm.app.ui.components.DownloadTableRenderers.FileNameCellRenderer()
+                val table = javax.swing.JTable()
+                val unselectedComp = renderer.getTableCellRendererComponent(table, "test.zip", false, false, 0, 0)
+                assertFalse(unselectedComp.isOpaque, "Unselected cell should be non-opaque when skin has wallpaper")
+
+                val selectedComp = renderer.getTableCellRendererComponent(table, "test.zip", true, true, 0, 0)
+                assertTrue(selectedComp.isOpaque, "Selected cell should remain opaque with selection background")
+
+                // Switch back to built-in skin without wallpaper
+                SkinManager.applySkin(SkinManager.SKIN_ENHANCED, saveConfig = false)
+                assertFalse(SkinManager.currentSkin.hasWallpaper(isDark = true), "Enhanced skin has no wallpaper")
+                tableView.updateTheme()
+                assertTrue(tableView.isOpaque, "TableView should become opaque when skin has no wallpaper")
+
+                val unselectedComp2 = renderer.getTableCellRendererComponent(table, "test.zip", false, false, 0, 0)
+                assertTrue(unselectedComp2.isOpaque, "Unselected cell should be opaque when skin has no wallpaper")
+            }
+        }
+    }
+
+    @Test
+    fun testSkinWallpaperSafePaintingZeroDimensionsAndFallback() {
+        val repoRoot = java.io.File("..").canonicalFile.let {
+            if (java.io.File(it, "pom.xml").exists()) it else java.io.File(".").canonicalFile
+        }
+        val cyberNeonArchive = java.io.File(repoRoot, "sample-skins/cyber-neon.xdmskin")
+        if (cyberNeonArchive.exists()) {
+            val skin = SkinManager.getSkin("cyber-neon")
+            if (skin != null) {
+                val dummyImg = java.awt.image.BufferedImage(10, 10, java.awt.image.BufferedImage.TYPE_INT_ARGB)
+                val g = dummyImg.createGraphics()
+                try {
+                    // Safe handling of 0 or negative dimensions
+                    assertFalse(skin.paintWallpaper(g, 0, 0, true))
+                    assertFalse(skin.paintWallpaper(g, -100, -100, false))
+                    assertFalse(skin.paintWallpaper(g, 0, 500, true))
+                    assertFalse(skin.paintWallpaper(g, 500, 0, false))
+
+                    // Valid dimensions paint successfully
+                    assertTrue(skin.paintWallpaper(g, 200, 200, true))
+                } finally {
+                    g.dispose()
+                }
+            }
+        }
+    }
+
+    @Test
+    fun testDeterministicPrecedenceHierarchy() {
+        // High contrast / luminance foreground guarantee
+        val brightAmber = Color(0xF5, 0x9E, 0x0B)
+        val fgForBright = ThemeManager.contrastForeground(brightAmber)
+        assertEquals(Color(0x18, 0x18, 0x1B), fgForBright, "Bright background requires dark text for accessibility")
+
+        val darkBlue = Color(0x1E, 0x3A, 0x8A)
+        val fgForDark = ThemeManager.contrastForeground(darkBlue)
+        assertEquals(Color.WHITE, fgForDark, "Dark background requires white text for contrast")
+    }
+
+    @Test
+    fun testCustomSkinPathTraversalProtection() {
+        val repoRoot = java.io.File("..").canonicalFile.let {
+            if (java.io.File(it, "pom.xml").exists()) it else java.io.File(".").canonicalFile
+        }
+        val cyberNeonArchive = java.io.File(repoRoot, "sample-skins/cyber-neon.xdmskin")
+        if (cyberNeonArchive.exists()) {
+            val skin = SkinManager.getSkin("cyber-neon") as? xdm.app.skins.CustomSkin
+            if (skin != null) {
+                // Malicious path traversal attempts must be rejected safely
+                assertNull(skin.getToolbarIcon("../../../../etc/passwd", 24))
+                assertNull(skin.getToolbarIcon("..\\..\\windows\\system32\\calc.exe", 24))
+                assertNull(skin.getToolbarIcon("C:/Windows/System32/notepad.exe", 24))
+            }
+        }
+    }
+
+    @Test
+    fun testClassicListViewAndModernListViewInitOpacity() {
+        val repoRoot = java.io.File("..").canonicalFile.let {
+            if (java.io.File(it, "pom.xml").exists()) it else java.io.File(".").canonicalFile
+        }
+        val cyberNeonArchive = java.io.File(repoRoot, "sample-skins/cyber-neon.xdmskin")
+        if (cyberNeonArchive.exists()) {
+            runOnEdt {
+                SkinManager.installSkin(cyberNeonArchive)
+                SkinManager.applySkin("cyber-neon", saveConfig = false)
+
+                // Classic list view should immediately have non-opaque containers
+                val classicView = xdm.app.ui.components.ClassicListView()
+                val classicComp = classicView.component as javax.swing.JPanel
+                assertFalse(classicComp.isOpaque, "ClassicListView outer panel should be non-opaque with wallpaper")
+
+                // Modern list view should also immediately have non-opaque containers
+                val modernView = xdm.app.ui.components.ModernListView()
+                val modernComp = modernView.component as javax.swing.JPanel
+                assertFalse(modernComp.isOpaque, "ModernListView outer panel should be non-opaque with wallpaper")
+
+                // Switch back
+                SkinManager.applySkin(SkinManager.SKIN_ENHANCED, saveConfig = false)
+                classicView.updateTheme()
+                assertTrue(classicComp.isOpaque, "ClassicListView should be opaque when skin has no wallpaper")
+            }
+        }
+    }
+
+    @Test
+    fun testModalDialogsLiveRepaintAndDisposal() {
+        runOnEdt {
+            SkinManager.applySkin(SkinManager.SKIN_ENHANCED, saveConfig = false)
+            val newDwn = xdm.app.ui.screens.NewDownloadWindow()
+            assertTrue(newDwn.contentPane is xdm.app.ui.components.SkinBackgroundPanel)
+            newDwn.dispose()
+
+            val newVid = xdm.app.ui.screens.NewVideoDownloadWindow()
+            assertTrue(newVid.contentPane is xdm.app.ui.components.SkinBackgroundPanel)
+            newVid.dispose()
+
+            val newTorr = xdm.app.ui.screens.NewTorrentDownloadWindow(
+                xdm.torrent.TorrentSource.MagnetUri("magnet:?xt=urn:btih:0123456789abcdef0123456789abcdef01234567&dn=test")
+            )
+            assertTrue(newTorr.contentPane is xdm.app.ui.components.SkinBackgroundPanel)
+            newTorr.dispose()
         }
     }
 }

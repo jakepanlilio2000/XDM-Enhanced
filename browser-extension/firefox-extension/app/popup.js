@@ -163,6 +163,37 @@ class VideoPopup {
             settingsBtn.addEventListener('click', () => this.openOptionsPage("general"));
         }
 
+        const recheckBtn = document.getElementById("recheckBtn");
+        if (recheckBtn) {
+            recheckBtn.addEventListener("click", () => {
+                recheckBtn.disabled = true;
+                recheckBtn.textContent = "Checking…";
+                chrome.runtime.sendMessage({ type: "recheck" }, res => {
+                    recheckBtn.disabled = false;
+                    recheckBtn.textContent = "Recheck Connection";
+                    if (!chrome.runtime.lastError && res) {
+                        this.onMsg(res);
+                    }
+                });
+            });
+        }
+
+        const launchBtn = document.getElementById("launchDesktopBtn");
+        if (launchBtn) {
+            launchBtn.addEventListener("click", () => {
+                chrome.runtime.sendMessage({ type: "launch" });
+                launchBtn.textContent = "Launching…";
+                setTimeout(() => {
+                    chrome.runtime.sendMessage({ type: "recheck" }, res => {
+                        launchBtn.textContent = "Launch XDM";
+                        if (!chrome.runtime.lastError && res) {
+                            this.onMsg(res);
+                        }
+                    });
+                }, 1500);
+            });
+        }
+
         const format = document.getElementById('format');
         const hint = document.getElementById('formatHint');
         if (format && hint) {
@@ -232,12 +263,12 @@ class VideoPopup {
 
     onMsg(response) {
         if (chrome.runtime.lastError || !response) {
-            this.setConnectionState(false);
+            this.setConnectionState(false, "", "desktop_unavailable", "Could not communicate with extension background script.");
             return;
         }
 
         this.connected = response.connected === true;
-        this.setConnectionState(this.connected, response.xdmVersion);
+        this.setConnectionState(this.connected, response.xdmVersion, response.status, response.statusDetails);
 
         this.updateMonitoringPill(response.enabled === true);
 
@@ -296,18 +327,59 @@ class VideoPopup {
         document.getElementById('actions').hidden = list.length === 0;
     }
 
-    setConnectionState(connected, appVersion) {
+    setConnectionState(connected, appVersion, status, statusDetails) {
         this.connected = connected;
         const banner = document.getElementById("disconnectedNotice");
-        if (banner) banner.hidden = connected;
+        if (banner) {
+            banner.hidden = connected;
+            const title = document.getElementById("disconnectedTitle");
+            const detail = document.getElementById("disconnectedDetail");
+            if (!connected) {
+                if (status === "connecting") {
+                    if (title) title.textContent = "Connecting to XDM Enhanced…";
+                    if (detail) detail.textContent = statusDetails || "Attempting to contact desktop integration service on 127.0.0.1:8597.";
+                } else if (status === "recovering") {
+                    if (title) title.textContent = "Reconnecting to XDM Enhanced…";
+                    if (detail) detail.textContent = statusDetails || "Connection dropped. Automatically retrying with exponential backoff…";
+                } else if (status === "connection_timeout") {
+                    if (title) title.textContent = "Connection Timed Out";
+                    if (detail) detail.textContent = statusDetails || "The desktop integration service took too long to respond on 127.0.0.1:8597.";
+                } else if (status === "permission_denied") {
+                    if (title) title.textContent = "Permission Denied";
+                    if (detail) detail.textContent = statusDetails || "Local loopback communication was refused or host permissions withheld.";
+                } else if (status === "incompatible_version") {
+                    if (title) title.textContent = "Incompatible Desktop Version";
+                    if (detail) detail.textContent = statusDetails || "Please update XDM Enhanced to v1.0.0 or higher.";
+                } else if (status === "host_missing") {
+                    if (title) title.textContent = "Integration Service Not Found";
+                    if (detail) detail.textContent = statusDetails || "XDM Enhanced host endpoint could not be reached (HTTP 404).";
+                } else if (status === "launch_failure") {
+                    if (title) title.textContent = "Launch Failed";
+                    if (detail) detail.textContent = statusDetails || "Could not launch desktop application via protocol handler.";
+                } else {
+                    if (title) title.textContent = "XDM Enhanced Disconnected";
+                    if (detail) detail.textContent = statusDetails || "Desktop application is not running. Launch XDM Enhanced to enable browser monitoring and downloads.";
+                }
+            }
+        }
 
         const pill = document.getElementById("connectionStatus");
         const text = document.getElementById("connectionText");
         if (pill && text) {
-            pill.className = `status-pill ${connected ? "connected" : "disconnected"}`;
-            text.textContent = connected
-                ? (appVersion ? `Connected (App v${appVersion})` : "Connected")
-                : "Disconnected";
+            let pillClass = "disconnected";
+            let label = "Disconnected";
+            if (connected) {
+                pillClass = "connected";
+                label = appVersion ? `Connected (v${appVersion})` : "Connected";
+            } else if (status === "connecting" || status === "recovering") {
+                pillClass = status;
+                label = status === "connecting" ? "Connecting…" : "Recovering…";
+            } else if (status === "incompatible_version") {
+                pillClass = "warn";
+                label = "Incompatible";
+            }
+            pill.className = `status-pill ${pillClass}`;
+            text.textContent = label;
         }
 
         const bulkBtn = document.getElementById("bulk");

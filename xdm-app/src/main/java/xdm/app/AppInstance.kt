@@ -177,6 +177,9 @@ open class AppInstance : IAppInstance {
                 }
             }
             handleLaunchArgs(args.toList())
+            if (AppContext.config.monitorClipboard) {
+                xdm.app.preflight.ClipboardMonitor.start()
+            }
         }
     }
 

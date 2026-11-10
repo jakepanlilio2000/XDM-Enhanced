@@ -314,6 +314,11 @@ class ClassicCardPanel {
                 lblTypeBadge.foreground = Color(210, 153, 34)
                 lblTypeBadge.background = Color(210, 153, 34, 40)
             }
+            DownloadType.Plugin -> {
+                lblTypeBadge.text = "PLUGIN"
+                lblTypeBadge.foreground = Color(0x7C, 0x4D, 0xFF)
+                lblTypeBadge.background = Color(0x7C, 0x4D, 0xFF, 40)
+            }
             else -> {
                 lblTypeBadge.text = "HTTP"
                 lblTypeBadge.foreground = Color(56, 139, 253)
@@ -427,10 +432,10 @@ class ClassicCardPanel {
         // Icon badge
         val cat = AppContext.config.categories.firstOrNull { it.id == ent.categoryId }
         val tile = AppTheme.tile(cat)
-        val glyph = if (ent.downloadType == DownloadType.Torrent) {
-            RemixIcon.DOWNLOAD_2_LINE
-        } else {
-            CategoryStyle.glyphForFile(ent.fileName)
+        val glyph = when (ent.downloadType) {
+            DownloadType.Torrent -> RemixIcon.DOWNLOAD_2_LINE
+            DownloadType.Plugin -> RemixIcon.PUZZLE_LINE
+            else -> CategoryStyle.glyphForFile(ent.fileName)
         }
         iconBadge.background = tile.background
         iconLabel.icon = FontIcon(glyph, 22.px, tile.glyph)
@@ -442,6 +447,7 @@ class ClassicCardPanel {
             val cat = AppContext.config.categories.firstOrNull { it.id == categoryId }
             if (cat != null) return cat.name
         }
+        if (rec.downloadType == DownloadType.Plugin) return "Plugin"
         val matched = CategoryRules.match(rec.fileName, null, null)
         if (matched != null) return matched.name
         val ext = rec.fileName.substringAfterLast('.', "").lowercase()

@@ -44,6 +44,10 @@ abstract class DownloadListBase(final override val filter: MainListViewFilter) :
     private val emptyListIcon = createIcon(RemixIcon.BOOK_SHELF_LINE, 96, AppTheme.emptyIconColor)
     private val noMatchIcon = createIcon(RemixIcon.SEARCH_LINE, 96, AppTheme.emptyIconColor)
     private val emptyLabel = JLabel("", SwingConstants.CENTER)
+    private val emptyPanel = JPanel(BorderLayout()).apply {
+        background = AppTheme.listBackground
+        add(emptyLabel, BorderLayout.CENTER)
+    }
 
     protected val window: Window? get() = SwingUtilities.windowForComponent(jsp)
 
@@ -112,15 +116,12 @@ abstract class DownloadListBase(final override val filter: MainListViewFilter) :
             border = ScaledEmptyBorder(0, 0, 90, 0)
             font = font.deriveFont(Font.PLAIN, 14.0f.px)
         }
-        val emptyPanel = JPanel(BorderLayout()).apply {
-            background = AppTheme.listBackground
-            add(emptyLabel, BorderLayout.CENTER)
-        }
         cardPanel.add(emptyPanel, "EMPTY")
         cardPanel.add(jsp, "LIST")
         // Filter, search and sort changes re-filter the view without touching the model.
         sorter.addRowSorterListener { updateCard() }
         updateCard()
+        updateTheme()
     }
 
     /** Sets the row [renderer] and hover [editor]; called once from the subclass constructor. */
@@ -243,8 +244,16 @@ abstract class DownloadListBase(final override val filter: MainListViewFilter) :
     }
 
     override fun updateTheme() {
+        val hasWallpaper = xdm.app.skins.SkinManager.currentSkin.hasWallpaper()
+        cardPanel.isOpaque = !hasWallpaper
+        jsp.isOpaque = !hasWallpaper
+        jsp.viewport.isOpaque = !hasWallpaper
+        table.isOpaque = !hasWallpaper
+        emptyPanel.isOpaque = !hasWallpaper
+
         cardPanel.background = AppTheme.listBackground
         table.background = AppTheme.listBackground
+        emptyPanel.background = AppTheme.listBackground
         table.updateUI()
         table.repaint()
     }

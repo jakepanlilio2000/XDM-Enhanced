@@ -228,10 +228,11 @@ class PluginsPanel : SettingsPanel() {
                 add(capsPanel)
             }
 
-            // Fault banner if faulted
-            if (plugin.status == PluginStatus.FAULTED && !plugin.faultReason.isNullOrBlank()) {
+            // Diagnostics banner if faulted or incompatible
+            if ((plugin.status == PluginStatus.FAULTED || plugin.status == PluginStatus.INCOMPATIBLE) && !plugin.faultReason.isNullOrBlank()) {
                 add(Box.createRigidArea(Dimension(0, 6.px)))
-                val faultLabel = JLabel("Fault: ${plugin.faultReason}").apply {
+                val prefix = if (plugin.status == PluginStatus.INCOMPATIBLE) "Incompatible" else "Fault"
+                val faultLabel = JLabel("$prefix: ${plugin.faultReason}").apply {
                     font = font.deriveFont(Font.PLAIN, 11f.px)
                     foreground = Color(0xE5, 0x39, 0x35)
                     alignmentX = Component.LEFT_ALIGNMENT
@@ -267,6 +268,17 @@ class PluginsPanel : SettingsPanel() {
                             PluginManager.enablePlugin(plugin.manifest.id)
                         }
                         add(btnEnable)
+                    }
+                    PluginStatus.INCOMPATIBLE -> {
+                        val btnIncompatible = settingsButton(I8N.text("PLUGINS_STATUS_INCOMPATIBLE") ?: "Incompatible") {
+                            JOptionPane.showMessageDialog(
+                                this@PluginsPanel,
+                                "This plugin cannot be enabled because it is incompatible with your XDM version or API:\n\n${plugin.faultReason}",
+                                "Plugin Incompatible",
+                                JOptionPane.WARNING_MESSAGE
+                            )
+                        }
+                        add(btnIncompatible)
                     }
                     PluginStatus.UNTRUSTED -> {
                         val btnTrust = settingsButton(I8N.text("PLUGINS_TRUST_CONFIRM_TITLE") ?: "Trust & Enable") {

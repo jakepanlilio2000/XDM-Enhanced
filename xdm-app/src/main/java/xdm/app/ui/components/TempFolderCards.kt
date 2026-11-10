@@ -1,6 +1,7 @@
 package xdm.app.ui.components
 
 import xdm.app.I8N.text
+import xdm.app.skins.SkinRegion
 import java.awt.CardLayout
 import java.awt.Component
 import java.awt.Container
@@ -9,6 +10,7 @@ import java.awt.GraphicsEnvironment
 import java.awt.Point
 import java.awt.Window
 import javax.swing.JButton
+import javax.swing.JComponent
 import javax.swing.JDialog
 import javax.swing.JPanel
 
@@ -27,15 +29,17 @@ class TempFolderCards(
     private val dialog: JDialog,
     private val fitMain: () -> Unit,
     private val onSaved: () -> Unit,
+    val region: SkinRegion = SkinRegion.DOWNLOAD_MODAL
 ) {
     private val layout = VisibleCardLayout()
-    private val cards = JPanel(layout)
+    private val cards = SkinBackgroundPanel(layout, region = region)
     private val panel = TempFolderPanel(onClose = ::close, onRelayout = { if (showingTemp) fit { fitCard() } })
     private var showingTemp = false
     private var formDefaultButton: JButton? = null
     private var formTitle: String? = null
 
     init {
+        (dialog.contentPane as? JComponent)?.isOpaque = false
         cards.add(dialog.contentPane, FORM)
         cards.add(panel, TEMP)
         dialog.contentPane = cards

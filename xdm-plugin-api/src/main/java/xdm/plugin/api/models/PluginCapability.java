@@ -8,7 +8,10 @@ public enum PluginCapability {
     CONTEXT_MENU("Context Menu Actions"),
     TOOLBAR("Toolbar Actions"),
     SETTINGS_PANEL("Settings Interface"),
-    COMMANDS("Command Registration");
+    COMMANDS("Command Registration"),
+    MEDIA_METADATA("Media Metadata Provider"),
+    TASK_ADAPTER("Task Adapter & Progress"),
+    EVENT_BUS("Event Bus & Messaging");
 
     private final String displayName;
 

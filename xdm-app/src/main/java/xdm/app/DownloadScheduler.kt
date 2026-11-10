@@ -153,6 +153,8 @@ class DownloadScheduler(private val appDB: AppDB, private val configDir: String)
         val rec = appDB.getById(id)
         if (rec?.downloadType == DownloadType.Torrent) {
             runCatching { AppContext.torrentManager.getTask(id)?.resume() }
+        } else if (rec?.downloadType == DownloadType.Plugin) {
+            runCatching { xdm.app.plugins.PluginDownloadBridge.resumeTask(id) }
         } else {
             runCatching { AppContext.downloader.resumeDownload(id) }
         }
@@ -163,6 +165,8 @@ class DownloadScheduler(private val appDB: AppDB, private val configDir: String)
         val rec = appDB.getById(id)
         if (rec?.downloadType == DownloadType.Torrent) {
             runCatching { AppContext.torrentManager.getTask(id)?.pause() }
+        } else if (rec?.downloadType == DownloadType.Plugin) {
+            runCatching { xdm.app.plugins.PluginDownloadBridge.pauseTask(id) }
         } else {
             runCatching { AppContext.downloader.stopDownload(id) }
         }

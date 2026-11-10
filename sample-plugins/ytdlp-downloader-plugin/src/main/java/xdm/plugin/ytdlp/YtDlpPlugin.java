@@ -4,6 +4,7 @@ import xdm.plugin.api.NotificationLevel;
 import xdm.plugin.api.PluginContext;
 import xdm.plugin.api.XdmPlugin;
 import xdm.plugin.api.commands.PluginCommand;
+import xdm.plugin.api.download.PluginDownloadTask;
 import xdm.plugin.api.models.DownloadInfo;
 import xdm.plugin.api.models.PluginAction;
 import xdm.plugin.api.models.PluginDownloadRequest;
@@ -140,18 +141,22 @@ public class YtDlpPlugin implements XdmPlugin {
             YtDlpDownloadTask task = (YtDlpDownloadTask) downloadProvider.createDownloadTask(req);
             activeTasks.add(task);
             task.addProgressListener(event -> {
-                if (event.getState() == YtDlpDownloadTask.TaskState.FINISHED) {
+                if (event.getState() == PluginDownloadTask.TaskState.FINISHED) {
                     activeTasks.remove(task);
                     context.showNotification("yt-dlp Complete", "Media download finished: " + url, NotificationLevel.INFO);
-                } else if (event.getState() == YtDlpDownloadTask.TaskState.FAILED) {
+                } else if (event.getState() == PluginDownloadTask.TaskState.FAILED) {
                     activeTasks.remove(task);
                     context.showNotification("yt-dlp Failed", "Download error: " + event.getMessage(), NotificationLevel.ERROR);
-                } else if (event.getState() == YtDlpDownloadTask.TaskState.CANCELED) {
+                } else if (event.getState() == PluginDownloadTask.TaskState.CANCELED) {
                     activeTasks.remove(task);
                 }
             });
-            task.start();
-            context.logInfo("Started yt-dlp task for: " + url);
+            long taskId = context.submitPluginTask(req, task);
+            if (taskId < 0) {
+                // Fallback for older hosts lacking task adapter support
+                task.start();
+            }
+            context.logInfo("Registered yt-dlp task (id=" + taskId + ") for: " + url);
             return task;
         } catch (Exception e) {
             context.logError("Failed to initiate yt-dlp download: " + e.getMessage(), e);

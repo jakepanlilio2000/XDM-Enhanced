@@ -15,6 +15,9 @@ enum class DownloadType(override val id: Int) : StableId {
 
     /** Many links saved as separate files in one folder, shown as a single download (see docs/batch-downloader.md). */
     Batch(5),
+
+    /** Third-party plugin managed download (e.g. yt-dlp, media stream, custom protocol). */
+    Plugin(6),
 }
 
 enum class DownloadError {
@@ -244,6 +247,16 @@ data class BatchDownloadTaskInfo(
     /** The folder holding merged items' tracks, or null when the batch has none. */
     val trackFolder: String? get() = tempDir?.let { File(it, "batch-$id").absolutePath }
 }
+
+data class PluginDownloadTaskInfo(
+    val id: Long,
+    val pluginId: String,
+    val url: String,
+    val fileName: String,
+    val targetFolder: String,
+    val categoryId: String? = null,
+    val totalSize: Long = -1L,
+)
 
 sealed interface DownloadStatusInfo {
     data class InitInfo(

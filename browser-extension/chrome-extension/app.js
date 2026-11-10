@@ -602,44 +602,77 @@ export default class App {
         this.onDisconnect();
     }
 
+    buildStatusPayload(tabId, currentUrl) {
+        let blocked = !!(currentUrl && isBlockedUrl(currentUrl));
+        let currentHost = "";
+        try {
+            if (currentUrl) {
+                currentHost = new URL(currentUrl).hostname;
+            }
+        } catch (e) {
+            currentHost = normalizeHost(currentUrl);
+        }
+        let siteExcluded = currentHost ? this.isSiteExcluded(currentHost) : false;
+
+        const connInfo = this.connector.getStatusInfo();
+        let effectiveStatus = connInfo.status;
+        let effectiveDetails = connInfo.statusDetails;
+
+        if (!this.hostAccess) {
+            effectiveStatus = "permission_denied";
+            effectiveDetails = "Extension host permissions not granted for 127.0.0.1:8597.";
+        } else if (connInfo.connected && isOutdatedXdm(this.xdmVersion)) {
+            effectiveStatus = "incompatible_version";
+            effectiveDetails = "Desktop XDM Enhanced is outdated (" + (this.xdmVersion || "unknown") + "). Version " + MIN_XDM_VERSION + "+ required.";
+        }
+
+        return {
+            enabled: this.isMonitoringEnabled(),
+            connected: connInfo.connected,
+            status: effectiveStatus,
+            statusDetails: effectiveDetails,
+            retryCount: connInfo.retryCount,
+            outdated: connInfo.connected && isOutdatedXdm(this.xdmVersion),
+            xdmVersion: this.xdmVersion,
+            updateUrl: XDM_DOWNLOAD_URL,
+            blockedSite: blocked,
+            siteExcluded: siteExcluded,
+            siteHost: normalizeHost(currentHost),
+            list: (blocked || siteExcluded) ? [] : this.videosForTab(tabId)
+        };
+    }
+
     onPopupMessage(request, sender, sendResponse) {
         this.logger.log(request.type);
         if (request.type === "stat") {
-            // Opening the popup is the clearest "is XDM there?" moment there is, so look before
-            // answering rather than reporting what the worker happened to know last. Opening it
-            // often wakes the worker too, so wait for startup first.
-            this.ready.then(() => this.connector.tryConnect("popup opened")).then(() => {
-                // Resolve the active tab fresh: the MV3 service worker can be torn
-                // down, resetting this.activeTabId, so don't rely on it here.
+            // Opening the popup is the clearest "is XDM there?" moment there is.
+            // If currently disconnected, force a fresh check rather than throttle.
+            const needForce = !this.connector.isConnected();
+            this.ready.then(() => this.connector.tryConnect("popup opened", needForce)).then(() => {
                 chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
                     let tabId = (tabs && tabs[0]) ? tabs[0].id + "" : this.activeTabId;
                     this.activeTabId = tabId;
                     let currentUrl = (tabs && tabs[0]) ? tabs[0].url : "";
-                    // On YouTube the popup says XDM stays out, and offers no bulk picker.
-                    let blocked = !!(currentUrl && isBlockedUrl(currentUrl));
-                    let currentHost = "";
-                    try {
-                        if (currentUrl) {
-                            currentHost = new URL(currentUrl).hostname;
-                        }
-                    } catch (e) {
-                        currentHost = normalizeHost(currentUrl);
-                    }
-                    let siteExcluded = currentHost ? this.isSiteExcluded(currentHost) : false;
-                    sendResponse({
-                        enabled: this.isMonitoringEnabled(),
-                        connected: this.connector.isConnected() === true,
-                        outdated: this.connector.isConnected() === true && isOutdatedXdm(this.xdmVersion),
-                        xdmVersion: this.xdmVersion,
-                        updateUrl: XDM_DOWNLOAD_URL,
-                        blockedSite: blocked,
-                        siteExcluded: siteExcluded,
-                        siteHost: normalizeHost(currentHost),
-                        list: (blocked || siteExcluded) ? [] : this.videosForTab(tabId)
-                    });
+                    sendResponse(this.buildStatusPayload(tabId, currentUrl));
                 });
             });
             return true; // keep the message channel open for the async response
+        }
+        else if (request.type === "recheck") {
+            this.ready.then(() => this.connector.recheck()).then(() => {
+                chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
+                    let tabId = (tabs && tabs[0]) ? tabs[0].id + "" : this.activeTabId;
+                    this.activeTabId = tabId;
+                    let currentUrl = (tabs && tabs[0]) ? tabs[0].url : "";
+                    sendResponse(this.buildStatusPayload(tabId, currentUrl));
+                });
+            });
+            return true;
+        }
+        else if (request.type === "launch") {
+            this.connector.launchApp();
+            sendResponse({ ok: true, status: this.connector.status });
+            return true;
         }
         else if (request.type === "cmd") {
             this.userDisabled = request.enabled === false;

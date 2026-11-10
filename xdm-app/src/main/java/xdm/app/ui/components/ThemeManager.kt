@@ -1,6 +1,8 @@
 package xdm.app.ui.components
 
+import com.formdev.flatlaf.FlatDarkLaf
 import com.formdev.flatlaf.FlatLaf
+import com.formdev.flatlaf.FlatLightLaf
 import com.formdev.flatlaf.themes.FlatMacDarkLaf
 import com.formdev.flatlaf.themes.FlatMacLightLaf
 import com.formdev.flatlaf.util.UIScale
@@ -120,6 +122,8 @@ object ThemeManager {
             false
         }
     }.getOrDefault(false)
+
+    val listenerCount: Int get() = listeners.size
 
     fun addThemeListener(listener: ThemeChangeListener) {
         listeners.add(listener)
@@ -255,8 +259,16 @@ object ThemeManager {
             FlatLaf.setSystemColorGetter(null)
         }
 
-        // Setup theme LaF
-        if (resolvedDark) FlatMacDarkLaf.setup() else FlatMacLightLaf.setup()
+        // Setup theme Look and Feel:
+        // Original XDM and presets with square buttons use standard FlatDarkLaf/FlatLightLaf
+        // to strictly respect rectangular geometry, avoiding macOS-style pill buttons.
+        val activeSkin = SkinManager.currentSkin
+        val useClassicLaf = activeSkin.id == SkinManager.SKIN_ORIGINAL_XDM || activeSkin.buttonArc == 0
+        if (useClassicLaf) {
+            if (resolvedDark) FlatDarkLaf.setup() else FlatLightLaf.setup()
+        } else {
+            if (resolvedDark) FlatMacDarkLaf.setup() else FlatMacLightLaf.setup()
+        }
 
         // Apply active skin geometry, category colors, and UIManager overrides
         SkinManager.applyCustomDefaults(resolvedDark)

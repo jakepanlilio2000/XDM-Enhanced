@@ -1,40 +1,64 @@
-# XDM Enhanced v1.0.0-beta.5
+# XDM Enhanced v1.0.0-beta.6
 
-Fifth beta release of **XDM Enhanced** — an independent, open-source download manager forked from Xtreme Download Manager (XDM). It pairs high-speed multi-connection segmented HTTP/HTTPS downloading and streaming video capture with native BitTorrent and magnet support, modern FlatLaf dynamic theming, custom skin packages, a public plugin framework, floating browser media grabbing, automated post-download rules, and companion browser extensions.
+Sixth beta release of **XDM Enhanced** — an independent, open-source download manager forked from Xtreme Download Manager (XDM). It pairs high-speed multi-connection segmented HTTP/HTTPS downloading and streaming video capture with native BitTorrent and magnet support, modern FlatLaf dynamic theming, custom skin packages, a public plugin framework, floating browser media grabbing, automated post-download rules, and companion browser extensions.
 
 ---
 
 ## Release Highlights
 
-- **Extensible Skin Engine & Custom Skin Packages (`.xdmskin`):** Full skinning support allowing users to switch between the modern **XDM Enhanced** theme and authentic **Original XDM** classic theme, or install portable community `.xdmskin` packages. Supports custom window backgrounds, wallpapers, toolbar icons, category icons, buttons, fonts, border radii, and accent overrides with live hot-reloading and sandboxed package validation.
-- **Core Plugin Framework & Developer API (`xdm-plugin-api`):** Introduced a decoupled public Java SPI module allowing third-party developers to extend XDM Enhanced without modifying the core codebase. Features sandboxed lifecycle management (discovery, validation, quarantine by default, trust verification), dedicated Settings > Plugins UI, and working reference plugins (Checksum Verifier and optional yt-dlp media downloader).
-- **Floating Browser Video Downloader & Quality Selection:** Lightweight, non-intrusive floating download button anchored to detected HTML5 `<video>` players in Chromium and Firefox extensions. Features Shadow DOM style isolation, responsive sizing, fullscreen adaptation, keyboard accessibility, format and quality selection (4K down to 480p), audio track badges (Muxed vs. Video Only), estimated size notation (`≈ ... (est.)`), EME DRM inspection with advisory warning, and offline desktop detection.
+- **Skin Background & Modal Customization System:** Extends the skinning engine to support declarative custom background images and colors for windows, sidebars, toolbars, and modal dialogs via `skin.json`. Adds `SkinBackgroundPanel` with tiling, scaling, centering, and opacity control, along with modal dimming and contrast-preserving legibility.
+- **User-Controlled Clipboard Monitoring & Non-Intrusive Preflight:** Enhanced clipboard security and network efficiency. Only single HTTP/HTTPS URLs (<= 2,048 chars) are evaluated when clipboard monitoring is enabled; credentials, multi-line blocks, and unrelated text are rejected immediately. Performs lightweight `HEAD`/range metadata discovery with **zero payload bytes** downloaded before explicit user confirmation.
+- **Public Plugin API v2 & Task Adapter Bridge:** Introduces semantic version-range compatibility matching (`[1.0.0, 2.0.0)`) preventing minor host updates from breaking plugins. Decouples plugin messaging via a publish-subscribe `PluginEventBus` and provides a public task adapter bridge (`PluginDownloadBridge`) routing tasks into the core download manager.
+- **Central Download List Integration for yt-dlp Plugin:** Solves missing yt-dlp tasks in the main download list. Tasks now register immediately with persistent IDs, `CAT_VIDEOS` categorization, real-time speed/ETA progress reporting, lifecycle state transitions (initialization through completion/failure), and safe `ProcessBuilder` argument isolation.
+- **Browser Connection Self-Diagnostics & Safe Repair:** Eliminates false "XDM Enhanced Disconnected" warnings via resilient loopback handshake verification and exponential backoff retry. Features an in-extension diagnostic panel reporting precise failure reasons, plus a non-blocking "Repair Browser Integration" tool in Desktop Settings that repairs Windows native messaging manifests and protocol registrations safely without silent registry hijacking.
 
 ---
 
 ## Changes & Fixes
 
 ### Added
+
 - **Skin Engine (`xdm-app`):**
-  - Portable `.xdmskin` ZIP archive format with `skin.json` declarative manifest.
-  - Skin Management UI in Settings > Appearance with preview cards, install, export, and delete actions.
-  - Security validation defending against Zip Slip path traversal and malicious binaries.
-  - Complete developer documentation ([Skin Development Guide](docs/SKIN_DEVELOPMENT.md)) and sample skin [`sample-skins/cyber-neon.xdmskin`](sample-skins/cyber-neon.xdmskin).
+  - Declarative background image and color customization for windows, panels, sidebars, toolbars, and dialogs.
+  - `SkinBackgroundPanel` supporting tile, scale, center, and adjustable opacity modes.
+  - Dialog backdrop tinting with contrast preservation for accessibility.
+  - Component styling resolver (`SkinStyleResolver`) for unified button radii, padding, and borders across dialogs.
+  - Live skin hot-reloading regression test coverage in `SkinEngineTest` and `FullUiSkinContractTest`.
+- **Clipboard & Preflight Architecture (`xdm-app`):**
+  - Strict privacy filter: discards passwords, tokens, multiple URLs, and arbitrary text immediately.
+  - Non-intrusive metadata preflight via HTTP `HEAD` or fallback `Range: bytes=0-0`.
+  - Zero-payload preflight guarantee: no chunk files or payload bytes are downloaded before user confirmation.
+  - In-flight socket cancellation when dialog is dismissed.
 - **Plugin Architecture (`xdm-plugin-api`, `xdm-app`):**
-  - Dedicated Maven module `xdm-plugin-api` exposing clean SPI interfaces (`XdmPlugin`, `PluginContext`, `DownloadProvider`, `MediaProvider`, `PluginDownloadTask`, `PluginProgressEvent`).
-  - Quarantine-by-default security model requiring explicit user activation.
-  - Dedicated Plugins panel in Settings.
-  - Reference plugins and documentation: [Plugin Development Guide](docs/PLUGIN_DEVELOPMENT.md), `sample-plugins/checksum-verifier.xdmplugin`, and `sample-plugins/ytdlp-downloader.xdmplugin`.
-- **Floating Browser Video Downloader (`browser-extension`):**
-  - Floating download button appearing on supported video players.
-  - Dropdown quality picker with detected resolutions, container types, and audio availability.
-  - Format integrity ensuring HLS/DASH streams are never falsely represented as MP4 files.
-  - Encrypted Media Extensions (EME) DRM detection (`mediaKeys`) displaying a `DRM Protected Stream` banner.
-  - Asynchronous download dispatch with offline status detection.
+  - Semantic version-range compatibility matching (`[minVersion, maxVersion)`).
+  - Decoupled `PluginEventBus` with typed `PluginProgressEvent` and listener contracts.
+  - Public `PluginDownloadBridge` and `PluginTaskAdapter` routing third-party downloads to the central download queue.
+- **yt-dlp Media Downloader Plugin (`sample-plugins`):**
+  - Full task registration and tracking in central download list across all views (table, cards, rows).
+  - Progress tracking with speed, ETA, and state persistence.
+  - Process argument hardening with list-based execution.
+- **Browser Integration & Diagnostics (`browser-extension`, `xdm-app`):**
+  - In-extension diagnostics reporting exact status (`host_missing`, `permission_denied`, `app_not_running`).
+  - Desktop Settings "Repair Browser Integration" utility with asynchronous execution on background threads.
+  - Comprehensive guide: [`docs/BROWSER_CONNECTION_TROUBLESHOOTING.md`](docs/BROWSER_CONNECTION_TROUBLESHOOTING.md).
 
 ### Changed
-- **Version Alignment:** Updated all application modules, installer configurations, and companion extensions to `1.0.0-beta.5`.
-- **Documentation Overhaul:** Modernized `README.md` to provide a concise, readable overview focused on verified functionality, clean installation steps, and developer guides.
+
+- **Version Alignment:** Synchronized project and artifact version declarations to `1.0.0-beta.6` across all Maven modules, NSIS installer, build configurations, and companion extensions.
+- **Documentation:** Updated `README.md` and distribution guides with troubleshooting references.
+
+### Fixed
+
+- **Browser Extension Handshake:** Fixed false "Disconnected" warnings caused by startup race conditions using exponential backoff retry.
+- **EDT Responsiveness:** Prevented Swing UI freezes during browser connection checks and integration repairs by dispatching network and registry I/O to background daemon threads.
+- **Stale Registry Handlers:** Auto-detected invalid or missing executable paths in the Windows `xdm-app://` protocol registry handler.
+
+### Security
+
+- **Clipboard Privacy Guard:** Enforces strict length limits (<= 2048 chars) and single-URL validation; never inspects or logs sensitive clipboard history.
+- **Preflight Isolation:** Guarantees headers-only inspection; no payload bytes downloaded before user confirmation.
+- **Subprocess Argument Hardening:** Enforces array/list arguments for yt-dlp executions, rejecting command-line shell string concatenation.
+- **Loopback Origin & Header Verification:** Strict host and origin verification on `127.0.0.1:8597` rejecting DNS rebinding with HTTP 403 Forbidden.
 
 ---
 
@@ -42,24 +66,25 @@ Fifth beta release of **XDM Enhanced** — an independent, open-source download 
 
 - **Unsigned Firefox Add-ons:** Standard Firefox release channels require unlisted Mozilla AMO signing (`web-ext sign`) for permanent `.xpi` add-on installation. Unsigned extensions can be loaded as temporary add-ons via `about:debugging` or permanently on Firefox Developer Edition/Nightly with `xpinstall.signatures.required = false`.
 - **Consumer Chrome Extension Loading:** Google Chrome consumer builds require Developer Mode to load unpacked `.zip` extension folders from outside the Chrome Web Store.
+- **Platform File Dialog Styling:** Native OS file pickers retain operating system look-and-feel rather than custom skin backgrounds.
 
 ---
 
-## Release Assets & Checksums
+## Verified Release Assets & Checksums
 
 | Asset | Size | SHA-256 Checksum |
 |---|---|---|
-| `XDM-Enhanced-Setup-v1.0.0-beta.5-win-x64.exe` | 64,614,210 bytes | `6e4e94a2ab91a5519ae248ac3c29dded6a3dc1b165bfba08f8b63bbe3ee6bd99` |
-| `XDM-Enhanced-v1.0.0-beta.5-windows-x64.zip` | 75,403,564 bytes | `ccc87b841cce61ca208e28374e4531f774b550f3dc20c3881475db9861649fe7` |
-| `xdm-app-1.0.0-beta.5.jar` | 97,594,661 bytes | `62439b492e6245ecaaeca37f5f7f8611052cd94cc62066b9eb974e444f42e10f` |
-| `xdm-plugin-api-1.0.0-beta.5.jar` | 20,377 bytes | `2dd312bd35465412da7783b7d1e5399172924d31be5c997603ee0a316508fe9d` |
-| `XDM-Enhanced-Extension-Chromium-v1.0.0-beta.5.zip` | 102,180 bytes | `925fdb36d4234316cda079f1fcc7cb849432ae6a70ada5972baaf21673ec7988` |
-| `XDM-Enhanced-Extension-Firefox-v1.0.0-beta.5.zip` | 98,607 bytes | `ff50587ef2d8f0b56e65c78761a9da6b4ef34b383b2cd1669e3fc5114aef99ad` |
-| `XDM-Enhanced-Extension-Firefox-v1.0.0-beta.5.xpi` | 98,607 bytes | `ff50587ef2d8f0b56e65c78761a9da6b4ef34b383b2cd1669e3fc5114aef99ad` |
-| `cyber-neon.xdmskin` | 34,100 bytes | `a562d6f545f92c6b321cd80df8783adfd8d25120df4bc48caa5ecd59ade2807c` |
-| `checksum-verifier.xdmplugin` | 6,213 bytes | `bdfb11fa84e4cd3bdd703911aeb7d7de8f40542d630f26f1725febfca638b2ac` |
-| `ytdlp-downloader.xdmplugin` | 27,306 bytes | `92fc02f6d8e1b5540923596ddbe797afd6705aa894ba71afec37646349ada721` |
-| `SHA256SUMS.txt` | | Included in release |
+| `XDM-Enhanced-Setup-v1.0.0-beta.6-win-x64.exe` | 64,769,287 bytes | `da95a6b3beda92a29357544dc448211f01d6c3ef48ca68182a0cd130a47d3636` |
+| `XDM-Enhanced-v1.0.0-beta.6-windows-x64.zip` | 75,585,579 bytes | `5bbb8edfd6d4d6a32540b309271c6b1cceefa0569f74f66c7bd2ef542876201d` |
+| `XDM-Enhanced-Extension-Chromium-v1.0.0-beta.6.zip` | 106,412 bytes | `0ee9bb3edf49e11d126eca200ad67b2938e2d33b306a493bc31821ad0977e981` |
+| `XDM-Enhanced-Extension-Firefox-v1.0.0-beta.6.zip` | 103,503 bytes | `14dfc9637085267dc098c56d49b882e69bdb5cca22eaa9cf75b6d4471951feaa` |
+| `XDM-Enhanced-Extension-Firefox-v1.0.0-beta.6.xpi` | 103,503 bytes | `14dfc9637085267dc098c56d49b882e69bdb5cca22eaa9cf75b6d4471951feaa` |
+| `xdm-app-1.0.0-beta.6.jar` | 3,836,003 bytes | `5f14df837cab6ada72b3f8fad437ee73183f64d21238e2f1bf03b8ed80c26c9c` |
+| `xdm-plugin-api-1.0.0-beta.6.jar` | 21,976 bytes | `ddec81692aa22354ff3f5df7c70bdd290c922e89d9077bf0c00ccff40d273db4` |
+| `cyber-neon.xdmskin` | 34,446 bytes | `74e80ededf6d7f41f29b5cfafa79a06bef8b53fc20b077523122ffaeaff2f213` |
+| `checksum-verifier.xdmplugin` | 6,213 bytes | `152766aa1ee2fc491cb06a7c4f36ee8e3fea95a6ffcbc856e8d44163da5b5a43` |
+| `ytdlp-downloader.xdmplugin` | 28,380 bytes | `0b6524b86d835c03948d0260598d31e27049e3292f6f67b569b369e95e5b0a19` |
+| `SHA256SUMS.txt` | 895 bytes | Included in release |
 
 ---
 

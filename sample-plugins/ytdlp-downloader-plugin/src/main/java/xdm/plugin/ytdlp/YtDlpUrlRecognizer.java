@@ -54,7 +54,7 @@ public class YtDlpUrlRecognizer implements UrlRecognizer {
         return new UrlMetadata(
                 url,
                 null,
-                "CAT_VIDEO",
+                "CAT_VIDEOS",
                 Collections.singletonMap("provider", "ytdlp")
         );
     }

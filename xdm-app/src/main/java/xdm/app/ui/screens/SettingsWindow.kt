@@ -2,6 +2,7 @@ package xdm.app.ui.screens
 
 import xdm.app.AppContext
 import xdm.app.ConfigSnapshot
+import xdm.app.skins.SkinRegion
 import xdm.app.I8N
 import xdm.app.I8N.text
 import xdm.app.ui.screens.settings.AdvancedConfigPanel
@@ -15,6 +16,7 @@ import xdm.app.ui.screens.settings.LanguagePanel
 import xdm.app.ui.screens.settings.NetworkConfigPanel
 import xdm.app.ui.screens.settings.PluginsPanel
 import xdm.app.ui.components.AppTheme
+import xdm.app.ui.components.SkinBackgroundPanel
 import xdm.app.ui.components.ThemeManager
 import xdm.app.ui.screens.settings.settingsAccentColor
 import xdm.app.ui.screens.settings.settingsMutedColor
@@ -66,12 +68,23 @@ import javax.swing.border.MatteBorder
  */
 class SettingsWindow : JFrame() {
     private val themeChangeListener = ThemeManager.ThemeChangeListener {
+        updateSkinState()
         (contentPane as? JComponent)?.border = MatteBorder(1, 0, 0, 0, AppTheme.sidebarBorder)
         repaint()
     }
 
+    private fun updateSkinState() {
+        val hasWp = xdm.app.skins.SkinManager.currentSkin.hasWallpaper()
+        panelHolder.isOpaque = !hasWp
+        scrollPanes.forEach { sp ->
+            sp.isOpaque = !hasWp
+            sp.viewport.isOpaque = !hasWp
+        }
+    }
+
     override fun dispose() {
         ThemeManager.removeThemeListener(themeChangeListener)
+        generalPanel.dispose()
         foldersPanel.dispose()
         appearancePanel.dispose()
         pluginsPanel.dispose()
@@ -159,15 +172,20 @@ class SettingsWindow : JFrame() {
         }
 
         val center = JPanel(BorderLayout()).apply {
+            isOpaque = false
             add(panelHolder, BorderLayout.CENTER)
             add(FooterBar(bottom), BorderLayout.SOUTH)
         }
+
+        contentPane = SkinBackgroundPanel(BorderLayout(), region = SkinRegion.SETTINGS)
 
         // Same top border as the main window.
         (contentPane as JComponent).border = MatteBorder(1, 0, 0, 0, AppTheme.sidebarBorder)
 
         add(NavRail(navList), BorderLayout.WEST)
         add(center, BorderLayout.CENTER)
+
+        updateSkinState()
 
         navList.selectedIndex = 0
         btnSave.requestFocusInWindow()
