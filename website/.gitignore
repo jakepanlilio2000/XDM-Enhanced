@@ -1,0 +1,7 @@
+# VitePress & Node dependencies
+node_modules/
+.vitepress/dist/
+.vitepress/cache/
+dist/
+*.local
+

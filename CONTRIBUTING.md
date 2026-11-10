@@ -8,7 +8,7 @@ translations and documentation are all welcome.
 - **Bugs and feature ideas:** open an issue first for anything bigger than a small fix, so we can
   agree on the approach before you spend time on it.
 - **Security issues:** please do **not** open a public issue. Report it privately through
-  [GitHub's private vulnerability reporting](https://github.com/subhra74/xdm/security/advisories/new).
+  [GitHub's private vulnerability reporting](https://github.com/jakepanlilio2000/XDM-Enhanced/security/advisories/new).
 - **Translations:** see [TRANSLATING.md](TRANSLATING.md). Translations go through Weblate and do not
   need a pull request.
 

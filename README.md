@@ -14,6 +14,13 @@
   <img src="https://img.shields.io/badge/status-active%20beta-brightgreen?style=flat-square" alt="Development Status"/>
 </p>
 
+> **Quick Links:**  
+> [🌐 Official Website](https://jakepanlilio2000.github.io/XDM-Enhanced/) • 
+> [📖 Documentation & Guides](docs/README.md) • 
+> [📚 Community Wiki](https://github.com/jakepanlilio2000/XDM-Enhanced/wiki) • 
+> [📦 Latest Release (v1.0.0-beta.6)](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/tag/v1.0.0-beta.6) • 
+> [💬 Issue Tracker](https://github.com/jakepanlilio2000/XDM-Enhanced/issues)
+
 ---
 
 **XDM Enhanced** is an independently maintained, open-source desktop download manager forked from [Xtreme Download Manager (XDM)](https://github.com/subhra74/xdm). It pairs high-speed multi-connection segmented HTTP/HTTPS downloading and streaming media capture with native BitTorrent and magnet support, modern FlatLaf dynamic theming, custom skin packages, a decoupled Java plugin framework, automated post-download rules, power management, and companion browser extensions.
@@ -189,6 +196,15 @@ The following items represent ideas under consideration for future exploration:
 6. **Cross-Platform Packaging:** Expanded desktop integration packages for modern Linux desktop environments and macOS.
 
 > *Note: These are ideas under consideration, not committed features or guaranteed future releases. Priorities may change based on development time, feasibility, and community feedback.*
+
+---
+
+## Contributing
+
+Contributions are welcome! Whether filing bug reports, suggesting features, writing code, or expanding translations:
+- Review [CONTRIBUTING.md](CONTRIBUTING.md) for branch strategy, coding guidelines, automated test execution, and DCO sign-off requirements.
+- Submit bug reports and feature requests on the [GitHub Issue Tracker](https://github.com/jakepanlilio2000/XDM-Enhanced/issues).
+- Check the [Developer Platform](https://jakepanlilio2000.github.io/XDM-Enhanced/developer/) or source specifications in [`docs/`](docs/README.md) to explore the Plugin SPI and Skin architecture.
 
 ---
 

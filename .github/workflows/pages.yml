@@ -1,80 +1,86 @@
-name: Pages
+name: Deploy GitHub Pages
 
-# Publishes subhra74.github.io/xdm/: the docs/ folder built with Jekyll (as the old "master /docs"
-# setting did), plus the translation generator at /xdm/translate/ (TRANSLATING.md). Rebuilt when a
-# language file changes, so the generator always offers the strings XDM ships.
-#
-# Automatic push trigger is temporarily disabled while GitHub Pages configuration is pending.
-# Trigger manually via workflow_dispatch when ready.
 on:
+  push:
+    branches: [ master ]
+    paths:
+      - 'website/**'
+      - '.github/workflows/pages.yml'
+  pull_request:
+    branches: [ master ]
+    paths:
+      - 'website/**'
+      - '.github/workflows/pages.yml'
   workflow_dispatch:
 
+# Least-privilege permissions by default
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
-# One deploy at a time; a newer push replaces a queued one, but a running deploy finishes.
+# Ensure only one deployment runs at a time
 concurrency:
-  group: pages
+  group: pages-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
   build:
+    name: Build & Validate Website
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: translation-generator/translation-gen
-
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
     steps:
-      - uses: actions/checkout@v7
-
-      - uses: actions/setup-node@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
         with:
-          node-version: '22'
-          cache: npm
-          cache-dependency-path: translation-generator/translation-gen/package-lock.json
+          fetch-depth: 0
 
-      - name: Install
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: website/package-lock.json
+
+      - name: Install Dependencies
+        working-directory: website
         run: npm ci
 
-      # pretest/prebuild run scripts/sync-lang.js: copies lang/*.txt and writes languages.json.
-      - name: Test
-        run: npm test -- --watchAll=false
-        env:
-          CI: true
+      - name: Build Static Site with VitePress
+        working-directory: website
+        run: npm run docs:build
 
-      - name: Build generator
-        run: npm run build
-        env:
-          PUBLIC_URL: /xdm/translate
-          # As on any runner: CRA fails the build on lint warnings.
-          CI: true
+      - name: Validate Output Integrity
+        working-directory: website
+        run: |
+          test -f .vitepress/dist/index.html || { echo "Missing index.html"; exit 1; }
+          test -f .vitepress/dist/sitemap.xml || { echo "Missing sitemap.xml"; exit 1; }
+          test -d .vitepress/dist/assets/site || { echo "Missing site assets"; exit 1; }
+          echo "Build artifact integrity check passed."
 
-      # The generator goes into docs/translate on the runner only (never committed); Jekyll then
-      # builds docs/ exactly as branch Pages did (why-a-download-manager.md -> .html) and copies
-      # the generator's files unchanged, as they have no front matter.
-      - name: Add generator to the site
-        working-directory: .
-        run: cp -R translation-generator/translation-gen/build docs/translate
+      - name: Configure GitHub Pages
+        if: github.ref == 'refs/heads/master' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+        uses: actions/configure-pages@v5
 
-      - uses: actions/configure-pages@v5
-
-      - uses: actions/jekyll-build-pages@v1
+      - name: Upload Pages Artifact
+        if: github.ref == 'refs/heads/master' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+        uses: actions/upload-pages-artifact@v3
         with:
-          source: ./docs
-          destination: ./_site
-
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: _site
+          path: website/.vitepress/dist
 
   deploy:
+    name: Deploy to GitHub Pages
     needs: build
+    if: github.ref == 'refs/heads/master' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - id: deployment
+      - name: Deploy to GitHub Pages
+        id: deployment
         uses: actions/deploy-pages@v4

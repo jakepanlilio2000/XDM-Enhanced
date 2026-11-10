@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="100%" height="100%">
+  <defs>
+    <linearGradient id="heroBase" x1="0" y1="0" x2="1920" y2="1080" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#030712" />
+      <stop offset="40%" stop-color="#0F172A" />
+      <stop offset="100%" stop-color="#0A0F1D" />
+    </linearGradient>
+    <radialGradient id="cyanGlow" cx="50%" cy="25%" r="45%">
+      <stop offset="0%" stop-color="#38BDF8" stop-opacity="0.16" />
+      <stop offset="50%" stop-color="#0284C7" stop-opacity="0.06" />
+      <stop offset="100%" stop-color="#0284C7" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="blueGlow" cx="80%" cy="65%" r="40%">
+      <stop offset="0%" stop-color="#2563EB" stop-opacity="0.12" />
+      <stop offset="100%" stop-color="#1E3A8A" stop-opacity="0" />
+    </radialGradient>
+    <pattern id="techGrid" width="60" height="60" patternUnits="userSpaceOnUse">
+      <path d="M 60 0 L 0 0 0 60" fill="none" stroke="#334155" stroke-width="0.75" stroke-opacity="0.25" />
+      <circle cx="0" cy="0" r="1.5" fill="#38BDF8" fill-opacity="0.3" />
+    </pattern>
+  </defs>
+
+  <!-- Base Dark Canvas -->
+  <rect width="1920" height="1080" fill="url(#heroBase)" />
+
+  <!-- Ambient Glows -->
+  <rect width="1920" height="1080" fill="url(#cyanGlow)" />
+  <rect width="1920" height="1080" fill="url(#blueGlow)" />
+
+  <!-- Geometric Grid Layer -->
+  <rect width="1920" height="1080" fill="url(#techGrid)" />
+
+  <!-- Abstract Acceleration Rays -->
+  <path d="M 0 350 Q 480 320 960 480 T 1920 380" fill="none" stroke="#0284C7" stroke-width="2" stroke-opacity="0.2" />
+  <path d="M 0 420 Q 560 380 1120 540 T 1920 460" fill="none" stroke="#38BDF8" stroke-width="1.5" stroke-opacity="0.35" stroke-dasharray="12 8" />
+  <path d="M 0 500 Q 640 460 1280 620 T 1920 540" fill="none" stroke="#2563EB" stroke-width="1.5" stroke-opacity="0.25" />
+</svg>
+

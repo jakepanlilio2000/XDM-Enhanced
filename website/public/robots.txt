@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://jakepanlilio2000.github.io/XDM-Enhanced/sitemap.xml
+
