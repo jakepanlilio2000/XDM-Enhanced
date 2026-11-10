@@ -84,7 +84,7 @@ Sixth beta release of **XDM Enhanced** — an independent, open-source download 
 | `cyber-neon.xdmskin` | 34,446 bytes | `74e80ededf6d7f41f29b5cfafa79a06bef8b53fc20b077523122ffaeaff2f213` |
 | `checksum-verifier.xdmplugin` | 6,213 bytes | `152766aa1ee2fc491cb06a7c4f36ee8e3fea95a6ffcbc856e8d44163da5b5a43` |
 | `ytdlp-downloader.xdmplugin` | 28,380 bytes | `0b6524b86d835c03948d0260598d31e27049e3292f6f67b569b369e95e5b0a19` |
-| `SHA256SUMS.txt` | 895 bytes | Included in release |
+| `SHA256SUMS.txt` | 1,027 bytes | Included in release |
 
 ---
 
