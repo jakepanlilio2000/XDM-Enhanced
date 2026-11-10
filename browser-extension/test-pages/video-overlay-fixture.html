@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>XDM Enhanced Video Overlay Test Fixture</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            margin: 0;
+            padding: 24px;
+            background: #0f172a;
+            color: #f8fafc;
+        }
+        h1 {
+            font-size: 22px;
+            margin-bottom: 8px;
+        }
+        p {
+            color: #94a3b8;
+            font-size: 14px;
+            margin-bottom: 24px;
+        }
+        .players-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+        .player-card {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .player-title {
+            font-size: 15px;
+            font-weight: 600;
+        }
+        .video-container {
+            position: relative;
+            background: #000000;
+            border-radius: 8px;
+            overflow: hidden;
+            aspect-ratio: 16 / 9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .controls-row {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        button {
+            background: #0ea5e9;
+            color: #fff;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 13px;
+        }
+        button:hover {
+            background: #0284c7;
+        }
+        button.secondary {
+            background: #334155;
+            color: #e2e8f0;
+        }
+        button.secondary:hover {
+            background: #475569;
+        }
+    </style>
+</head>
+<body>
+    <h1>XDM Enhanced Video Overlay Test Fixture</h1>
+    <p>This test page contains multiple HTML5 video elements for verifying floating download overlay attachment, positioning, fullscreen transitions, and dynamic lifecycle handling.</p>
+
+    <div class="controls-row" style="margin-bottom: 20px;">
+        <button id="addDynamicPlayerBtn">Add Dynamic Video Player</button>
+        <button id="removeDynamicPlayerBtn" class="secondary">Remove Dynamic Player</button>
+    </div>
+
+    <div class="players-grid" id="playersContainer">
+        <!-- Player 1: Primary Stream Test -->
+        <div class="player-card" id="cardPlayer1">
+            <div class="player-title">Player 1: 1080p MP4 Authorized Media</div>
+            <div class="video-container" id="playerWrap1">
+                <video id="video1" controls preload="metadata" title="Open Source Nature Trailer 1080p">
+                    <source src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+            </div>
+        </div>
+
+        <!-- Player 2: Multi-format Stream Test -->
+        <div class="player-card" id="cardPlayer2">
+            <div class="player-title">Player 2: WebM Media Stream</div>
+            <div class="video-container" id="playerWrap2">
+                <video id="video2" controls preload="metadata" title="Blender Foundation Open Movie">
+                    <source src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+            </div>
+        </div>
+
+        <!-- Player 3: DRM Protected Stream Test -->
+        <div class="player-card" id="cardPlayer3">
+            <div class="player-title">Player 3: DRM Protected Stream (EME mediaKeys Mock)</div>
+            <div class="video-container" id="playerWrap3">
+                <video id="video3" controls preload="metadata" title="Encrypted Premium Movie">
+                    <source src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Simulate EME mediaKeys on Player 3 to verify DRM detection and notification
+        try {
+            const drmVideo = document.getElementById("video3");
+            if (drmVideo) {
+                Object.defineProperty(drmVideo, "mediaKeys", {
+                    value: { keySystem: "org.w3.clearkey", createMediaKeySession: () => {} },
+                    configurable: true
+                });
+            }
+        } catch (e) {
+            console.warn("Could not mock mediaKeys:", e);
+        }
+
+        let dynamicCount = 0;
+        document.getElementById("addDynamicPlayerBtn").addEventListener("click", () => {
+            dynamicCount++;
+            const container = document.getElementById("playersContainer");
+            const card = document.createElement("div");
+            card.className = "player-card";
+            card.id = `dynamicCard${dynamicCount}`;
+            card.innerHTML = `
+                <div class="player-title">Dynamic Player #${dynamicCount}</div>
+                <div class="video-container">
+                    <video id="dynamicVideo${dynamicCount}" controls preload="metadata" title="Dynamic Video Stream #${dynamicCount}">
+                        <source src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4" type="video/mp4">
+                    </video>
+                </div>
+            `;
+            container.appendChild(card);
+        });
+
+        document.getElementById("removeDynamicPlayerBtn").addEventListener("click", () => {
+            if (dynamicCount > 0) {
+                const card = document.getElementById(`dynamicCard${dynamicCount}`);
+                if (card) {
+                    card.remove();
+                    dynamicCount--;
+                }
+            }
+        });
+    </script>
+</body>
+</html>
+

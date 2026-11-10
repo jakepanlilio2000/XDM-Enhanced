@@ -235,10 +235,92 @@ function editUserBlockedSite(oldInput, newInput) {
     });
 }
 
+var OVERLAY_EXCLUDED_HOSTS_KEY = "overlayExcludedHosts";
+var ENABLE_VIDEO_OVERLAY_KEY = "enableVideoOverlay";
+
+function getOverlayExcludedHosts() {
+    var storage = (typeof browser !== "undefined" && browser.storage) ? browser.storage : chrome.storage;
+    return storage.local.get(OVERLAY_EXCLUDED_HOSTS_KEY).then(function (stored) {
+        var list = stored && stored[OVERLAY_EXCLUDED_HOSTS_KEY];
+        if (Array.isArray(list)) {
+            return list.map(normalizeHost).filter(Boolean);
+        }
+        return [];
+    }).catch(function () {
+        return [];
+    });
+}
+
+function saveOverlayExcludedHosts(hosts) {
+    var storage = (typeof browser !== "undefined" && browser.storage) ? browser.storage : chrome.storage;
+    var normalized = Array.from(new Set((hosts || []).map(normalizeHost).filter(Boolean)));
+    var obj = {};
+    obj[OVERLAY_EXCLUDED_HOSTS_KEY] = normalized;
+    return storage.local.set(obj).then(function () {
+        return normalized;
+    });
+}
+
+function addOverlayExcludedHost(input) {
+    var host = normalizeHost(input);
+    if (!host) {
+        return Promise.resolve({ ok: false, error: "Invalid hostname or URL" });
+    }
+    return getOverlayExcludedHosts().then(function (current) {
+        if (current.includes(host)) {
+            return { ok: true, hosts: current, added: host };
+        }
+        current.push(host);
+        return saveOverlayExcludedHosts(current).then(function (updated) {
+            return { ok: true, hosts: updated, added: host };
+        });
+    });
+}
+
+function removeOverlayExcludedHost(input) {
+    var host = normalizeHost(input);
+    if (!host) {
+        return Promise.resolve({ ok: false, error: "Invalid hostname" });
+    }
+    return getOverlayExcludedHosts().then(function (current) {
+        var updated = current.filter(function (item) { return item !== host; });
+        return saveOverlayExcludedHosts(updated).then(function (saved) {
+            return { ok: true, hosts: saved, removed: host };
+        });
+    });
+}
+
+function isOverlayExcludedForHost(hostname, excludedHosts) {
+    if (!hostname) return false;
+    var host = normalizeHost(hostname);
+    if (!host) return false;
+    return (excludedHosts || []).some(function (rule) { return matchesHostRule(host, rule); });
+}
+
+function getVideoOverlayEnabled() {
+    var storage = (typeof browser !== "undefined" && browser.storage) ? browser.storage : chrome.storage;
+    return storage.local.get(ENABLE_VIDEO_OVERLAY_KEY).then(function (stored) {
+        return !stored || stored[ENABLE_VIDEO_OVERLAY_KEY] !== false;
+    }).catch(function () {
+        return true;
+    });
+}
+
+function setVideoOverlayEnabled(enabled) {
+    var storage = (typeof browser !== "undefined" && browser.storage) ? browser.storage : chrome.storage;
+    var obj = {};
+    obj[ENABLE_VIDEO_OVERLAY_KEY] = !!enabled;
+    return storage.local.set(obj).then(function () {
+        return !!enabled;
+    });
+}
+
 if (typeof window !== "undefined") {
     window.BlockedSites = {
         BLOCKED_DOMAINS: BLOCKED_DOMAINS,
         USER_BLOCKED_SITES_KEY: USER_BLOCKED_SITES_KEY,
+        OVERLAY_EXCLUDED_HOSTS_KEY: OVERLAY_EXCLUDED_HOSTS_KEY,
+        ENABLE_VIDEO_OVERLAY_KEY: ENABLE_VIDEO_OVERLAY_KEY,
         normalizeHost: normalizeHost,
         matchesHostRule: matchesHostRule,
         isBlockedHost: isBlockedHost,
@@ -248,7 +330,14 @@ if (typeof window !== "undefined") {
         saveUserBlockedSites: saveUserBlockedSites,
         addUserBlockedSite: addUserBlockedSite,
         removeUserBlockedSite: removeUserBlockedSite,
-        editUserBlockedSite: editUserBlockedSite
+        editUserBlockedSite: editUserBlockedSite,
+        getOverlayExcludedHosts: getOverlayExcludedHosts,
+        saveOverlayExcludedHosts: saveOverlayExcludedHosts,
+        addOverlayExcludedHost: addOverlayExcludedHost,
+        removeOverlayExcludedHost: removeOverlayExcludedHost,
+        isOverlayExcludedForHost: isOverlayExcludedForHost,
+        getVideoOverlayEnabled: getVideoOverlayEnabled,
+        setVideoOverlayEnabled: setVideoOverlayEnabled
     };
 }
 

@@ -95,6 +95,7 @@ object DesktopPlatformHooks : PlatformHooks {
         if (AppContext.config.runCommand) {
             AppContext.platform.runCustomCommand(filePath)
         }
+        xdm.app.plugins.PluginManager.notifyDownloadCompleted(filePath, id)
     }
 
     override fun downloadFinished(filePath: String) {

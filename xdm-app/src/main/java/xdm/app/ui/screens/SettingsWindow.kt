@@ -5,6 +5,7 @@ import xdm.app.ConfigSnapshot
 import xdm.app.I8N
 import xdm.app.I8N.text
 import xdm.app.ui.screens.settings.AdvancedConfigPanel
+import xdm.app.ui.screens.settings.AppearancePanel
 import xdm.app.ui.screens.settings.BitTorrentPanel
 import xdm.app.ui.screens.settings.BrowserMonitorPanel
 import xdm.app.ui.screens.settings.DownloadsPanel
@@ -12,6 +13,7 @@ import xdm.app.ui.screens.settings.FoldersPanel
 import xdm.app.ui.screens.settings.GeneralPanel
 import xdm.app.ui.screens.settings.LanguagePanel
 import xdm.app.ui.screens.settings.NetworkConfigPanel
+import xdm.app.ui.screens.settings.PluginsPanel
 import xdm.app.ui.components.AppTheme
 import xdm.app.ui.components.ThemeManager
 import xdm.app.ui.screens.settings.settingsAccentColor
@@ -71,27 +73,33 @@ class SettingsWindow : JFrame() {
     override fun dispose() {
         ThemeManager.removeThemeListener(themeChangeListener)
         foldersPanel.dispose()
+        appearancePanel.dispose()
+        pluginsPanel.dispose()
         super.dispose()
     }
 
     private class Page(val key: String, val icon: RemixIcon, val panel: JComponent)
 
     private val generalPanel = GeneralPanel()
+    private val appearancePanel = AppearancePanel()
     private val downloadsPanel = DownloadsPanel()
     private val foldersPanel = FoldersPanel()
     private val browserMonitorPanel = BrowserMonitorPanel()
     private val networkConfigPanel = NetworkConfigPanel()
     private val bitTorrentPanel = BitTorrentPanel()
+    private val pluginsPanel = PluginsPanel()
     private val languagePanel = LanguagePanel()
     private val advancedConfigPanel = AdvancedConfigPanel()
 
     private val pages = listOf(
         Page("SETTINGS_GENERAL", RemixIcon.SETTINGS_4_LINE, generalPanel),
+        Page("SETTINGS_SEC_APPEARANCE", RemixIcon.BRUSH_LINE, appearancePanel),
         Page("SETTINGS_DOWNLOADS", RemixIcon.DOWNLOAD_2_LINE, downloadsPanel),
         Page("SETTINGS_FOLDERS", RemixIcon.FOLDER_3_LINE, foldersPanel),
-        Page("SETTINGS_MONITORING", RemixIcon.PUZZLE_LINE, browserMonitorPanel),
+        Page("SETTINGS_MONITORING", RemixIcon.CHROME_FILL, browserMonitorPanel),
         Page("SETTINGS_NETWORK", RemixIcon.WIFI_LINE, networkConfigPanel),
         Page("SETTINGS_BITTORRENT", RemixIcon.SERVER_LINE, bitTorrentPanel),
+        Page("SETTINGS_SEC_PLUGINS", RemixIcon.PUZZLE_LINE, pluginsPanel),
         Page("MSG_LANG1", RemixIcon.GLOBAL_LINE, languagePanel),
         Page("MSG_ADV_TITLE", RemixIcon.TERMINAL_BOX_LINE, advancedConfigPanel),
     )
@@ -197,6 +205,7 @@ class SettingsWindow : JFrame() {
         val beforeWrite = ConfigSnapshot.of(config)
         val oldLang = config.lang
         generalPanel.save()
+        appearancePanel.save()
         downloadsPanel.save()
         foldersPanel.save()
         browserMonitorPanel.save()
@@ -222,6 +231,7 @@ class SettingsWindow : JFrame() {
     fun loadConfig() {
         loaded = ConfigSnapshot.of(AppContext.config)
         generalPanel.load()
+        appearancePanel.load()
         downloadsPanel.load()
         foldersPanel.load()
         browserMonitorPanel.load()

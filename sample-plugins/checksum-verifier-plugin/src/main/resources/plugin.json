@@ -1,0 +1,19 @@
+{
+  "id": "checksum-verifier",
+  "name": "Checksum Verifier",
+  "version": "1.0.0",
+  "author": "XDM Enhanced Team",
+  "description": "Calculates cryptographic SHA-256 hashes for completed downloads and provides right-click checksum inspection.",
+  "minAppVersion": "1.0.0-beta.4",
+  "minApiVersion": "1.0.0",
+  "entryPoint": "xdm.sample.plugin.ChecksumVerifierPlugin",
+  "capabilities": [
+    "POST_DOWNLOAD_HOOK",
+    "CONTEXT_MENU",
+    "SETTINGS_PANEL"
+  ],
+  "dependencies": [],
+  "license": "GPL-3.0-or-later",
+  "homepage": "https://github.com/jakepanlilio2000/XDM-Enhanced"
+}
+

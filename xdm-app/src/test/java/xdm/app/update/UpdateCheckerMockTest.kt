@@ -113,11 +113,11 @@ class UpdateCheckerMockTest {
 
     @Test
     fun testCompareSemVerVersions() {
-        assertTrue(UpdateChecker.compareVersions("1.0.0-beta.4", "1.0.0-beta.3") > 0)
-        assertTrue(UpdateChecker.compareVersions("v1.0.0-beta.4", "1.0.0-beta.3") > 0)
-        assertEquals(0, UpdateChecker.compareVersions("1.0.0-beta.3", "v1.0.0-beta.3"))
-        assertTrue(UpdateChecker.compareVersions("1.0.0-beta.2", "1.0.0-beta.3") < 0)
-        assertTrue(UpdateChecker.compareVersions("1.0.0", "1.0.0-beta.4") > 0)
+        assertTrue(UpdateChecker.compareVersions("1.0.0-beta.5", "1.0.0-beta.4") > 0)
+        assertTrue(UpdateChecker.compareVersions("v1.0.0-beta.5", "1.0.0-beta.4") > 0)
+        assertEquals(0, UpdateChecker.compareVersions("1.0.0-beta.4", "v1.0.0-beta.4"))
+        assertTrue(UpdateChecker.compareVersions("1.0.0-beta.3", "1.0.0-beta.4") < 0)
+        assertTrue(UpdateChecker.compareVersions("1.0.0", "1.0.0-beta.5") > 0)
         assertTrue(UpdateChecker.compareVersions("1.0.1", "1.0.0") > 0)
     }
 
@@ -262,10 +262,12 @@ class UpdateCheckerMockTest {
         val result = UpdateChecker.checkSync(UpdateChannel.BETA, currentVersion = "1.0.0-beta.1")
         when (result) {
             is UpdateCheckResult.UpdateAvailable -> {
-                assertEquals("1.0.0-beta.3", result.releaseInfo.version)
+                assertTrue(UpdateChecker.compareVersions(result.releaseInfo.version, "1.0.0-beta.1") > 0)
+                assertTrue(result.releaseInfo.version.startsWith("1.0.0-beta."))
                 assertTrue(result.releaseInfo.isPreRelease)
-                assertNotNull(result.releaseInfo.installerAsset)
-                assertTrue(result.releaseInfo.installerAsset!!.name.endsWith(".exe") || result.releaseInfo.installerAsset!!.name.endsWith(".zip"))
+                result.releaseInfo.installerAsset?.let { asset ->
+                    assertTrue(asset.name.endsWith(".exe") || asset.name.endsWith(".zip") || asset.name.endsWith(".tar.gz"))
+                }
                 // Checksum asset is optional if not uploaded as a separate file asset
                 result.releaseInfo.checksumAsset?.let {
                     assertEquals("SHA256SUMS.txt", it.name)

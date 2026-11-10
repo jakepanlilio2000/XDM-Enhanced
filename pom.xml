@@ -4,13 +4,14 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>xdm</groupId>
     <artifactId>xdm</artifactId>
-    <version>1.0.0-beta.4</version>
+    <version>1.0.0-beta.5</version>
     <packaging>pom</packaging>
     <properties>
         <!-- Tests are skipped by default (install/package stay fast). Run them with -DskipTests=false. -->
         <skipTests>true</skipTests>
     </properties>
     <modules>
+        <module>xdm-plugin-api</module>
         <module>xdm-core</module>
         <module>xdm-capture</module>
         <module>xdm-torrent</module>

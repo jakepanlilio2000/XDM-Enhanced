@@ -1,0 +1,74 @@
+{
+  "id": "cyber-neon",
+  "name": "Cyber Neon",
+  "version": "1.0.0",
+  "author": "XDM Enhanced Team",
+  "description": "High-contrast cyberpunk visual theme with glowing neon cyan and emerald accents, custom category icons, wallpapers, and dark grid aesthetics.",
+  "minAppVersion": "1.0.0-beta.4",
+  "license": "GPL-3.0-or-later",
+  "homepage": "https://github.com/jakepanlilio2000/XDM-Enhanced",
+  "geometry": {
+    "componentArc": 12,
+    "buttonArc": 10,
+    "popupArc": 12
+  },
+  "accents": {
+    "dark": "#00F0FF",
+    "light": "#0284C7",
+    "selection": "#00F0FF"
+  },
+  "colors": {
+    "dark": {
+      "background": "#0B0E14",
+      "sidebar": "#07090D",
+      "card": "#131720",
+      "text": "#E0F7FA",
+      "mutedText": "#546E7A",
+      "border": "#1E293B"
+    },
+    "light": {
+      "background": "#F0F4F8",
+      "sidebar": "#E2E8F0",
+      "card": "#FFFFFF",
+      "text": "#0F172A",
+      "mutedText": "#64748B",
+      "border": "#CBD5E1"
+    }
+  },
+  "wallpaper": {
+    "dark": "backgrounds/cyber-dark.png",
+    "light": "backgrounds/cyber-light.png",
+    "mode": "fill",
+    "opacity": 0.15
+  },
+  "layout": {
+    "toolbarPosition": "top",
+    "sidebarPosition": "left",
+    "showStatusBar": true,
+    "showSearchBar": true
+  },
+  "icons": {
+    "categories": {
+      "documents": "icons/categories/documents.png",
+      "compressed": "icons/categories/compressed.png",
+      "music": "icons/categories/music.png",
+      "videos": "icons/categories/videos.png",
+      "programs": "icons/categories/programs.png",
+      "images": "icons/categories/images.png",
+      "torrents": "icons/categories/torrents.png",
+      "all": "icons/categories/all.png"
+    },
+    "toolbar": {
+      "ADD_URL": "icons/toolbar/add.png",
+      "RESUME": "icons/toolbar/resume.png",
+      "STOP": "icons/toolbar/pause.png",
+      "DELETE": "icons/toolbar/delete.png",
+      "SETTINGS": "icons/toolbar/settings.png"
+    }
+  },
+  "uiDefaults": {
+    "Component.arc": 12,
+    "Button.arc": 10,
+    "TextComponent.arc": 12
+  }
+}

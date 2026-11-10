@@ -182,6 +182,16 @@ class GeneralPanel : SettingsPanel() {
         )
 
         add(Box.createVerticalGlue())
+
+        ThemeManager.addThemeListener {
+            val curTheme = ThemeManager.currentTheme
+            if (themeCodes.contains(curTheme) && optTheme.selected != curTheme) {
+                optTheme.selected = curTheme
+            }
+            optTheme.updateTheme()
+            optListMode.updateTheme()
+            accentChooser.updateSelection(ThemeManager.currentAccent)
+        }
     }
 
     fun load() {

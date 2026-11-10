@@ -1,7 +1,9 @@
 package xdm.app.ui.components
 
 import java.awt.Color
+import javax.swing.Icon
 import javax.swing.UIManager
+import xdm.app.skins.SkinManager
 import xdm.app.utils.FontIcon
 import xdm.app.utils.RemixIcon
 import xdm.app.utils.px
@@ -104,6 +106,8 @@ object CategoryStyle {
      */
     fun colorForCategory(categoryId: String?, downloadType: DownloadType? = null): Color {
         if (downloadType == DownloadType.Torrent) return EMERALD
+        val skinColor = categoryId?.let { SkinManager.currentSkin.categoryColor(it, com.formdev.flatlaf.FlatLaf.isLafDark()) }
+        if (skinColor != null) return skinColor
         val themeColor = categoryId?.let { UIManager.getColor("XDM.category.$it") }
         if (themeColor != null) return themeColor
         return when (categoryId) {
@@ -134,14 +138,18 @@ object CategoryStyle {
     }
 
     /**
-     * Creates a DPI-scaled category FontIcon with proper category color.
+     * Creates a DPI-scaled category Icon (classic bitmap or modern vector glyph).
      */
     fun createCategoryIcon(
         categoryId: String?,
         fileName: String? = null,
         downloadType: DownloadType? = null,
         size: Int = 18
-    ): FontIcon {
+    ): Icon {
+        val classicIcon = SkinManager.currentSkin.getCategoryIcon(categoryId, size.px)
+        if (classicIcon != null) {
+            return classicIcon
+        }
         val glyph = glyphForCategory(categoryId, fileName, downloadType)
         val color = colorForCategory(categoryId, downloadType)
         return FontIcon(glyph, size.px, color)

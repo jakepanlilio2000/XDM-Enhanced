@@ -1,43 +1,40 @@
-# XDM Enhanced v1.0.0-beta.4
+# XDM Enhanced v1.0.0-beta.5
 
-Fourth beta release of **XDM Enhanced** — an independent, open-source download manager forked from Xtreme Download Manager (XDM). It pairs high-speed multi-connection segmented HTTP/HTTPS downloading and streaming video capture with native BitTorrent and magnet support, modern FlatLaf dynamic theming, automated post-download rules, download completion power controls, network optimization presets, and companion browser extensions.
+Fifth beta release of **XDM Enhanced** — an independent, open-source download manager forked from Xtreme Download Manager (XDM). It pairs high-speed multi-connection segmented HTTP/HTTPS downloading and streaming video capture with native BitTorrent and magnet support, modern FlatLaf dynamic theming, custom skin packages, a public plugin framework, floating browser media grabbing, automated post-download rules, and companion browser extensions.
 
 ---
 
 ## Release Highlights
 
-- **Fork-Specific Application Updater:** Dedicated in-app auto-update discovery querying releases exclusively from the GitHub fork (`jakepanlilio2000/XDM-Enhanced`). Supports both **Stable** and **Beta (Prerelease)** channels, Semantic Versioning comparison, in-app download progress tracking, cancellation, and cryptographic SHA-256 integrity verification before launching installers.
-- **Persistent Progress Dialog on Pause:** Pausing a download now keeps the progress dialog visible and open. Accurately indicates transfer transitions (`Downloading` -> `Pausing...` -> `Paused` -> `Resuming...` -> `Completed`), retains the confirmed progress percentage and byte count, stops showing stale speeds, and provides an immediate Resume button. Closing the progress window safely dismisses the dialog without canceling the download.
-- **Native Windows Default Apps Navigation:** Fixed the "Open Windows Settings" action in BitTorrent settings launching a web browser. Now natively executes Windows shell protocol navigation (`start "" "ms-settings:defaultapps"`) to directly open Windows Default Apps, with debounce rate-limiting and legacy Control Panel fallback.
-- **Categorized File & Dialog Icons:** Comprehensive category vector icon set across download dialogs. Add Download and Progress windows render distinct, theme-adaptive icons for Documents, Compressed, Music, Videos, Programs, Images, Torrents, and Other files, with dynamic icon updates when changing URLs, filenames, or categories.
-- **Browser Extension Update Integration:** Overhauled Chromium (Manifest V3) and Firefox (Manifest V2) extension update manifests and discovery endpoints. Added in-extension notifications on popup and settings pages with direct links to verified GitHub releases, while preserving localhost loopback IPC security without remote code execution.
+- **Extensible Skin Engine & Custom Skin Packages (`.xdmskin`):** Full skinning support allowing users to switch between the modern **XDM Enhanced** theme and authentic **Original XDM** classic theme, or install portable community `.xdmskin` packages. Supports custom window backgrounds, wallpapers, toolbar icons, category icons, buttons, fonts, border radii, and accent overrides with live hot-reloading and sandboxed package validation.
+- **Core Plugin Framework & Developer API (`xdm-plugin-api`):** Introduced a decoupled public Java SPI module allowing third-party developers to extend XDM Enhanced without modifying the core codebase. Features sandboxed lifecycle management (discovery, validation, quarantine by default, trust verification), dedicated Settings > Plugins UI, and working reference plugins (Checksum Verifier and optional yt-dlp media downloader).
+- **Floating Browser Video Downloader & Quality Selection:** Lightweight, non-intrusive floating download button anchored to detected HTML5 `<video>` players in Chromium and Firefox extensions. Features Shadow DOM style isolation, responsive sizing, fullscreen adaptation, keyboard accessibility, format and quality selection (4K down to 480p), audio track badges (Muxed vs. Video Only), estimated size notation (`≈ ... (est.)`), EME DRM inspection with advisory warning, and offline desktop detection.
 
 ---
 
 ## Changes & Fixes
 
 ### Added
-- **Native Application Updater (`UpdateDialog`, `UpdateChecker`):**
-  - Configurable update checks in Settings > General.
-  - Channel selector: Stable vs. Beta.
-  - Markdown-rendered release notes display.
-  - Platform/architecture asset matching.
-  - Automated SHA-256 checksum verification against published release manifests.
-- **Browser Extension Update Feeds:**
-  - `chrome-updates.xml` for enterprise-managed Chromium deployments.
-  - `updates.json` for self-hosted Firefox distributions.
-  - Synchronized desktop-extension version compatibility reporting.
+- **Skin Engine (`xdm-app`):**
+  - Portable `.xdmskin` ZIP archive format with `skin.json` declarative manifest.
+  - Skin Management UI in Settings > Appearance with preview cards, install, export, and delete actions.
+  - Security validation defending against Zip Slip path traversal and malicious binaries.
+  - Complete developer documentation ([Skin Development Guide](docs/SKIN_DEVELOPMENT.md)) and sample skin [`sample-skins/cyber-neon.xdmskin`](sample-skins/cyber-neon.xdmskin).
+- **Plugin Architecture (`xdm-plugin-api`, `xdm-app`):**
+  - Dedicated Maven module `xdm-plugin-api` exposing clean SPI interfaces (`XdmPlugin`, `PluginContext`, `DownloadProvider`, `MediaProvider`, `PluginDownloadTask`, `PluginProgressEvent`).
+  - Quarantine-by-default security model requiring explicit user activation.
+  - Dedicated Plugins panel in Settings.
+  - Reference plugins and documentation: [Plugin Development Guide](docs/PLUGIN_DEVELOPMENT.md), `sample-plugins/checksum-verifier.xdmplugin`, and `sample-plugins/ytdlp-downloader.xdmplugin`.
+- **Floating Browser Video Downloader (`browser-extension`):**
+  - Floating download button appearing on supported video players.
+  - Dropdown quality picker with detected resolutions, container types, and audio availability.
+  - Format integrity ensuring HLS/DASH streams are never falsely represented as MP4 files.
+  - Encrypted Media Extensions (EME) DRM detection (`mediaKeys`) displaying a `DRM Protected Stream` banner.
+  - Asynchronous download dispatch with offline status detection.
 
-### Fixed
-- **Download Progress Window Closure on Pause:** Fixed issue where pausing an active transfer prematurely disposed the progress window.
-- **BitTorrent Windows Settings Button:** Fixed button launching web browser instead of opening `ms-settings:defaultapps`.
-- **Localization Warning:** Added missing `CAT_IMAGES=Images` entry to `en.txt` to eliminate missing translation warnings.
-- **Loopback Socket Test Draining:** Added socket drain delay in refresh link tests to eliminate race conditions during heavy parallel test execution.
-
-### Improved
-- **Download Category Styling:** Added image extensions (`.png`, `.jpg`, `.webp`, `.svg`, etc.) and `.torrent` to `CategoryStyle`.
-- **DPI-Scaled Category Badges:** 36px icon badges and display labels in `ProgressWindow` for HTTP and BitTorrent downloads.
-- **Dropdown Category Icons:** Category comboboxes in `NewDownloadWindow` and `NewTorrentDownloadWindow` display scalable category icons next to each option.
+### Changed
+- **Version Alignment:** Updated all application modules, installer configurations, and companion extensions to `1.0.0-beta.5`.
+- **Documentation Overhaul:** Modernized `README.md` to provide a concise, readable overview focused on verified functionality, clean installation steps, and developer guides.
 
 ---
 
@@ -52,12 +49,16 @@ Fourth beta release of **XDM Enhanced** — an independent, open-source download
 
 | Asset | Size | SHA-256 Checksum |
 |---|---|---|
-| `XDM-Enhanced-Setup-v1.0.0-beta.4-win-x64.exe` | 63,548,724 bytes | `c31dc1c69597e7656b774162bee25ae220b38b6dd793c4d9854b9c1844ebb7eb` |
-| `XDM-Enhanced-v1.0.0-beta.4-windows-x64.zip` | 74,341,547 bytes | `eccb8cd7e63ab1b41eb701dffe42a2aefd28e8b8dc646a3807175c8cd1dfacdc` |
-| `xdm-app-1.0.0-beta.4.jar` | 94,179,254 bytes | `70de237537b2bdd9c517c1f90a3796c1310286c47443f5368bb71a4f1e2dadb8` |
-| `XDM-Enhanced-Extension-Chromium-v1.0.0-beta.4.zip` | 87,827 bytes | `b39903ea750e608b791693dde1ed07d846d27ed5dc7778038fbeba7bfb14bf19` |
-| `XDM-Enhanced-Extension-Firefox-v1.0.0-beta.4.zip` | 84,027 bytes | `2a7b5ad65015412e32783a607f694776ccf408cdce55a385d31840728e95e93f` |
-| `XDM-Enhanced-Extension-Firefox-v1.0.0-beta.4.xpi` | 84,027 bytes | `2a7b5ad65015412e32783a607f694776ccf408cdce55a385d31840728e95e93f` |
+| `XDM-Enhanced-Setup-v1.0.0-beta.5-win-x64.exe` | 64,614,210 bytes | `6e4e94a2ab91a5519ae248ac3c29dded6a3dc1b165bfba08f8b63bbe3ee6bd99` |
+| `XDM-Enhanced-v1.0.0-beta.5-windows-x64.zip` | 75,403,564 bytes | `ccc87b841cce61ca208e28374e4531f774b550f3dc20c3881475db9861649fe7` |
+| `xdm-app-1.0.0-beta.5.jar` | 97,594,661 bytes | `62439b492e6245ecaaeca37f5f7f8611052cd94cc62066b9eb974e444f42e10f` |
+| `xdm-plugin-api-1.0.0-beta.5.jar` | 20,377 bytes | `2dd312bd35465412da7783b7d1e5399172924d31be5c997603ee0a316508fe9d` |
+| `XDM-Enhanced-Extension-Chromium-v1.0.0-beta.5.zip` | 102,180 bytes | `925fdb36d4234316cda079f1fcc7cb849432ae6a70ada5972baaf21673ec7988` |
+| `XDM-Enhanced-Extension-Firefox-v1.0.0-beta.5.zip` | 98,607 bytes | `ff50587ef2d8f0b56e65c78761a9da6b4ef34b383b2cd1669e3fc5114aef99ad` |
+| `XDM-Enhanced-Extension-Firefox-v1.0.0-beta.5.xpi` | 98,607 bytes | `ff50587ef2d8f0b56e65c78761a9da6b4ef34b383b2cd1669e3fc5114aef99ad` |
+| `cyber-neon.xdmskin` | 34,100 bytes | `a562d6f545f92c6b321cd80df8783adfd8d25120df4bc48caa5ecd59ade2807c` |
+| `checksum-verifier.xdmplugin` | 6,213 bytes | `bdfb11fa84e4cd3bdd703911aeb7d7de8f40542d630f26f1725febfca638b2ac` |
+| `ytdlp-downloader.xdmplugin` | 27,306 bytes | `92fc02f6d8e1b5540923596ddbe797afd6705aa894ba71afec37646349ada721` |
 | `SHA256SUMS.txt` | | Included in release |
 
 ---

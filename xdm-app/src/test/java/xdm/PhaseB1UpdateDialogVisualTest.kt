@@ -21,29 +21,28 @@ class PhaseB1UpdateDialogVisualTest : DownloadManagerTestBase() {
     private val artifactDir = File("C:/Users/Administrator/.gemini/antigravity/brain/1021f44a-ff70-4fe4-af84-ab35c2654b54")
 
     private val sampleRelease = ReleaseInfo(
-        version = "1.0.0-beta.4",
-        releaseName = "XDM Enhanced v1.0.0-beta.4",
+        version = "1.0.0-beta.5",
+        releaseName = "XDM Enhanced v1.0.0-beta.5",
         releaseNotes = """
-            ## XDM Enhanced v1.0.0-beta.4
+            ## XDM Enhanced v1.0.0-beta.5
             
             ### Improvements & Fixes
-            * GitHub Desktop Updater: Exclusively checks fork releases and supports Stable vs Beta channels.
-            * Download Progress Pause Visibility: Preserves progress window and displays accurate paused state.
-            * Windows Settings: Direct ms-settings launcher with no browser opening.
-            * Category Icons: Accurate file category badges in download dialogs.
+            * Extensible skin engine and custom skin packages (.xdmskin)
+            * Decoupled Java plugin framework and public developer API
+            * Floating browser video downloader with quality selection
         """.trimIndent(),
-        htmlUrl = "https://github.com/jakepanlilio2000/XDM-Enhanced/releases/tag/v1.0.0-beta.4",
+        htmlUrl = "https://github.com/jakepanlilio2000/XDM-Enhanced/releases/tag/v1.0.0-beta.5",
         isPreRelease = true,
         publishedAt = "2026-11-10T04:00:00Z",
         installerAsset = GithubAsset(
-            name = "XDM-Enhanced-Setup-v1.0.0-beta.4-win-x64.exe",
+            name = "XDM-Enhanced-Setup-v1.0.0-beta.5-win-x64.exe",
             size = 54525952L,
-            browser_download_url = "https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.0.0-beta.4/XDM-Enhanced-Setup-v1.0.0-beta.4-win-x64.exe"
+            browser_download_url = "https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.0.0-beta.5/XDM-Enhanced-Setup-v1.0.0-beta.5-win-x64.exe"
         ),
         checksumAsset = GithubAsset(
             name = "SHA256SUMS.txt",
             size = 512L,
-            browser_download_url = "https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.0.0-beta.4/SHA256SUMS.txt"
+            browser_download_url = "https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.0.0-beta.5/SHA256SUMS.txt"
         )
     )
 
@@ -121,7 +120,7 @@ class PhaseB1UpdateDialogVisualTest : DownloadManagerTestBase() {
 
                 val all = findAllComponents(dialogDark.contentPane)
                 val labels = all.filterIsInstance<JLabel>()
-                assertTrue(labels.any { it.text?.contains("v1.0.0-beta.4") == true })
+                assertTrue(labels.any { it.text?.contains("v1.0.0-beta.5") == true })
                 assertTrue(labels.any { it.text?.contains("Beta / Pre-release") == true })
             } finally {
                 dialogDark.dispose()

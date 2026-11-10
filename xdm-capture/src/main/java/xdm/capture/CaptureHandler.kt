@@ -58,10 +58,11 @@ object CaptureHandler {
     }
 
     /** The user picked a captured video in the browser. */
-    fun onVideoPicked(msg: ExtensionMessage) {
+    fun onVideoPicked(msg: ExtensionMessage): Boolean {
         logMessage(msg)
         removeBlockedHeaders(msg)
-        msg.vid?.let { CaptureContext.tracker.addVideoDownload(it) }
+        val vid = msg.vid ?: return false
+        return CaptureContext.tracker.addVideoDownload(vid)
     }
 
     /**

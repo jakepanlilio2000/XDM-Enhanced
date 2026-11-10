@@ -104,4 +104,57 @@ class CaptureDedupeTest {
         assertEquals(listOf(1L), t.videoList.map { it.id }, "an upgrade keeps its id")
         assertEquals("https://c/v1080.mp4", t.getDashVideo(1)!!.videoSegments.first().toString(), "upgraded")
     }
+
+    @Test
+    fun metadataEnrichment_andFormatIntegrity() {
+        val t = CapturedVideoTracker()
+
+        val dashItem = dash(10, "https://c/v1080.mp4", "https://c/a.mp4")
+        val dashDisplay = StreamingVideoDisplayInfo(tabId = "1", height = 1080)
+        t.addVideoDash(listOf(dashItem to dashDisplay))
+
+        val hlsItem = hls(20, "https://h/v720.m3u8", "https://h/a.m3u8")
+        val hlsDisplay = StreamingVideoDisplayInfo(tabId = "1", height = 720)
+        t.addVideoHls(listOf(hlsItem to hlsDisplay))
+
+        val httpItem = http(30, "https://cdn/sample.mp4")
+        val httpDisplay = StreamingVideoDisplayInfo(tabId = "1", height = 1080, size = 10485760L)
+        t.addVideoHttp(listOf(httpItem to httpDisplay))
+
+        val list = t.videoList
+        assertEquals(3, list.size)
+
+        val dashInfo = list.first { it.id == 10L }
+        assertEquals("DASH", dashInfo.streamType)
+        assertEquals("DASH (Muxed)", dashInfo.format, "DASH with audio and video segments must be DASH (Muxed)")
+        assertFalse(dashInfo.format.equals("MP4", ignoreCase = true), "DASH must never be labeled MP4")
+        assertEquals("1080p", dashInfo.resolution)
+        assertTrue(dashInfo.hasAudio)
+
+        val hlsInfo = list.first { it.id == 20L }
+        assertEquals("HLS", hlsInfo.streamType)
+        assertEquals("HLS (Muxed)", hlsInfo.format, "HLS with audio URL must be HLS (Muxed)")
+        assertFalse(hlsInfo.format.equals("MP4", ignoreCase = true), "HLS must never be labeled MP4")
+        assertEquals("720p", hlsInfo.resolution)
+        assertTrue(hlsInfo.hasAudio)
+
+        val httpInfo = list.first { it.id == 30L }
+        assertEquals("HTTP", httpInfo.streamType)
+        assertEquals("MP4", httpInfo.format)
+        assertEquals("1080p", httpInfo.resolution)
+        assertTrue(httpInfo.hasAudio)
+    }
+
+    @Test
+    fun addVideoDownload_validation() {
+        val t = CapturedVideoTracker()
+        val httpItem = http(100, "https://cdn/sample.mp4")
+        t.addVideoHttp(listOf(httpItem to display("tab1")))
+
+        // Valid registered ID must succeed
+        assertTrue(t.addVideoDownload(100L), "Valid capture ID must return true")
+
+        // Unknown or expired ID must fail safely
+        assertFalse(t.addVideoDownload(99999L), "Unknown/expired capture ID must return false")
+    }
 }

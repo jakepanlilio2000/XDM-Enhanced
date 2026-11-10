@@ -3,6 +3,7 @@ package xdm.app.ui.components
 import com.formdev.flatlaf.FlatClientProperties
 import xdm.app.AppContext
 import xdm.app.I8N.text
+import xdm.app.skins.SkinManager
 import xdm.app.ui.screens.AboutDialog
 import xdm.app.ui.screens.SettingsWindow
 import xdm.app.utils.FontIcon
@@ -59,6 +60,7 @@ class DownloadToolBar(
     private val txtSearch: JTextField
 
     private val sortMenu: JPopupMenu
+    private val pluginButtons = mutableListOf<Component>()
 
     init {
         isOpaque = false
@@ -122,12 +124,58 @@ class DownloadToolBar(
         add(toolbar, BorderLayout.WEST)
         add(rightPanel, BorderLayout.EAST)
 
+        updateButtonIcons()
         refreshGlobalStates()
+        refreshPluginButtons()
+        xdm.app.plugins.PluginManager.addStateListener {
+            SwingUtilities.invokeLater { refreshPluginButtons() }
+        }
+    }
+
+    fun refreshPluginButtons() {
+        pluginButtons.forEach { toolbar.remove(it) }
+        pluginButtons.clear()
+
+        val actions = xdm.app.plugins.PluginManager.getToolbarActions()
+        if (actions.isNotEmpty()) {
+            toolbar.addSeparator(Dimension(8.px, 28.px))
+            for (action in actions) {
+                val btn = JButton(action.label).apply {
+                    action.tooltip?.let { toolTipText = it }
+                    putClientProperty(FlatClientProperties.BUTTON_TYPE, FlatClientProperties.BUTTON_TYPE_TOOLBAR_BUTTON)
+                    isFocusable = false
+                    addActionListener { action.handler.accept(emptyList()) }
+                }
+                toolbar.add(btn)
+                pluginButtons.add(btn)
+            }
+            toolbar.revalidate()
+            toolbar.repaint()
+        }
     }
 
     fun updateTheme() {
         border = BorderFactory.createMatteBorder(0, 0, 1, 0, AppTheme.sidebarBorder)
+        updateButtonIcons()
         repaint()
+    }
+
+    private fun updateButtonIcons() {
+        val skin = SkinManager.currentSkin
+        fun iconFor(key: String, fallback: RemixIcon): Icon =
+            skin.getToolbarIcon(key, 20.px) ?: FontIcon(fallback, 20.px)
+
+        btnAddUrl.icon = iconFor("ADD_URL", RemixIcon.GLOBAL_LINE)
+        btnAddMagnet.icon = iconFor("ADD_MAGNET", RemixIcon.DOWNLOAD_2_LINE)
+        btnAddTorrent.icon = iconFor("ADD_TORRENT", RemixIcon.FILE_ZIP_LINE)
+        btnResume.icon = iconFor("RESUME", RemixIcon.PLAY_CIRCLE_LINE)
+        btnStop.icon = iconFor("STOP", RemixIcon.PAUSE_CIRCLE_LINE)
+        btnStopAll.icon = iconFor("STOP_ALL", RemixIcon.CLOSE_CIRCLE_LINE)
+        btnDelete.icon = iconFor("DELETE", RemixIcon.DELETE_BIN_LINE)
+        btnDeleteCompleted.icon = iconFor("DELETE_COMPLETED", RemixIcon.BRUSH_LINE)
+        btnScheduler.icon = iconFor("SCHEDULER", RemixIcon.LIST_CHECK_2)
+        btnSettings.icon = iconFor("SETTINGS", RemixIcon.SETTINGS_4_LINE)
+        btnSort.icon = skin.getToolbarIcon("SORT", 18.px) ?: FontIcon(RemixIcon.SORT_DESC, 18.px)
     }
 
     private fun createToolButton(
@@ -169,6 +217,10 @@ class DownloadToolBar(
         addSortOption("Size (Largest first)", SortKey.SIZE, false)
         addSortOption("Size (Smallest first)", SortKey.SIZE, true)
         return menu
+    }
+
+    fun setSearchVisible(visible: Boolean) {
+        txtSearch.isVisible = visible
     }
 
     val isResumeEnabled: Boolean get() = btnResume.isEnabled

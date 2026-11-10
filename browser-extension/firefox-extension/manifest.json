@@ -21,6 +21,21 @@
         "storage",
         "*://*/*"
     ],
+    "content_scripts": [
+        {
+            "matches": [
+                "*://*/*"
+            ],
+            "js": [
+                "app/overlay.js"
+            ],
+            "css": [
+                "app/overlay.css"
+            ],
+            "run_at": "document_idle",
+            "all_frames": true
+        }
+    ],
     "commands": {
         "open-bulk": {
             "suggested_key": {

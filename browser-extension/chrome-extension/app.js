@@ -2,7 +2,7 @@
 import Logger from './logger.js';
 import RequestWatcher from './request-watcher.js';
 import Connector from './connector.js';
-import { isBlockedUrl, isBlockedHost, matchesHostRule, normalizeHost, getUserBlockedSites, saveUserBlockedSites, addUserBlockedSite, removeUserBlockedSite, isHostExcluded } from './blocked-sites.js';
+import { isBlockedUrl, isBlockedHost, matchesHostRule, normalizeHost, getUserBlockedSites, saveUserBlockedSites, addUserBlockedSite, removeUserBlockedSite, isHostExcluded, getOverlayExcludedHosts, addOverlayExcludedHost, removeOverlayExcludedHost, isOverlayExcludedForHost, getVideoOverlayEnabled, setVideoOverlayEnabled, OVERLAY_EXCLUDED_HOSTS_KEY, ENABLE_VIDEO_OVERLAY_KEY } from './blocked-sites.js';
 
 const HOST_ORIGINS = ["*://*/*"];
 /** Opened once, on first install (not on updates): the next steps after adding the extension. */
@@ -43,6 +43,8 @@ export default class App {
         this.videoList = [];
         this.blockedHosts = [];
         this.userBlockedSites = [];
+        this.overlayEnabled = true;
+        this.overlayExcludedHosts = [];
         this.fileExts = [];
         this.requestWatcher = new RequestWatcher(this.onRequestDataReceived.bind(this));
         this.userDisabled = false;
@@ -82,6 +84,7 @@ export default class App {
             this.connector.connect(),
             this.restoreUserDisabled(),
             this.restoreUserBlockedSites(),
+            this.restoreOverlaySettings(),
             this.refreshHostAccess(),
             this.restoreActiveTab()
         ]);
@@ -122,6 +125,37 @@ export default class App {
         }
     }
 
+    async restoreOverlaySettings() {
+        try {
+            this.overlayEnabled = await getVideoOverlayEnabled();
+            this.overlayExcludedHosts = await getOverlayExcludedHosts();
+        } catch (e) {
+            this.overlayEnabled = true;
+            this.overlayExcludedHosts = [];
+        }
+    }
+
+    broadcastVideosToTabs() {
+        if (!chrome.tabs || !chrome.tabs.query) return;
+        chrome.tabs.query({}, tabs => {
+            for (const tab of tabs || []) {
+                if (tab.id && tab.url && !this.isSiteExcluded(tab.url)) {
+                    try {
+                        const p = chrome.tabs.sendMessage(tab.id, {
+                            type: "videos-updated",
+                            videos: this.videosForTab(tab.id + "")
+                        }, () => {
+                            if (chrome.runtime && chrome.runtime.lastError) {}
+                        });
+                        if (p && typeof p.catch === "function") {
+                            p.catch(() => {});
+                        }
+                    } catch (e) {}
+                }
+            }
+        });
+    }
+
     isSiteExcluded(hostnameOrUrl) {
         return isHostExcluded(hostnameOrUrl, this.userBlockedSites, this.blockedHosts);
     }
@@ -153,6 +187,7 @@ export default class App {
         // XDM is there: watch the network again (see onDisconnect).
         this.requestWatcher.register();
         this.updateActionIcon();
+        this.broadcastVideosToTabs();
     }
 
     // With XDM gone there is nothing to report a request to, so stop watching the network at all:
@@ -327,10 +362,19 @@ export default class App {
         });
         this.requestWatcher.register();
         chrome.storage.onChanged.addListener((changes, areaName) => {
-            if (areaName === "local" && changes["userBlockedSites"]) {
-                const newVal = changes["userBlockedSites"].newValue;
-                this.userBlockedSites = Array.isArray(newVal) ? newVal : [];
-                this.requestWatcher.setUserBlockedSites(this.userBlockedSites);
+            if (areaName === "local") {
+                if (changes["userBlockedSites"]) {
+                    const newVal = changes["userBlockedSites"].newValue;
+                    this.userBlockedSites = Array.isArray(newVal) ? newVal : [];
+                    this.requestWatcher.setUserBlockedSites(this.userBlockedSites);
+                }
+                if (changes[OVERLAY_EXCLUDED_HOSTS_KEY]) {
+                    const newVal = changes[OVERLAY_EXCLUDED_HOSTS_KEY].newValue;
+                    this.overlayExcludedHosts = Array.isArray(newVal) ? newVal : [];
+                }
+                if (changes[ENABLE_VIDEO_OVERLAY_KEY]) {
+                    this.overlayEnabled = changes[ENABLE_VIDEO_OVERLAY_KEY].newValue !== false;
+                }
             }
         });
         chrome.permissions.onAdded.addListener(() => this.refreshHostAccess());
@@ -609,9 +653,20 @@ export default class App {
         }
         else if (request.type === "vid") {
             let vid = request.itemId;
+            if (!this.connector.isConnected()) {
+                this.connector.launchApp();
+                sendResponse({ ok: false, notRunning: true, error: "XDM isn't running" });
+                return true;
+            }
+            const senderTabId = (sender && sender.tab && sender.tab.id) ? (sender.tab.id + "") : this.activeTabId;
+            const tabUrl = (sender && sender.tab && sender.tab.url) || request.tabUrl || "";
             this.connector.postMessage("/vid", {
                 vid: vid + "",
+                tabId: senderTabId,
+                tabUrl: tabUrl
             });
+            sendResponse({ ok: true });
+            return true;
         }
         else if (request.type === "clear") {
             this.connector.postMessage("/clear", {});
@@ -664,6 +719,67 @@ export default class App {
             }).catch(err => {
                 sendResponse({ ok: false, error: (err && err.message) || String(err) });
             });
+            return true;
+        }
+        else if (request.type === "overlay-init") {
+            const senderTabId = (sender && sender.tab && sender.tab.id) ? (sender.tab.id + "") : this.activeTabId;
+            const url = request.url || (sender && sender.tab && sender.tab.url) || "";
+            let host = "";
+            try { host = new URL(url).hostname; } catch (e) { host = normalizeHost(url); }
+            const siteExcluded = host ? this.isSiteExcluded(host) : false;
+            const siteOverlayDisabled = host ? isOverlayExcludedForHost(host, this.overlayExcludedHosts) : false;
+
+            sendResponse({
+                ok: true,
+                enabled: this.isMonitoringEnabled(),
+                overlayEnabled: this.overlayEnabled !== false,
+                siteExcluded: siteExcluded,
+                siteOverlayDisabled: siteOverlayDisabled,
+                videos: (siteExcluded || siteOverlayDisabled) ? [] : this.videosForTab(senderTabId)
+            });
+            return true;
+        }
+        else if (request.type === "overlay-get-videos") {
+            const senderTabId = (sender && sender.tab && sender.tab.id) ? (sender.tab.id + "") : this.activeTabId;
+            sendResponse({
+                ok: true,
+                videos: this.videosForTab(senderTabId)
+            });
+            return true;
+        }
+        else if (request.type === "overlay-hide-site") {
+            addOverlayExcludedHost(request.host).then(res => {
+                if (res.ok) {
+                    this.overlayExcludedHosts = res.hosts;
+                }
+                sendResponse(res);
+            });
+            return true;
+        }
+        else if (request.type === "overlay-toggle") {
+            setVideoOverlayEnabled(request.enabled).then(res => {
+                this.overlayEnabled = res;
+                sendResponse({ ok: true, overlayEnabled: this.overlayEnabled });
+            });
+            return true;
+        }
+        else if (request.type === "overlay-download-url") {
+            if (!this.connector.isConnected()) {
+                this.connector.launchApp();
+                sendResponse({ ok: false, notRunning: true, error: "XDM isn't running" });
+                return true;
+            }
+            this.triggerDownload(request.url, request.filename, request.referer || (sender && sender.tab && sender.tab.url), null, null);
+            sendResponse({ ok: true });
+            return true;
+        }
+        else if (request.type === "overlay-open-options") {
+            if (chrome.runtime.openOptionsPage) {
+                chrome.runtime.openOptionsPage();
+            } else {
+                chrome.tabs.create({ url: chrome.runtime.getURL("options.html") });
+            }
+            sendResponse({ ok: true });
             return true;
         }
     }

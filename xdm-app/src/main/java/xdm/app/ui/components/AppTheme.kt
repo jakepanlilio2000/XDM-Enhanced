@@ -1,5 +1,7 @@
 package xdm.app.ui.components
 
+import com.formdev.flatlaf.FlatLaf
+import xdm.app.skins.SkinManager
 import xdm.manager.DownloadCategory
 import java.awt.Color
 import javax.swing.UIManager
@@ -77,6 +79,7 @@ object AppTheme {
      */
     fun categoryColor(category: DownloadCategory): Color =
         category.color?.let { Color(it) }
+            ?: SkinManager.currentSkin.categoryColor(category.id, FlatLaf.isLafDark())
             ?: UIManager.getColor("XDM.category.${category.id}")
             ?: UIManager.getColor("XDM.category.custom${Math.floorMod(category.id.hashCode(), CUSTOM_HUES) + 1}")
             ?: sidebarIcon

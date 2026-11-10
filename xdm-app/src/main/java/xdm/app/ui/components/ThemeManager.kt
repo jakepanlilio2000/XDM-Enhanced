@@ -8,6 +8,7 @@ import xdm.app.AppContext
 import xdm.app.AppMain
 import xdm.app.IAppConfig
 import xdm.app.OS
+import xdm.app.skins.SkinManager
 import xdm.app.utils.linux.DesktopFontSettings
 import xdm.app.utils.linux.LinuxPlaces
 import xdm.app.utils.SystemTheme
@@ -78,7 +79,9 @@ object ThemeManager {
      * light blue (#6E9BFF) in dark theme, royal blue (#3B6FE0) in light theme.
      */
     val defaultAccentColor: Color
-        get() = if (isDark) Color(0x6E, 0x9B, 0xFF) else Color(0x3B, 0x6F, 0xE0)
+        get() = SkinManager.currentSkin.run {
+            if (isDark) defaultDarkAccent else defaultLightAccent
+        }
 
     /**
      * Relative luminance and contrast foreground calculation.
@@ -158,6 +161,7 @@ object ThemeManager {
      * Initializes the theme manager with application configuration and starts the OS appearance watcher.
      */
     fun init(config: IAppConfig) {
+        SkinManager.init(config.skinId)
         currentTheme = config.theme
         currentAccentHex = config.accentColor
         currentAccent = parseHexColor(config.accentColor)
@@ -220,6 +224,7 @@ object ThemeManager {
                     val cfg = AppContext.config
                     cfg.theme = theme
                     cfg.accentColor = currentAccentHex
+                    cfg.skinId = SkinManager.currentSkin.id
                     cfg.save()
                 }
             }
@@ -252,6 +257,9 @@ object ThemeManager {
 
         // Setup theme LaF
         if (resolvedDark) FlatMacDarkLaf.setup() else FlatMacLightLaf.setup()
+
+        // Apply active skin geometry, category colors, and UIManager overrides
+        SkinManager.applyCustomDefaults(resolvedDark)
 
         Logger.info("Theme applied: ${if (FlatLaf.isLafDark()) "dark" else "light"} ($theme), accent: ${currentAccentHex ?: "default"}, zoom: $zoomPercent%")
 

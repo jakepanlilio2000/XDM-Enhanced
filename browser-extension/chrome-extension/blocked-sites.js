@@ -224,3 +224,93 @@ export async function editUserBlockedSite(oldInput, newInput) {
 }
 
 export const normalizeHostRule = normalizeHost;
+
+export const OVERLAY_EXCLUDED_HOSTS_KEY = "overlayExcludedHosts";
+export const ENABLE_VIDEO_OVERLAY_KEY = "enableVideoOverlay";
+
+/**
+ * Retrieves the list of hostnames where the floating video overlay is disabled.
+ */
+export async function getOverlayExcludedHosts() {
+    try {
+        const stored = await chrome.storage.local.get(OVERLAY_EXCLUDED_HOSTS_KEY);
+        const list = stored && stored[OVERLAY_EXCLUDED_HOSTS_KEY];
+        if (Array.isArray(list)) {
+            return list.map(normalizeHost).filter(Boolean);
+        }
+        return [];
+    } catch (e) {
+        return [];
+    }
+}
+
+/**
+ * Persists the list of hostnames where the floating video overlay is disabled.
+ */
+export async function saveOverlayExcludedHosts(hosts) {
+    const normalized = Array.from(new Set((hosts || []).map(normalizeHost).filter(Boolean)));
+    await chrome.storage.local.set({ [OVERLAY_EXCLUDED_HOSTS_KEY]: normalized });
+    return normalized;
+}
+
+/**
+ * Disables the floating video overlay on the specified site.
+ */
+export async function addOverlayExcludedHost(input) {
+    const host = normalizeHost(input);
+    if (!host) {
+        return { ok: false, error: "Invalid hostname or URL" };
+    }
+    const current = await getOverlayExcludedHosts();
+    if (current.includes(host)) {
+        return { ok: true, hosts: current, added: host };
+    }
+    current.push(host);
+    const updated = await saveOverlayExcludedHosts(current);
+    return { ok: true, hosts: updated, added: host };
+}
+
+/**
+ * Re-enables the floating video overlay on the specified site.
+ */
+export async function removeOverlayExcludedHost(input) {
+    const host = normalizeHost(input);
+    if (!host) {
+        return { ok: false, error: "Invalid hostname" };
+    }
+    const current = await getOverlayExcludedHosts();
+    const updated = current.filter(item => item !== host);
+    const saved = await saveOverlayExcludedHosts(updated);
+    return { ok: true, hosts: saved, removed: host };
+}
+
+/**
+ * Checks whether the floating video overlay is disabled for the given host.
+ */
+export function isOverlayExcludedForHost(hostname, excludedHosts) {
+    if (!hostname) return false;
+    const host = normalizeHost(hostname);
+    if (!host) return false;
+    return (excludedHosts || []).some(rule => matchesHostRule(host, rule));
+}
+
+/**
+ * Gets whether the floating video overlay is enabled globally.
+ */
+export async function getVideoOverlayEnabled() {
+    try {
+        const stored = await chrome.storage.local.get(ENABLE_VIDEO_OVERLAY_KEY);
+        return !stored || stored[ENABLE_VIDEO_OVERLAY_KEY] !== false;
+    } catch (e) {
+        return true;
+    }
+}
+
+/**
+ * Sets whether the floating video overlay is enabled globally.
+ */
+export async function setVideoOverlayEnabled(enabled) {
+    await chrome.storage.local.set({ [ENABLE_VIDEO_OVERLAY_KEY]: !!enabled });
+    return !!enabled;
+}
+

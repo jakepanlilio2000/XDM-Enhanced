@@ -12,6 +12,7 @@ import xdm.app.update.UpdateCheckResult
 import xdm.app.update.UpdateChecker
 import xdm.app.utils.*
 import xdm.core.util.Logger
+import xdm.app.skins.SkinManager
 import xdm.manager.DbRecord
 import xdm.manager.RecordStatus
 import java.awt.*
@@ -26,6 +27,7 @@ import javax.swing.border.MatteBorder
 class AppWindow(image: Image, startHidden: Boolean = false) : JFrame(), ActionListener {
     internal var listView: DownloadListView = createListView(MainListViewFilter(FilterState.All, null, ""))
     private lateinit var listContainer: JPanel
+    private lateinit var rightPanel: JPanel
     private lateinit var toolbar: DownloadToolBar
     private lateinit var sidebar: CategorySidebar
     private lateinit var statusBar: DownloadStatusBar
@@ -170,12 +172,17 @@ class AppWindow(image: Image, startHidden: Boolean = false) : JFrame(), ActionLi
 
         wireListView()
 
-        listContainer = JPanel(BorderLayout()).apply {
+        listContainer = object : JPanel(BorderLayout()) {
+            override fun paintComponent(g: Graphics) {
+                super.paintComponent(g)
+                SkinManager.currentSkin.paintWallpaper(g, width, height, com.formdev.flatlaf.FlatLaf.isLafDark())
+            }
+        }.apply {
             background = AppTheme.listBackground
             add(listView.component)
         }
 
-        val rightPanel = JPanel(BorderLayout()).apply {
+        rightPanel = JPanel(BorderLayout()).apply {
             add(toolbar, BorderLayout.NORTH)
             add(listContainer, BorderLayout.CENTER)
             background = AppTheme.listBackground
@@ -281,14 +288,21 @@ class AppWindow(image: Image, startHidden: Boolean = false) : JFrame(), ActionLi
     }
 
     fun setSidebarVisible(visible: Boolean) {
-        if (visible) {
-            splitPane.leftComponent = sidebar
+        val layout = SkinManager.currentSkin.layoutConfig
+        if (visible && !layout.sidebarPosition.equals("hidden", ignoreCase = true)) {
+            if (layout.sidebarPosition.equals("right", ignoreCase = true)) {
+                splitPane.leftComponent = rightPanel
+                splitPane.rightComponent = sidebar
+            } else {
+                splitPane.leftComponent = sidebar
+                splitPane.rightComponent = rightPanel
+            }
             sidebar.isVisible = true
             val loc = AppContext.config.sidebarDividerLocation.takeIf { it > 50 } ?: 210.px
             splitPane.dividerSize = defaultDividerSize
             splitPane.dividerLocation = loc
             SwingUtilities.invokeLater {
-                if (AppContext.config.showCategoriesSidebar && splitPane.leftComponent != null) {
+                if (AppContext.config.showCategoriesSidebar && (splitPane.leftComponent != null || splitPane.rightComponent == sidebar)) {
                     splitPane.dividerLocation = loc
                 }
             }
@@ -297,7 +311,11 @@ class AppWindow(image: Image, startHidden: Boolean = false) : JFrame(), ActionLi
             if (loc > 50) {
                 AppContext.config.sidebarDividerLocation = loc
             }
-            splitPane.leftComponent = null
+            if (layout.sidebarPosition.equals("right", ignoreCase = true)) {
+                splitPane.rightComponent = null
+            } else {
+                splitPane.leftComponent = null
+            }
             splitPane.dividerSize = 0
         }
         if (chkSidebar?.isSelected != visible) {
@@ -309,16 +327,59 @@ class AppWindow(image: Image, startHidden: Boolean = false) : JFrame(), ActionLi
         splitPane.repaint()
     }
 
-    fun isSidebarVisible(): Boolean = AppContext.config.showCategoriesSidebar && splitPane.leftComponent != null
+    fun isSidebarVisible(): Boolean = AppContext.config.showCategoriesSidebar && (splitPane.leftComponent == sidebar || splitPane.rightComponent == sidebar)
 
     fun updateTheme() {
         val os = detectOS()
         if (os == OS.Windows) {
             rootPane.putClientProperty("JRootPane.titleBarBackground", AppTheme.sidebarBackground)
         }
+        val skin = SkinManager.currentSkin
+        val layout = skin.layoutConfig
+
+        // Toolbar position
+        when (layout.toolbarPosition.lowercase()) {
+            "bottom" -> {
+                rightPanel.remove(toolbar)
+                rightPanel.add(toolbar, BorderLayout.SOUTH)
+                toolbar.isVisible = true
+            }
+            "hidden" -> {
+                toolbar.isVisible = false
+            }
+            else -> {
+                rightPanel.remove(toolbar)
+                rightPanel.add(toolbar, BorderLayout.NORTH)
+                toolbar.isVisible = true
+            }
+        }
+        toolbar.setSearchVisible(layout.showSearchBar)
+
+        // Sidebar position
+        val showSidebar = AppContext.config.showCategoriesSidebar && !layout.sidebarPosition.equals("hidden", ignoreCase = true)
+        if (showSidebar) {
+            if (layout.sidebarPosition.equals("right", ignoreCase = true)) {
+                splitPane.leftComponent = rightPanel
+                splitPane.rightComponent = sidebar
+            } else {
+                splitPane.leftComponent = sidebar
+                splitPane.rightComponent = rightPanel
+            }
+            splitPane.dividerSize = defaultDividerSize
+            val loc = AppContext.config.sidebarDividerLocation.takeIf { it > 50 } ?: 210.px
+            splitPane.dividerLocation = loc
+        } else {
+            splitPane.leftComponent = null
+            splitPane.rightComponent = rightPanel
+            splitPane.dividerSize = 0
+        }
+
+        statusBar.isVisible = layout.showStatusBar
+
         splitPane.border = MatteBorder(1, 0, 0, 0, AppTheme.sidebarBorder)
         splitPane.background = AppTheme.listBackground
         listContainer.background = AppTheme.listBackground
+        rightPanel.background = AppTheme.listBackground
         sidebar.updateTheme()
         toolbar.updateTheme()
         statusBar.updateTheme()

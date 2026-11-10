@@ -3,6 +3,7 @@ package xdm.app.ui.components
 import com.formdev.flatlaf.FlatClientProperties
 import xdm.app.AppContext
 import xdm.app.I8N.text
+import xdm.app.skins.SkinManager
 import xdm.app.utils.FontIcon
 import xdm.app.utils.RemixIcon
 import xdm.app.utils.ScaledEmptyBorder
@@ -259,18 +260,28 @@ class CategorySidebar(
 
         val isDark = com.formdev.flatlaf.FlatLaf.isLafDark()
         val accent = AppTheme.accent
-        setIcon(allDownloadsNode, FontIcon(RemixIcon.ARROW_DOWN_CIRCLE_LINE, 18.px, accent))
-        setIcon(compressedNode, FontIcon(RemixIcon.FILE_ZIP_LINE, 18.px, UIManager.getColor("XDM.category.CAT_COMPRESSED") ?: Color(210, 153, 34)))
-        setIcon(documentsNode, FontIcon(RemixIcon.FILE_TEXT_LINE, 18.px, UIManager.getColor("XDM.category.CAT_DOCUMENTS") ?: Color(88, 166, 255)))
-        setIcon(musicNode, FontIcon(RemixIcon.MUSIC_2_LINE, 18.px, UIManager.getColor("XDM.category.CAT_MUSIC") ?: Color(240, 136, 62)))
-        setIcon(videosNode, FontIcon(RemixIcon.MOVIE_LINE, 18.px, UIManager.getColor("XDM.category.CAT_VIDEOS") ?: Color(163, 113, 247)))
-        setIcon(programsNode, FontIcon(RemixIcon.TERMINAL_BOX_LINE, 18.px, UIManager.getColor("XDM.category.CAT_PROGRAMS") ?: Color(230, 80, 80)))
-        setIcon(imagesNode, FontIcon(RemixIcon.IMAGE_LINE, 18.px, UIManager.getColor("XDM.category.CAT_IMAGES") ?: Color(56, 189, 248)))
-        setIcon(otherNode, FontIcon(RemixIcon.FILE_LINE, 18.px, AppTheme.sidebarIcon))
-        setIcon(unfinishedNode, FontIcon(RemixIcon.PROGRESS_2_LINE, 18.px, accent))
-        setIcon(completedNode, FontIcon(RemixIcon.CHECKBOX_CIRCLE_LINE, 18.px, if (isDark) Color(63, 185, 80) else Color(26, 127, 55)))
-        setIcon(torrentsNode, FontIcon(RemixIcon.DOWNLOAD_2_LINE, 18.px, accent))
-        setIcon(queuesNode, FontIcon(RemixIcon.LIST_CHECK_2, 18.px, UIManager.getColor("XDM.category.CAT_MUSIC") ?: Color(210, 153, 34)))
+        val skin = SkinManager.currentSkin
+
+        fun catIcon(catId: String, fallbackIcon: RemixIcon, fallbackColor: Color): Icon {
+            return skin.getCategoryIcon(catId, 18.px) ?: FontIcon(
+                fallbackIcon,
+                18.px,
+                skin.categoryColor(catId, isDark) ?: UIManager.getColor("XDM.category.$catId") ?: fallbackColor
+            )
+        }
+
+        setIcon(allDownloadsNode, skin.getCategoryIcon("ALL", 18.px) ?: FontIcon(RemixIcon.ARROW_DOWN_CIRCLE_LINE, 18.px, accent))
+        setIcon(compressedNode, catIcon("CAT_COMPRESSED", RemixIcon.FILE_ZIP_LINE, Color(210, 153, 34)))
+        setIcon(documentsNode, catIcon("CAT_DOCUMENTS", RemixIcon.FILE_TEXT_LINE, Color(88, 166, 255)))
+        setIcon(musicNode, catIcon("CAT_MUSIC", RemixIcon.MUSIC_2_LINE, Color(240, 136, 62)))
+        setIcon(videosNode, catIcon("CAT_VIDEOS", RemixIcon.MOVIE_LINE, Color(163, 113, 247)))
+        setIcon(programsNode, catIcon("CAT_PROGRAMS", RemixIcon.TERMINAL_BOX_LINE, Color(230, 80, 80)))
+        setIcon(imagesNode, catIcon("CAT_IMAGES", RemixIcon.IMAGE_LINE, Color(56, 189, 248)))
+        setIcon(otherNode, skin.getCategoryIcon("other", 18.px) ?: FontIcon(RemixIcon.FILE_LINE, 18.px, AppTheme.sidebarIcon))
+        setIcon(unfinishedNode, skin.getCategoryIcon("unfinished", 18.px) ?: FontIcon(RemixIcon.PROGRESS_2_LINE, 18.px, accent))
+        setIcon(completedNode, skin.getCategoryIcon("completed", 18.px) ?: FontIcon(RemixIcon.CHECKBOX_CIRCLE_LINE, 18.px, if (isDark) Color(63, 185, 80) else Color(26, 127, 55)))
+        setIcon(torrentsNode, skin.getCategoryIcon("torrents", 18.px) ?: FontIcon(RemixIcon.DOWNLOAD_2_LINE, 18.px, accent))
+        setIcon(queuesNode, skin.getCategoryIcon("queues", 18.px) ?: FontIcon(RemixIcon.LIST_CHECK_2, 18.px, UIManager.getColor("XDM.category.CAT_MUSIC") ?: Color(210, 153, 34)))
 
         tree.cellRenderer = CategoryTreeRenderer()
         recount()

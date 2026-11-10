@@ -38,6 +38,8 @@ class App {
         this.videoList = [];
         this.blockedHosts = [];
         this.userBlockedSites = [];
+        this.overlayEnabled = true;
+        this.overlayExcludedHosts = [];
         this.fileExts = [];
         this.requestWatcher = new RequestWatcher(this.onRequestDataReceived.bind(this), this.onDownloadCandidate.bind(this));
         this.userDisabled = false;
@@ -54,6 +56,7 @@ class App {
     start() {
         this.logger.log("starting...");
         this.restoreUserBlockedSites();
+        this.restoreOverlaySettings();
         this.starAppConnector();
         this.register();
         this.logger.log("started.");
@@ -64,6 +67,41 @@ class App {
             this.userBlockedSites = sites || [];
             this.requestWatcher.setUserBlockedSites(this.userBlockedSites);
         }).catch(() => { });
+    }
+
+    restoreOverlaySettings() {
+        if (typeof getVideoOverlayEnabled === "function") {
+            getVideoOverlayEnabled().then(enabled => {
+                this.overlayEnabled = enabled !== false;
+            }).catch(() => { });
+        }
+        if (typeof getOverlayExcludedHosts === "function") {
+            getOverlayExcludedHosts().then(hosts => {
+                this.overlayExcludedHosts = hosts || [];
+            }).catch(() => { });
+        }
+    }
+
+    broadcastVideosToTabs() {
+        var tabsApi = (typeof browser !== "undefined" && browser.tabs) ? browser.tabs : chrome.tabs;
+        if (!tabsApi || !tabsApi.query) return;
+        tabsApi.query({}, tabs => {
+            for (const tab of tabs || []) {
+                if (tab.id && tab.url && !this.isSiteExcluded(tab.url)) {
+                    try {
+                        const p = tabsApi.sendMessage(tab.id, {
+                            type: "videos-updated",
+                            videos: this.videosForTab(tab.id + "")
+                        }, () => {
+                            if (chrome.runtime && chrome.runtime.lastError) {}
+                        });
+                        if (p && typeof p.catch === "function") {
+                            p.catch(() => {});
+                        }
+                    } catch (e) {}
+                }
+            }
+        });
     }
 
     isSiteExcluded(hostnameOrUrl) {
@@ -88,12 +126,14 @@ class App {
             mediaTypes: msg.mediaTypes
         });
         this.updateActionIcon();
+        this.broadcastVideosToTabs();
     }
 
     onDisconnect() {
         this.logger.log("Disconnected from native host!");
         this.logger.log("Disconnected...");
         this.updateActionIcon();
+        this.broadcastVideosToTabs();
     }
 
     isMonitoringEnabled() {
@@ -212,6 +252,7 @@ class App {
             tabUrl: tabUrl
         });
         this.updateActionIcon();
+        this.broadcastVideosToTabs();
     }
 
     register() {
@@ -242,6 +283,26 @@ class App {
         this.attachContextMenu();
         chrome.tabs.onActivated.addListener(this.onTabActivated.bind(this));
         chrome.commands.onCommand.addListener(this.onCommand.bind(this));
+
+        var storageApi = (typeof browser !== "undefined" && browser.storage) ? browser.storage : chrome.storage;
+        if (storageApi && storageApi.onChanged) {
+            storageApi.onChanged.addListener((changes, areaName) => {
+                if (areaName === "local") {
+                    if (changes["userBlockedSites"]) {
+                        const newVal = changes["userBlockedSites"].newValue;
+                        this.userBlockedSites = Array.isArray(newVal) ? newVal : [];
+                        this.requestWatcher.setUserBlockedSites(this.userBlockedSites);
+                    }
+                    if (changes[OVERLAY_EXCLUDED_HOSTS_KEY]) {
+                        const newVal = changes[OVERLAY_EXCLUDED_HOSTS_KEY].newValue;
+                        this.overlayExcludedHosts = Array.isArray(newVal) ? newVal : [];
+                    }
+                    if (changes[ENABLE_VIDEO_OVERLAY_KEY]) {
+                        this.overlayEnabled = changes[ENABLE_VIDEO_OVERLAY_KEY].newValue !== false;
+                    }
+                }
+            });
+        }
     }
     
     isSupportedProtocol(url) {
@@ -479,9 +540,20 @@ class App {
         }
         else if (request.type === "vid") {
             let vid = request.itemId;
+            if (!this.connector.isConnected()) {
+                this.connector.launchApp();
+                sendResponse({ ok: false, notRunning: true, error: "XDM isn't running" });
+                return true;
+            }
+            const senderTabId = (sender && sender.tab && sender.tab.id) ? (sender.tab.id + "") : this.activeTabId;
+            const tabUrl = (sender && sender.tab && sender.tab.url) || request.tabUrl || "";
             this.connector.postMessage("/vid", {
                 vid: vid + "",
+                tabId: senderTabId,
+                tabUrl: tabUrl
             });
+            sendResponse({ ok: true });
+            return true;
         }
         else if (request.type === "clear") {
             this.connector.postMessage("/clear", {});
@@ -534,6 +606,69 @@ class App {
             }).catch(err => {
                 sendResponse({ ok: false, error: (err && err.message) || String(err) });
             });
+            return true;
+        }
+        else if (request.type === "overlay-init") {
+            const senderTabId = (sender && sender.tab && sender.tab.id) ? (sender.tab.id + "") : this.activeTabId;
+            const url = request.url || (sender && sender.tab && sender.tab.url) || "";
+            let host = "";
+            try { host = new URL(url).hostname; } catch (e) { host = normalizeHost(url); }
+            const siteExcluded = host ? this.isSiteExcluded(host) : false;
+            const siteOverlayDisabled = host ? isOverlayExcludedForHost(host, this.overlayExcludedHosts) : false;
+
+            sendResponse({
+                ok: true,
+                enabled: this.isMonitoringEnabled(),
+                overlayEnabled: this.overlayEnabled !== false,
+                siteExcluded: siteExcluded,
+                siteOverlayDisabled: siteOverlayDisabled,
+                videos: (siteExcluded || siteOverlayDisabled) ? [] : this.videosForTab(senderTabId)
+            });
+            return true;
+        }
+        else if (request.type === "overlay-get-videos") {
+            const senderTabId = (sender && sender.tab && sender.tab.id) ? (sender.tab.id + "") : this.activeTabId;
+            sendResponse({
+                ok: true,
+                videos: this.videosForTab(senderTabId)
+            });
+            return true;
+        }
+        else if (request.type === "overlay-hide-site") {
+            addOverlayExcludedHost(request.host).then(res => {
+                if (res.ok) {
+                    this.overlayExcludedHosts = res.hosts;
+                }
+                sendResponse(res);
+            });
+            return true;
+        }
+        else if (request.type === "overlay-toggle") {
+            setVideoOverlayEnabled(request.enabled).then(res => {
+                this.overlayEnabled = res;
+                sendResponse({ ok: true, overlayEnabled: this.overlayEnabled });
+            });
+            return true;
+        }
+        else if (request.type === "overlay-download-url") {
+            if (!this.connector.isConnected()) {
+                this.connector.launchApp();
+                sendResponse({ ok: false, notRunning: true, error: "XDM isn't running" });
+                return true;
+            }
+            this.triggerDownload(request.url, request.filename, request.referer || (sender && sender.tab && sender.tab.url), null, null);
+            sendResponse({ ok: true });
+            return true;
+        }
+        else if (request.type === "overlay-open-options") {
+            const runtime = (typeof browser !== "undefined" && browser.runtime) ? browser.runtime : chrome.runtime;
+            if (runtime.openOptionsPage) {
+                runtime.openOptionsPage();
+            } else {
+                const tabsApi = (typeof browser !== "undefined" && browser.tabs) ? browser.tabs : chrome.tabs;
+                tabsApi.create({ url: runtime.getURL("app/options.html") });
+            }
+            sendResponse({ ok: true });
             return true;
         }
     }
@@ -803,5 +938,6 @@ class App {
         this.activeTabId = activeInfo.tabId + "";
         this.logger.log("Active tab: " + this.activeTabId);
         this.updateActionIcon();
+        this.broadcastVideosToTabs();
     }
 }

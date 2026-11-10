@@ -76,6 +76,8 @@ interface IAppConfig : EngineConfig {
     var lang: String
     /** "dark", "light" or "system" (follow the OS, read at every startup). */
     var theme: String
+    /** Visual skin preset ID (e.g. "enhanced", "classic_xdm"). */
+    var skinId: String
     /** Hex color string like "#3B82F6", or null for the theme's default accent. */
     var accentColor: String?
     /** Whole-UI zoom in percent (Settings > Appearance), one of [AppConfig.UI_SCALES]; 100 leaves the UI as is. */
@@ -188,6 +190,11 @@ interface IAppConfig : EngineConfig {
     var showCategoriesSidebar: Boolean
     var sidebarDividerLocation: Int
 
+    // --- Plugin Preferences ---
+    var enabledPlugins: List<String>
+    var trustedPlugins: List<String>
+    var safeMode: Boolean
+
     fun applyAuthConfig()
 
     /**
@@ -289,6 +296,10 @@ private const val F_TABLE_HIDDEN_COLUMNS = 83
 private const val F_AUTO_UPDATE_CHECK = 84
 private const val F_UPDATE_CHANNEL = 85
 private const val F_UPDATE_NOTIFICATIONS = 86
+private const val F_SKIN_ID = 87
+private const val F_ENABLED_PLUGINS = 88
+private const val F_TRUSTED_PLUGINS = 89
+private const val F_SAFE_MODE = 90
 
 // Inside F_POST_DOWNLOAD_RULES: one F_RULE record per rule, in order.
 private const val F_RULE = 1
@@ -351,6 +362,7 @@ class AppConfig(private val configDir: String) : IAppConfig {
     override var minVideoSize: Long = 1024
     override var lang: String = "en"
     override var theme: String = "dark"
+    override var skinId: String = "enhanced"
     override var accentColor: String? = null
     override var uiScale: Int = 100
     override var themeMigrated: Boolean = false
@@ -495,6 +507,10 @@ class AppConfig(private val configDir: String) : IAppConfig {
     override var updateChannel: String = "beta"
     override var updateNotificationsEnabled: Boolean = true
 
+    override var enabledPlugins: List<String> = emptyList()
+    override var trustedPlugins: List<String> = emptyList()
+    override var safeMode: Boolean = false
+
     override fun applyAuthConfig() {
         Authenticator.setDefault(DefaultAuthenticator())
     }
@@ -620,6 +636,10 @@ class AppConfig(private val configDir: String) : IAppConfig {
         w.bool(F_AUTO_UPDATE_CHECK, autoUpdateCheck)
         w.string(F_UPDATE_CHANNEL, updateChannel)
         w.bool(F_UPDATE_NOTIFICATIONS, updateNotificationsEnabled)
+        w.string(F_SKIN_ID, skinId)
+        w.strings(F_ENABLED_PLUGINS, enabledPlugins)
+        w.strings(F_TRUSTED_PLUGINS, trustedPlugins)
+        w.bool(F_SAFE_MODE, safeMode)
         w.raw(unknownFields)
     }
 
@@ -726,6 +746,10 @@ class AppConfig(private val configDir: String) : IAppConfig {
                 F_AUTO_UPDATE_CHECK -> autoUpdateCheck = r.bool()
                 F_UPDATE_CHANNEL -> updateChannel = r.string().ifBlank { "beta" }
                 F_UPDATE_NOTIFICATIONS -> updateNotificationsEnabled = r.bool()
+                F_SKIN_ID -> skinId = r.string().takeIf { it.isNotBlank() } ?: "enhanced"
+                F_ENABLED_PLUGINS -> enabledPlugins = r.strings()
+                F_TRUSTED_PLUGINS -> trustedPlugins = r.strings()
+                F_SAFE_MODE -> safeMode = r.bool()
                 else -> unknown.raw(r.rawField())
             }
         }

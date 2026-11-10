@@ -388,7 +388,10 @@ object BrowserIntegration {
 
     private fun onVideoDownloadMessage(context: RequestContext) {
         Logger.info("Received video download message..")
-        decodeBody<ExtensionMessage>(context)?.let { CaptureHandler.onVideoPicked(it) }
+        val success = decodeBody<ExtensionMessage>(context)?.let { CaptureHandler.onVideoPicked(it) } ?: false
+        if (!success) {
+            Logger.info("Video item not found or expired in tracker")
+        }
     }
 
     private fun onMediaMessage(context: RequestContext) {
@@ -444,6 +447,12 @@ object BrowserIntegration {
                     previewable = it.previewable,
                     subtitle = it.subtitle,
                     badge = if (it.subtitle) I8N.text("ND_SUBTITLE_BADGE") else null,
+                    resolution = it.resolution,
+                    format = it.format,
+                    streamType = it.streamType,
+                    estimatedSize = it.estimatedSize,
+                    hasAudio = it.hasAudio,
+                    frameRate = it.frameRate,
                 )
             },
         )
@@ -514,6 +523,12 @@ data class VideoItem(
      * null for none. Sent from here because the extension has no translations of its own.
      */
     val badge: String? = null,
+    val resolution: String? = null,
+    val format: String? = null,
+    val streamType: String? = null,
+    val estimatedSize: String? = null,
+    val hasAudio: Boolean? = null,
+    val frameRate: String? = null,
 )
 
 /** Body of a `/preview` request: the captured video, by its [VideoItem.id]. */

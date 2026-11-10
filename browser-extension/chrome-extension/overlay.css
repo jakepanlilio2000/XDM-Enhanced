@@ -1,0 +1,499 @@
+/* XDM Enhanced — Floating Video Download Overlay Styles (Shadow DOM Scoped) */
+
+:host {
+    all: initial;
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 2147483647;
+    pointer-events: none;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 13px;
+    line-height: 1.4;
+    user-select: none;
+    -webkit-user-select: none;
+    display: block;
+}
+
+:host([data-hidden="true"]) {
+    display: none !important;
+}
+
+:host([data-fullscreen="true"]) {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+}
+
+.xdm-overlay-wrapper {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+/* Floating Pill Button */
+.xdm-btn {
+    pointer-events: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    height: 32px;
+    padding: 0 12px 0 9px;
+    background: rgba(15, 23, 42, 0.88);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 16px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    opacity: 0;
+    transform: translateY(-2px);
+    transition: opacity 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+                background 0.15s ease,
+                border-color 0.15s ease,
+                box-shadow 0.15s ease;
+}
+
+.xdm-btn:hover {
+    background: rgba(14, 165, 233, 0.95);
+    border-color: #38bdf8;
+    box-shadow: 0 6px 20px rgba(14, 165, 233, 0.45);
+    transform: translateY(-3px);
+}
+
+.xdm-btn:active {
+    transform: translateY(-1px);
+    background: #0284c7;
+}
+
+.xdm-btn:focus-visible {
+    outline: 2px solid #38bdf8;
+    outline-offset: 2px;
+}
+
+/* Visibility states */
+.xdm-btn.xdm-visible,
+.xdm-overlay-wrapper:hover .xdm-btn,
+.xdm-btn:focus-visible,
+.xdm-btn.xdm-active {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.xdm-btn-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+}
+
+.xdm-btn-icon svg {
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.xdm-btn-label {
+    white-space: nowrap;
+    letter-spacing: 0.01em;
+}
+
+.xdm-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 5px;
+    background: #0ea5e9;
+    color: #ffffff;
+    border-radius: 8px;
+    font-size: 10.5px;
+    font-weight: 700;
+    line-height: 1;
+    margin-left: -2px;
+}
+
+.xdm-btn:hover .xdm-badge {
+    background: #ffffff;
+    color: #0284c7;
+}
+
+/* Micro / compact mode for small players (< 280px) */
+:host([data-compact="true"]) .xdm-btn-label {
+    display: none;
+}
+:host([data-compact="true"]) .xdm-btn {
+    padding: 0 8px;
+}
+
+/* Dropdown Menu */
+.xdm-dropdown {
+    pointer-events: auto;
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    width: 320px;
+    max-width: calc(100vw - 32px);
+    background: #0f172a;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 10px;
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(0, 0, 0, 0.2);
+    color: #f1f5f9;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    animation: xdmSlideDown 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+    transform-origin: top right;
+}
+
+@keyframes xdmSlideDown {
+    from {
+        opacity: 0;
+        transform: scale(0.95) translateY(-6px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.xdm-dropdown-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: rgba(30, 41, 59, 0.7);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.xdm-dropdown-title-group {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding-right: 8px;
+}
+
+.xdm-dropdown-title {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #f8fafc;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.xdm-dropdown-subtitle {
+    font-size: 11px;
+    color: #94a3b8;
+    margin-top: 1px;
+}
+
+.xdm-close-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    border-radius: 4px;
+    cursor: pointer;
+    padding: 0;
+    transition: color 0.15s, background 0.15s;
+}
+
+.xdm-close-btn:hover {
+    color: #f8fafc;
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.xdm-close-btn svg {
+    width: 14px;
+    height: 14px;
+    stroke: currentColor;
+    stroke-width: 2;
+}
+
+/* Streams List */
+.xdm-streams-list {
+    max-height: 240px;
+    overflow-y: auto;
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.xdm-streams-list::-webkit-scrollbar {
+    width: 5px;
+}
+.xdm-streams-list::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+}
+
+.xdm-stream-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 10px;
+    border-radius: 6px;
+    background: rgba(30, 41, 59, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.xdm-stream-item:hover {
+    background: rgba(51, 65, 85, 0.7);
+    border-color: rgba(56, 189, 248, 0.35);
+}
+
+.xdm-stream-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    overflow: hidden;
+}
+
+.xdm-stream-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.xdm-format-tag {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 2px 5px;
+    border-radius: 4px;
+    background: rgba(14, 165, 233, 0.2);
+    color: #38bdf8;
+    border: 1px solid rgba(14, 165, 233, 0.4);
+}
+
+.xdm-format-tag[data-type="hls"],
+.xdm-format-tag[data-type="m3u8"] {
+    background: rgba(168, 85, 247, 0.2);
+    color: #c084fc;
+    border-color: rgba(168, 85, 247, 0.4);
+}
+
+.xdm-format-tag[data-type="dash"],
+.xdm-format-tag[data-type="mpd"] {
+    background: rgba(249, 115, 22, 0.2);
+    color: #fb923c;
+    border-color: rgba(249, 115, 22, 0.4);
+}
+
+.xdm-format-tag[data-type="audio"] {
+    background: rgba(34, 197, 94, 0.2);
+    color: #4ade80;
+    border-color: rgba(34, 197, 94, 0.4);
+}
+
+.xdm-format-tag[data-type="subtitle"] {
+    background: rgba(20, 184, 166, 0.2);
+    color: #2dd4bf;
+    border-color: rgba(20, 184, 166, 0.4);
+}
+
+.xdm-audio-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 9.5px;
+    font-weight: 600;
+    padding: 1px 4px;
+    border-radius: 3px;
+    line-height: 1.2;
+}
+
+.xdm-audio-badge.xdm-muxed {
+    background: rgba(14, 165, 233, 0.15);
+    color: #38bdf8;
+    border: 1px solid rgba(14, 165, 233, 0.35);
+}
+
+.xdm-audio-badge.xdm-no-audio {
+    background: rgba(245, 158, 11, 0.18);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+.xdm-dropdown-alert {
+    margin: 8px 10px 0 10px;
+    padding: 7px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    line-height: 1.35;
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    animation: xdmSlideDown 0.15s ease-out;
+}
+
+.xdm-dropdown-alert.xdm-alert-error {
+    background: rgba(239, 68, 68, 0.18);
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    color: #fca5a5;
+}
+
+.xdm-dropdown-alert.xdm-alert-warning {
+    background: rgba(245, 158, 11, 0.18);
+    border: 1px solid rgba(245, 158, 11, 0.4);
+    color: #fcd34d;
+}
+
+.xdm-stream-action.xdm-loading {
+    opacity: 0.75;
+    pointer-events: none;
+}
+
+.xdm-stream-action.xdm-error {
+    background: #ef4444;
+    color: #ffffff;
+}
+
+.xdm-stream-action.xdm-error:hover {
+    background: #dc2626;
+}
+
+.xdm-quality-tag {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: #f1f5f9;
+}
+
+.xdm-stream-size {
+    font-size: 11px;
+    color: #94a3b8;
+}
+
+.xdm-stream-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 26px;
+    padding: 0 9px;
+    background: #0ea5e9;
+    color: #ffffff;
+    border: none;
+    border-radius: 4px;
+    font-size: 11.5px;
+    font-weight: 500;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.15s, transform 0.1s;
+}
+
+.xdm-stream-action:hover {
+    background: #0284c7;
+    transform: scale(1.02);
+}
+
+.xdm-stream-action:active {
+    transform: scale(0.98);
+}
+
+.xdm-stream-action:focus-visible {
+    outline: 2px solid #38bdf8;
+}
+
+.xdm-stream-action.xdm-sent {
+    background: #10b981;
+}
+
+/* Empty / Waiting State */
+.xdm-empty-state {
+    padding: 20px 16px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    color: #94a3b8;
+}
+
+.xdm-empty-icon {
+    width: 28px;
+    height: 28px;
+    stroke: #64748b;
+    stroke-width: 1.8;
+}
+
+.xdm-empty-title {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #e2e8f0;
+}
+
+.xdm-empty-desc {
+    font-size: 11.5px;
+    line-height: 1.4;
+    color: #94a3b8;
+    margin: 0;
+}
+
+/* Footer / Actions */
+.xdm-dropdown-footer {
+    padding: 8px 12px;
+    background: rgba(15, 23, 42, 0.9);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11px;
+}
+
+.xdm-footer-link {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    text-decoration: none;
+    transition: color 0.15s, background 0.15s;
+}
+
+.xdm-footer-link:hover {
+    color: #f8fafc;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.xdm-footer-link:focus-visible {
+    outline: 2px solid #38bdf8;
+}
+
+.xdm-dl-all-btn {
+    background: rgba(14, 165, 233, 0.2);
+    border: 1px solid rgba(14, 165, 233, 0.5);
+    color: #38bdf8;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 11.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+
+.xdm-dl-all-btn:hover {
+    background: #0ea5e9;
+    color: #ffffff;
+}
+

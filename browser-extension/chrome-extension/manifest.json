@@ -10,7 +10,7 @@
     },
     "manifest_version": 3,
     "version": "3.5.3",
-    "version_name": "1.0.0-beta.4",
+    "version_name": "1.0.0-beta.5",
     "description": "Send downloads, web videos and links from Chrome to XDM Enhanced. Fast, modern open-source download manager.",
     "homepage_url": "https://github.com/jakepanlilio2000/XDM-Enhanced",
     "minimum_chrome_version": "103",
@@ -25,6 +25,21 @@
         "contextMenus",
         "alarms",
         "scripting"
+    ],
+    "content_scripts": [
+        {
+            "matches": [
+                "*://*/*"
+            ],
+            "js": [
+                "overlay.js"
+            ],
+            "css": [
+                "overlay.css"
+            ],
+            "run_at": "document_idle",
+            "all_frames": true
+        }
     ],
     "options_ui": {
         "page": "options.html",

@@ -17,6 +17,12 @@ data class DetectedVideoInfo(
     val previewable: Boolean = false,
     /** A subtitle file ([CapturedSubtitle]), not a video. */
     val subtitle: Boolean = false,
+    val resolution: String? = null,
+    val format: String? = null,
+    val streamType: String? = null,
+    val estimatedSize: String? = null,
+    val hasAudio: Boolean = true,
+    val frameRate: String? = null,
 )
 
 data class StreamingVideoDisplayInfo(

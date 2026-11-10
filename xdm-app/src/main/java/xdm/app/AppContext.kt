@@ -58,6 +58,9 @@ object AppContext {
     val hasConfig: Boolean
         get() = ::config.isInitialized
 
+    val hasDb: Boolean
+        get() = ::db.isInitialized
+
     /** True when this launch found no saved config, i.e. XDM is running for the first time. */
     var firstRun = false
         private set
@@ -172,6 +175,14 @@ object AppContext {
 
             Logger.info("Loading translations...")
             I8N.loadTexts(config.lang)
+
+            val safeMode = args.contains("--safe-mode") || args.contains("--no-plugins") || config.safeMode
+            xdm.app.plugins.PluginManager.init(safeMode = safeMode)
+            runCatching {
+                Runtime.getRuntime().addShutdownHook(Thread({
+                    runCatching { xdm.app.plugins.PluginManager.shutdown() }
+                }, "XDM-Plugin-ShutdownHook"))
+            }
 
             // Taking the integration port is also how XDM decides it is the only instance, so this
             // happens before the UI exists - but after the theme and translations, so both paths

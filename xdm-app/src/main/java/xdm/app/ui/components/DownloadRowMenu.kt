@@ -66,6 +66,20 @@ class DownloadRowMenu(private val withPrimaryActions: Boolean) {
         }
         menu.item("CTX_COPY_URL") { AppMenuHandler.copyUrl(ent) }
         menu.item("MENU_PROPERTIES") { AppContext.app.showPropertiesWindow(ent) }
+
+        // Plugin actions
+        val infoList = listOf(toDownloadInfo(ent))
+        val pluginActions = xdm.app.plugins.PluginManager.getContextMenuActions(infoList)
+        if (pluginActions.isNotEmpty()) {
+            menu.addSeparator()
+            for (action in pluginActions) {
+                menu.add(JMenuItem(action.label).apply {
+                    action.tooltip?.let { toolTipText = it }
+                    addActionListener { action.handler.accept(infoList) }
+                })
+            }
+        }
+
         if (withPrimaryActions) {
             menu.addSeparator()
             menu.item("TOOL_DELETE") { AppMenuHandler.deleteDownload(ent, window()) }
@@ -85,11 +99,48 @@ class DownloadRowMenu(private val withPrimaryActions: Boolean) {
         if (entries.any { it.canRestart }) {
             menu.item("MENU_RESTART") { entries.filter { it.canRestart }.forEach { AppMenuHandler.restartDownload(it) } }
         }
+
+        // Plugin actions for bulk selection
+        val infoList = entries.map { toDownloadInfo(it) }
+        val pluginActions = xdm.app.plugins.PluginManager.getContextMenuActions(infoList)
+        if (pluginActions.isNotEmpty()) {
+            menu.addSeparator()
+            for (action in pluginActions) {
+                menu.add(JMenuItem(action.label).apply {
+                    action.tooltip?.let { toolTipText = it }
+                    addActionListener { action.handler.accept(infoList) }
+                })
+            }
+        }
+
         if (menu.componentCount > 0) menu.addSeparator()
         menu.item("TOOL_DELETE") {
             AppMenuHandler.deleteSelectedDownloads(entries, SwingUtilities.getWindowAncestor(invoker))
         }
         return menu
+    }
+
+    private fun toDownloadInfo(rec: DbRecord): xdm.plugin.api.models.DownloadInfo {
+        val taskInfo = runCatching { AppContext.taskInfoDB.getHttpTask(rec.id) }.getOrNull()
+        val destPath = if (taskInfo != null) {
+            java.io.File(taskInfo.targetFolder, rec.fileName).absolutePath
+        } else {
+            rec.fileName
+        }
+        val url = taskInfo?.url ?: ""
+        return xdm.plugin.api.models.DownloadInfo(
+            rec.id,
+            url,
+            rec.fileName,
+            destPath,
+            rec.size,
+            rec.downloaded,
+            rec.progress,
+            rec.speed,
+            rec.status.name,
+            rec.categoryId ?: "None",
+            rec.date
+        )
     }
 
     private val DbRecord.canRestart: Boolean

@@ -1,6 +1,6 @@
 "use strict";
 
-import { normalizeHostRule, matchesHostRule } from './blocked-sites.js';
+import { normalizeHostRule, matchesHostRule, ENABLE_VIDEO_OVERLAY_KEY, OVERLAY_EXCLUDED_HOSTS_KEY } from './blocked-sites.js';
 
 const BLOCKED_SITES_KEY = "userBlockedSites";
 const BULK_PREFS_KEY = "bulkPrefs";
@@ -14,7 +14,7 @@ const CAPTURE_STREAMS_KEY = "captureStreams";
 
 const DEFAULT_EXTENSIONS = ".mp4, .m3u8, .mpd, .ts, .webm, .mkv, .flv, .avi, .zip, .rar, .7z, .tar, .gz, .iso, .exe, .msi, .apk, .dmg, .pkg, .pdf";
 const GITHUB_RELEASES_API = "https://api.github.com/repos/jakepanlilio2000/XDM-Enhanced/releases?per_page=5";
-const PROJECT_BASELINE_VERSION = "1.0.0-beta.4";
+const PROJECT_BASELINE_VERSION = "1.0.0-beta.5";
 
 function parseSemVer(v) {
     if (!v) return { major: 0, minor: 0, patch: 0, pre: [], isPre: false };
@@ -168,7 +168,8 @@ class ExtensionOptions {
             NOTIFICATIONS_KEY,
             FILE_EXTS_KEY,
             MIN_VIDEO_SIZE_KEY,
-            CAPTURE_STREAMS_KEY
+            CAPTURE_STREAMS_KEY,
+            ENABLE_VIDEO_OVERLAY_KEY
         ], stored => {
             if (chrome.runtime.lastError || !stored) return;
 
@@ -190,6 +191,10 @@ class ExtensionOptions {
             }
             if (stored[PREVIEWS_KEY] !== undefined) {
                 document.getElementById("optPreviews").checked = stored[PREVIEWS_KEY];
+            }
+            const overlayCheckbox = document.getElementById("optFloatingOverlay");
+            if (overlayCheckbox) {
+                overlayCheckbox.checked = stored[ENABLE_VIDEO_OVERLAY_KEY] !== false;
             }
 
             // Theme
@@ -244,6 +249,12 @@ class ExtensionOptions {
         document.getElementById("optPreviews").addEventListener("change", e => {
             chrome.storage.local.set({ [PREVIEWS_KEY]: e.target.checked });
         });
+        const optOverlay = document.getElementById("optFloatingOverlay");
+        if (optOverlay) {
+            optOverlay.addEventListener("change", e => {
+                chrome.storage.local.set({ [ENABLE_VIDEO_OVERLAY_KEY]: e.target.checked });
+            });
+        }
 
         // Theme selection
         document.querySelectorAll('input[name="themeMode"]').forEach(radio => {
@@ -345,7 +356,7 @@ class ExtensionOptions {
         const appVer = document.getElementById("diagAppVersion");
         if (appVer) {
             appVer.textContent = connected
-                ? (appVersion ? `v${appVersion}` : "v1.0.0-beta.4")
+                ? (appVersion ? `v${appVersion}` : "v1.0.0-beta.5")
                 : "Not connected";
         }
 

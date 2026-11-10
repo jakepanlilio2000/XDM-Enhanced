@@ -5,6 +5,41 @@ All notable changes to the XDM Enhanced project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0-beta.5] - 2026-11-10
+
+### Added
+
+- **Extensible Skin Engine & Custom Skin Packages (`.xdmskin`):**
+  - Integrated skin engine supporting built-in skins (**XDM Enhanced** modern FlatLaf theme and authentic **Original XDM** classic theme) as well as portable, declarative `.xdmskin` archive packages.
+  - Comprehensive customization points: custom window backgrounds, wallpapers, toolbar icons, category sidebar icons, buttons, fonts, border radii, and accent overrides.
+  - Security-hardened archive validation defending against Zip Slip path traversal and prohibiting native executable payloads.
+  - Dedicated Skin Management interface in Settings > Appearance with preview cards, one-click installation, export, live hot-reloading, and deletion.
+  - Complete developer documentation and reference package: [Skin Development Guide](docs/SKIN_DEVELOPMENT.md) and [`sample-skins/cyber-neon.xdmskin`](sample-skins/cyber-neon.xdmskin).
+- **Core Plugin Framework & Public Developer API (`xdm-plugin-api`):**
+  - Dedicated public Java Service Provider Interface (SPI) module (`xdm-plugin-api`) defining contracts: `XdmPlugin`, `PluginContext`, `DownloadProvider`, `MediaProvider`, `PluginDownloadTask`, `PluginProgressEvent`, and settings registration.
+  - Sandboxed lifecycle management: discovery, metadata validation, quarantine by default, user-confirmed trust activation, initialization, and safe uninstallation.
+  - Dedicated Plugins panel in Settings with capability listings, status badges, configuration dialogs, and safe-mode fallback.
+  - Reference implementations: Checksum Verifier plugin (`sample-plugins/checksum-verifier.xdmplugin`) and optional yt-dlp downloader integration (`sample-plugins/ytdlp-downloader.xdmplugin`).
+  - Comprehensive public developer guide: [Plugin Development Guide](docs/PLUGIN_DEVELOPMENT.md).
+- **Floating Browser Video Downloader & Quality Selection:**
+  - Lightweight, non-intrusive floating download button anchored to detected HTML5 `<video>` players in Chromium and Firefox extensions.
+  - Shadow DOM style isolation to prevent host page style bleed, responsive sizing, fullscreen adaptation, and keyboard accessibility (Tab, Enter, Escape, Arrow keys).
+  - Stream quality and format resolution: displays detected container formats (MP4, WebM), resolutions (4K, 1440p, 1080p, 720p, 480p), audio track availability badges (Muxed vs. Video Only), and estimated stream sizes (`≈ ... (est.)`).
+  - Strict format integrity: HLS and MPEG-DASH playlists are labeled accurately and never falsely claimed as MP4 files.
+  - Encrypted Media Extensions (EME) DRM inspection: detects `mediaKeys` early and displays a clear DRM advisory alert without attempting invalid capture.
+  - Asynchronous download dispatch with connection status verification and offline feedback.
+
+### Changed
+
+- **Version Alignment:** Synchronized project and artifact version declarations to `1.0.0-beta.5` across all Maven modules, NSIS installer, build configurations, and companion extensions.
+- **Documentation Overhaul:** Reorganized `README.md` to present a concise, professional, and accessible overview focused on verified capabilities, clean installation steps, and developer extension points, moving development issue references to changelog and developer guides.
+
+### Security
+
+- **Package Verification:** Enforced strict canonical path checks (Zip Slip defense) in both `.xdmskin` and `.xdmplugin` archive unpackers.
+- **Sandboxed Execution:** Disallowed native executable binaries and shell scripts inside third-party plugin packages.
+- **Localhost IPC Hardening:** Enforced strict origin validation (`chrome-extension://`, `moz-extension://`) and loopback binding (`127.0.0.1:8597`) across all browser-to-desktop endpoints.
+
 ## [1.0.0-beta.4] - 2026-11-10
 
 ### Added

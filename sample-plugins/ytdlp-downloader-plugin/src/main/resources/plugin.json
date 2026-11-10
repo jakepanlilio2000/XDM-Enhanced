@@ -1,0 +1,20 @@
+{
+  "id": "ytdlp-downloader",
+  "name": "yt-dlp Media Downloader",
+  "version": "1.0.0",
+  "author": "XDM Enhanced Community",
+  "description": "Optional media downloader plugin integrating authorized yt-dlp command-line tools for video and audio retrieval.",
+  "minAppVersion": "1.0.0-beta.1",
+  "minApiVersion": "1.0.0",
+  "entryPoint": "xdm.plugin.ytdlp.YtDlpPlugin",
+  "capabilities": [
+    "DOWNLOAD_PROVIDER",
+    "URL_RECOGNIZER",
+    "SETTINGS_PANEL",
+    "TOOLBAR_ACTION",
+    "COMMAND"
+  ],
+  "license": "GPL-3.0",
+  "homepage": "https://github.com/jakepanlilio2000/XDM-Enhanced"
+}
+

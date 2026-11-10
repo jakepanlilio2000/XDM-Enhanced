@@ -9,9 +9,10 @@ import xdm.core.downloaders.HlsDownloadTaskInfo
 import xdm.core.downloaders.HttpDownloadTaskInfo
 import xdm.core.downloaders.StreamingDownloadTaskInfo
 import xdm.core.util.*
+import java.util.Locale
 
 interface ICapturedVideoTracker {
-    fun addVideoDownload(videoId: Long)
+    fun addVideoDownload(videoId: Long): Boolean
     fun addVideoHls(items: List<Pair<HlsDownloadTaskInfo, StreamingVideoDisplayInfo>>)
     fun addVideoDash(items: List<Pair<DashDownloadTaskInfo, StreamingVideoDisplayInfo>>)
     fun addVideoHttp(items: List<Pair<HttpDownloadTaskInfo, StreamingVideoDisplayInfo>>)
@@ -51,7 +52,7 @@ class CapturedVideoTracker : ICapturedVideoTracker {
     /** What the UI needs about one detected video, read out under the lock. */
     private data class VideoSummary(val fileName: String, val size: Long, val contentType: String?)
 
-    override fun addVideoDownload(videoId: Long) {
+    override fun addVideoDownload(videoId: Long): Boolean {
         // The maps are guarded by this instance; look the video up under the lock, then call the UI
         // outside it. (This ran unsynchronized before.)
         val summary = synchronized(this) {
@@ -67,9 +68,10 @@ class CapturedVideoTracker : ICapturedVideoTracker {
                 ?: dashVideoList[videoId]?.let { (s, _) -> VideoSummary(s.fileName, -1, "application/dash+xml") }
                 ?: restarts[videoId]?.let { s -> VideoSummary(s.fileName, -1, if (s is DashDownloadTaskInfo) "application/dash+xml" else "application/x-mpegURL") }
                 ?: subtitleList[videoId]?.let { s -> VideoSummary(s.task.fileName, s.display.size ?: -1, s.format.mimeType) }
-        } ?: return
+        } ?: return false
 
         CaptureContext.host.offerVideo(videoId, summary.fileName, summary.size, summary.contentType)
+        return true
     }
 
 
@@ -144,6 +146,9 @@ class CapturedVideoTracker : ICapturedVideoTracker {
             synchronized(this) {
                 val list = ArrayList<DetectedVideoInfo>(hlsVideoList.size + httpVideoList.size)
                 list.addAll(dashVideoList.values.map { (t, s) ->
+                    val res = s.height?.let { "${it}p" }
+                    val sizeText = s.streamSize?.text ?: s.size?.takeIf { it > 0 }?.let { FormatHelper.formatSize(it.toDouble()) }
+                    val audioPresent = t.audioSegments.isNotEmpty() || (t.videoSegments.isEmpty() && t.audioSegments.isNotEmpty())
                     DetectedVideoInfo(
                         id = t.id,
                         name = t.fileName,
@@ -151,18 +156,33 @@ class CapturedVideoTracker : ICapturedVideoTracker {
                         date = s.dateTime,
                         tabId = s.tabId,
                         previewable = previewUrl(t) != null,
+                        resolution = res,
+                        format = if (t.videoSegments.isNotEmpty() && t.audioSegments.isNotEmpty()) "DASH (Muxed)" else "DASH",
+                        streamType = "DASH",
+                        estimatedSize = sizeText,
+                        hasAudio = audioPresent,
                     )
                 })
                 list.addAll(hlsVideoList.values.map { (t, s) ->
+                    val res = s.height?.let { "${it}p" }
+                    val sizeText = s.streamSize?.text
+                    val audioPresent = t.audioUrl != null || !t.audioOnly
                     DetectedVideoInfo(
                         id = t.id,
                         name = t.fileName,
                         description = s.descriptionText,
                         date = s.dateTime,
-                        tabId = s.tabId
+                        tabId = s.tabId,
+                        resolution = res,
+                        format = if (t.audioUrl != null) "HLS (Muxed)" else "HLS",
+                        streamType = "HLS",
+                        estimatedSize = sizeText,
+                        hasAudio = audioPresent,
                     )
                 })
                 list.addAll(httpVideoList.values.map { (t, s) ->
+                    val ext = getExtension(t.fileName)?.trimStart('.')?.uppercase(Locale.ROOT) ?: "MP4"
+                    val sizeText = s.size?.takeIf { it > 0 }?.let { FormatHelper.formatSize(it.toDouble()) }
                     DetectedVideoInfo(
                         id = t.id,
                         name = t.fileName,
@@ -170,9 +190,15 @@ class CapturedVideoTracker : ICapturedVideoTracker {
                         date = s.dateTime,
                         tabId = s.tabId,
                         previewable = previewUrl(t) != null,
+                        resolution = s.height?.let { "${it}p" },
+                        format = ext,
+                        streamType = "HTTP",
+                        estimatedSize = sizeText,
+                        hasAudio = true,
                     )
                 })
                 list.addAll(subtitleList.values.map { s ->
+                    val sizeText = s.display.size?.takeIf { it > 0 }?.let { FormatHelper.formatSize(it.toDouble()) }
                     DetectedVideoInfo(
                         id = s.task.id,
                         name = s.task.fileName,
@@ -180,6 +206,10 @@ class CapturedVideoTracker : ICapturedVideoTracker {
                         date = s.display.dateTime,
                         tabId = s.display.tabId,
                         subtitle = true,
+                        format = s.format.ext.uppercase(Locale.ROOT),
+                        streamType = "SUBTITLE",
+                        estimatedSize = sizeText,
+                        hasAudio = false,
                     )
                 })
                 return list
