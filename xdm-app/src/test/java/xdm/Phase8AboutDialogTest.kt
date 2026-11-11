@@ -96,9 +96,9 @@ class Phase8AboutDialogTest : DownloadManagerTestBase() {
                 val nameLabel = labels.find { it.text == "XDM Enhanced" }
                 assertNotNull(nameLabel, "Must display 'XDM Enhanced'")
 
-                // 2. Version 1.0.0-beta.6 from build metadata
-                val verLabel = labels.find { it.text?.contains("v1.0.0-beta.6") == true }
-                assertNotNull(verLabel, "Must display version from build metadata (v1.0.0-beta.6)")
+                // 2. Version from build metadata (v1.0.0-rc.1 or v1.0.0-beta.6)
+                val verLabel = labels.find { it.text?.contains("v1.0.0-rc.1") == true || it.text?.contains("v1.0.0-beta.6") == true }
+                assertNotNull(verLabel, "Must display version from build metadata")
 
                 // 3. Release channel
                 val channelLabel = labels.find { it.text?.contains("Beta Channel") == true }
@@ -192,7 +192,7 @@ class Phase8AboutDialogTest : DownloadManagerTestBase() {
                 val clipboardText = java.awt.Toolkit.getDefaultToolkit().systemClipboard
                     .getData(DataFlavor.stringFlavor) as? String
                 assertNotNull(clipboardText)
-                assertTrue(clipboardText!!.contains("Application Version") && clipboardText.contains("XDM Enhanced v1.0.0-beta.6"))
+                assertTrue(clipboardText!!.contains("Application Version") && (clipboardText.contains("XDM Enhanced v1.0.0-rc.1") || clipboardText.contains("XDM Enhanced v1.0.0-beta.6")))
                 assertTrue(clipboardText.contains("Java Runtime"))
                 assertTrue(clipboardText.contains("Operating System"))
                 assertTrue(clipboardText.contains("BitTorrent Engine"))

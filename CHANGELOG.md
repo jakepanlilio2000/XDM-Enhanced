@@ -5,6 +5,22 @@ All notable changes to the XDM Enhanced project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0-rc.1] - 2026-11-11
+
+### Added
+
+- **Release Candidate Verification Suite:** Added comprehensive 15-phase audit and verification suites covering media capture, browser handshake, theme engine, plugin API v2, database migration rollback, desktop view-mode switching, NSIS uninstaller safety, credential scrubbing, and stress profiling.
+- **Browser Diagnostic Error Dispatch:** Implemented explicit handling for `host_missing` and `launch_failure` in companion browser extensions.
+- **Dynamic Theme Resilience:** Added defensive `FlatLaf.updateUI()` shielding in `ThemeManager` preventing transient window states from aborting theme application.
+
+### Fixed
+
+- **Path & Device Name Sanitization:** Hardened `FileNameHelper` against Windows reserved device names (`CON`, `PRN`, `AUX`, `NUL`, `COM1-9`, `LPT1-9`) and control characters.
+- **Transactional Migration Rollback:** Added rollback protection preserving legacy state when encountering corrupted download metadata during migration.
+- **Uninstaller Directory Containment:** Secured NSIS uninstaller verifying installation target paths before recursive directory deletion.
+- **Modal Dialog Keyboard Navigation:** Added `Escape` key dismissals and hardened native Windows URI association resolution.
+- **AWT Test Harness Teardown:** Resolved lingering window leaks across UI test suites.
+
 ## [1.0.0-beta.6] - 2026-11-11
 
 ### Added

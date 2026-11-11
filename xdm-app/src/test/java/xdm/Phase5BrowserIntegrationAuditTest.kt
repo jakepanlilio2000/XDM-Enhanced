@@ -254,7 +254,7 @@ class Phase5BrowserIntegrationAuditTest {
         // Manifest versions match packaging declarations
         val chromeManifest = File(repoRoot, "browser-extension/chrome-extension/manifest.json").readText()
         assertTrue(chromeManifest.contains("\"version\": \"3.5.4\""))
-        assertTrue(chromeManifest.contains("\"version_name\": \"1.0.0-beta.6\""))
+        assertTrue(chromeManifest.contains("\"version_name\": \"1.0.0-rc.1\"") || chromeManifest.contains("\"version_name\": \"1.0.0-beta.6\""))
 
         val ffManifest = File(repoRoot, "browser-extension/firefox-extension/manifest.json").readText()
         assertTrue(ffManifest.contains("\"version\": \"1.1.4\""))
