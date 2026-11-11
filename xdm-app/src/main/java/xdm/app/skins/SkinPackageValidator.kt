@@ -52,6 +52,7 @@ object SkinPackageValidator {
         var totalBytes = 0L
         var hasManifest = false
         var rawManifestBytes: ByteArray? = null
+        val entryNames = mutableSetOf<String>()
 
         try {
             ZipFile(archiveFile).use { zip ->
@@ -83,6 +84,8 @@ object SkinPackageValidator {
                     }
 
                     if (!entry.isDirectory) {
+                        val norm = name.trim().trimStart('/', '\\').replace('\\', '/')
+                        entryNames.add(norm)
                         val ext = name.substringAfterLast('.', "").lowercase()
                         if (DISALLOWED_EXTENSIONS.contains(ext)) {
                             errors.add("Security violation: executable or script file detected in archive: '$name'")
@@ -113,15 +116,15 @@ object SkinPackageValidator {
             return ValidationResult(false, listOf("Failed to parse 'skin.json': ${e.message}"))
         }
 
-        val manifestValidation = validateManifest(manifest, skinRoot = null)
+        val manifestValidation = validateManifest(manifest, skinRoot = null, archiveEntries = entryNames)
         val combinedErrors = errors + manifestValidation.errors
         return ValidationResult(combinedErrors.isEmpty(), combinedErrors, manifestValidation.warnings, manifest)
     }
 
     /**
-     * Validates a parsed [SkinManifest] and optionally verifies declared local file assets against [skinRoot].
+     * Validates a parsed [SkinManifest] and optionally verifies declared local file assets against [skinRoot] or [archiveEntries].
      */
-    fun validateManifest(manifest: SkinManifest, skinRoot: File? = null): ValidationResult {
+    fun validateManifest(manifest: SkinManifest, skinRoot: File? = null, archiveEntries: Set<String>? = null): ValidationResult {
         val errors = mutableListOf<String>()
         val warnings = mutableListOf<String>()
 
@@ -220,17 +223,24 @@ object SkinPackageValidator {
             }
         }
 
-        // 8. Declared file resources validation (if skinRoot provided)
-        if (skinRoot != null && skinRoot.isDirectory) {
+        // 8. Declared file resources validation (if skinRoot or archiveEntries provided)
+        if (archiveEntries != null || (skinRoot != null && skinRoot.isDirectory)) {
             fun checkAssetFile(relPath: String?, description: String) {
                 if (relPath.isNullOrBlank()) return
-                val file = File(skinRoot, relPath)
-                if (!file.exists() || !file.isFile) {
-                    errors.add("Declared $description file not found: '$relPath'")
-                } else {
-                    val ext = file.extension.lowercase()
-                    if (DISALLOWED_EXTENSIONS.contains(ext)) {
-                        errors.add("Security violation: declared $description '$relPath' has disallowed extension.")
+                val norm = relPath.trim().trimStart('/', '\\').replace('\\', '/')
+                val ext = norm.substringAfterLast('.', "").lowercase()
+                if (DISALLOWED_EXTENSIONS.contains(ext)) {
+                    errors.add("Security violation: declared $description '$relPath' has disallowed extension.")
+                    return
+                }
+                if (archiveEntries != null) {
+                    if (!archiveEntries.contains(norm)) {
+                        errors.add("Declared $description file not found: '$relPath'")
+                    }
+                } else if (skinRoot != null && skinRoot.isDirectory) {
+                    val file = File(skinRoot, norm)
+                    if (!file.exists() || !file.isFile) {
+                        errors.add("Declared $description file not found: '$relPath'")
                     }
                 }
             }
