@@ -40,7 +40,11 @@ object PluginDownloadBridge {
         }
 
         override fun stop() {
-            pluginTask.pause()
+            if (pluginTask.canPause()) {
+                pluginTask.pause()
+            } else {
+                pluginTask.cancel()
+            }
         }
 
         override fun resume() {
@@ -225,7 +229,14 @@ object PluginDownloadBridge {
     }
 
     fun pauseTask(id: Long) {
-        activeTasks[id]?.pause()
+        val task = activeTasks[id]
+        if (task != null) {
+            if (task.canPause()) {
+                task.pause()
+            } else {
+                task.cancel()
+            }
+        }
         AppContext.db.getById(id)?.let { rec ->
             rec.status = RecordStatus.PAUSED
             AppContext.db.update(rec)

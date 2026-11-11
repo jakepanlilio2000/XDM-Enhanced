@@ -396,6 +396,15 @@ open class AppInstance : IAppInstance {
     }
 
     private fun showNewDownloadWindowInternal(downloadInfo: HttpDownloadTaskInfo?) {
+        val url = downloadInfo?.url?.trim()
+        if (!url.isNullOrEmpty()) {
+            val existing = NewDownloadWindow.getOpenWindow(url)
+            if (existing != null && existing.isDisplayable) {
+                existing.toFront()
+                existing.requestFocus()
+                return
+            }
+        }
         val dlg = NewDownloadWindow()
         dlg.showWindow(downloadInfo)
     }

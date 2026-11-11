@@ -2,6 +2,8 @@ package xdm.app.ui.screens
 
 import xdm.app.AppContext
 import xdm.app.I8N.text
+import xdm.app.skins.SkinRegion
+import xdm.app.ui.components.SkinBackgroundPanel
 import xdm.app.ui.components.AppTheme
 import xdm.app.ui.components.ChecksumPanel
 import xdm.app.ui.components.ChecksumWindow
@@ -97,6 +99,7 @@ class PropertiesDialog(private val owner: Window?, ent: DbRecord) : JDialog(owne
     } else null
 
     init {
+        contentPane = SkinBackgroundPanel(BorderLayout(), region = SkinRegion.DIALOGS)
         title = text("TITLE_PROP")
         defaultCloseOperation = DISPOSE_ON_CLOSE
         isResizable = true

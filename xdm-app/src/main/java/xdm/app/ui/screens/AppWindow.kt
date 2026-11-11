@@ -13,6 +13,9 @@ import xdm.app.update.UpdateChecker
 import xdm.app.utils.*
 import xdm.core.util.Logger
 import xdm.app.skins.SkinManager
+import xdm.app.skins.SkinRegion
+import xdm.app.skins.SkinStyleResolver
+import xdm.app.ui.components.SkinBackgroundPanel
 import xdm.manager.DbRecord
 import xdm.manager.RecordStatus
 import java.awt.*
@@ -29,7 +32,7 @@ class AppWindow(image: Image, startHidden: Boolean = false) : JFrame(), ActionLi
     private lateinit var listContainer: JPanel
     private lateinit var rightPanel: JPanel
     private lateinit var toolbar: DownloadToolBar
-    private lateinit var sidebar: CategorySidebar
+    internal lateinit var sidebar: CategorySidebar
     private lateinit var statusBar: DownloadStatusBar
     private lateinit var splitPane: JSplitPane
     private var defaultDividerSize = 5
@@ -143,6 +146,7 @@ class AppWindow(image: Image, startHidden: Boolean = false) : JFrame(), ActionLi
     }
 
     private fun initWindow() {
+        contentPane = SkinBackgroundPanel(BorderLayout(), region = SkinRegion.MAIN_FRAME)
         createMainMenu()
 
         sidebar = CategorySidebar { state, category ->
@@ -174,8 +178,10 @@ class AppWindow(image: Image, startHidden: Boolean = false) : JFrame(), ActionLi
 
         listContainer = object : JPanel(BorderLayout()) {
             override fun paintComponent(g: Graphics) {
-                super.paintComponent(g)
-                SkinManager.currentSkin.paintWallpaper(g, width, height, com.formdev.flatlaf.FlatLaf.isLafDark())
+                val painted = SkinStyleResolver.paintRegionBackground(g, width, height, SkinRegion.DOWNLOAD_LIST)
+                if (!painted) {
+                    super.paintComponent(g)
+                }
             }
         }.apply {
             background = AppTheme.listBackground

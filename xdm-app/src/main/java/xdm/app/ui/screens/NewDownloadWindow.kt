@@ -51,6 +51,39 @@ import kotlin.math.max
  * the tray, and on native Wayland, where always-on-top does nothing, the taskbar is how to find it.
  */
 class NewDownloadWindow : JDialog(null as Window?) {
+    companion object {
+        private val activeWindowsByUrl = java.util.concurrent.ConcurrentHashMap<String, NewDownloadWindow>()
+
+        fun isModalOpen(url: String?): Boolean {
+            if (url.isNullOrBlank()) return false
+            return activeWindowsByUrl.containsKey(url.trim())
+        }
+
+        fun getOpenWindow(url: String?): NewDownloadWindow? {
+            if (url.isNullOrBlank()) return null
+            return activeWindowsByUrl[url.trim()]
+        }
+
+        internal fun registerOpenWindow(url: String?, window: NewDownloadWindow) {
+            if (url.isNullOrBlank()) return
+            activeWindowsByUrl[url.trim()] = window
+        }
+
+        internal fun unregisterOpenWindow(url: String?, window: NewDownloadWindow) {
+            if (url.isNullOrBlank()) return
+            activeWindowsByUrl.remove(url.trim(), window)
+        }
+
+        internal fun unregisterAllForWindow(window: NewDownloadWindow) {
+            activeWindowsByUrl.values.removeIf { it === window }
+        }
+
+        fun closeAllForTests() {
+            activeWindowsByUrl.values.forEach { runCatching { it.dispose() } }
+            activeWindowsByUrl.clear()
+        }
+    }
+
     lateinit var txtUrl: JTextField
     lateinit var txtFileName: JTextField
     val txtDescription = JTextField().apply {
@@ -306,6 +339,7 @@ class NewDownloadWindow : JDialog(null as Window?) {
                 }
 
                 override fun windowClosed(e: WindowEvent) {
+                    unregisterAllForWindow(this@NewDownloadWindow)
                     System.gc()
                 }
             })
@@ -318,6 +352,7 @@ class NewDownloadWindow : JDialog(null as Window?) {
     }
 
     override fun dispose() {
+        unregisterAllForWindow(this)
         activeProbe?.cancel()
         activeProbe = null
         debounceTimer?.stop()
@@ -722,6 +757,18 @@ class NewDownloadWindow : JDialog(null as Window?) {
     }
 
     fun showWindow(taskInfo: HttpDownloadTaskInfo?) {
+        val targetUrl = taskInfo?.url?.trim() ?: runCatching { getClipBoardText()?.trim() }.getOrNull()
+        if (!targetUrl.isNullOrEmpty() && validateURL(targetUrl)) {
+            val existing = activeWindowsByUrl[targetUrl]
+            if (existing != null && existing !== this && existing.isDisplayable) {
+                existing.toFront()
+                existing.requestFocus()
+                dispose()
+                return
+            }
+            registerOpenWindow(targetUrl, this)
+        }
+
         lblIgnore.isVisible = taskInfo != null
         spnSegments.count = if (taskInfo != null && taskInfo.maxPiece > 0) taskInfo.maxPiece else AppContext.config.maxSegments
         userModifiedFileName = false
@@ -808,9 +855,11 @@ class NewDownloadWindow : JDialog(null as Window?) {
 
             // Debounce preflight probe on URL changes
             debounceTimer?.stop()
-            if (validateURL(text)) {
+            val newUrl = text.trim()
+            if (validateURL(newUrl)) {
+                registerOpenWindow(newUrl, this@NewDownloadWindow)
                 debounceTimer = javax.swing.Timer(400) {
-                    triggerPreflight(text.trim())
+                    triggerPreflight(newUrl)
                 }.apply {
                     isRepeats = false
                     start()

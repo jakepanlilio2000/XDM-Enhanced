@@ -131,7 +131,7 @@ object ClipboardMonitor {
         }
 
         // Deduplication: Avoid prompt loops for the same URL or currently active modal
-        if (trimmed == lastProcessedUrl || activeModalUrls.contains(trimmed)) {
+        if (trimmed == lastProcessedUrl || activeModalUrls.contains(trimmed) || NewDownloadWindow.isModalOpen(trimmed)) {
             lastProcessedText = text
             return
         }
@@ -174,7 +174,8 @@ object ClipboardMonitor {
     }
 
     fun openDownloadModal(result: PreflightResult) {
-        if (activeModalUrls.contains(result.originalUrl) || activeModalUrls.contains(result.finalUrl)) {
+        if (activeModalUrls.contains(result.originalUrl) || activeModalUrls.contains(result.finalUrl)
+            || NewDownloadWindow.isModalOpen(result.originalUrl) || NewDownloadWindow.isModalOpen(result.finalUrl)) {
             return
         }
         activeModalUrls.add(result.originalUrl)

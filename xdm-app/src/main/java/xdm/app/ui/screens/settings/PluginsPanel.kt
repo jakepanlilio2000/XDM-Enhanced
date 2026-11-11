@@ -12,6 +12,7 @@ import xdm.app.utils.ScaledEmptyBorder
 import xdm.app.utils.openFolderExternal
 import xdm.app.utils.px
 import xdm.app.utils.scaledSize
+import xdm.core.util.Logger
 import java.awt.BorderLayout
 import java.awt.Color
 import java.awt.Component
@@ -421,36 +422,40 @@ class PluginsPanel : SettingsPanel() {
         val panelContributor = plugin.context?.settingsPanels?.firstOrNull() ?: return
         val window = SwingUtilities.getWindowAncestor(this)
 
-        val dialog = JDialog(window, "${plugin.manifest.name} - ${panelContributor.title}").apply {
-            isModal = true
-            layout = BorderLayout()
-            size = scaledSize(550, 400)
-            setLocationRelativeTo(window)
-
+        try {
             val customPanel = panelContributor.createPanel(plugin.context)
-            add(JScrollPane(customPanel).apply {
-                border = ScaledEmptyBorder(0, 0, 0, 0)
-            }, BorderLayout.CENTER)
+            val dialog = JDialog(window, "${plugin.manifest.name} - ${panelContributor.title}").apply {
+                isModal = true
+                layout = BorderLayout()
+                size = scaledSize(550, 400)
+                setLocationRelativeTo(window)
 
-            val btnBar = JPanel(FlowLayout(FlowLayout.RIGHT, 10.px, 10.px)).apply {
-                border = ScaledEmptyBorder(8, 12, 12, 12)
-                val btnSave = settingsButton("Save") {
-                    try {
-                        panelContributor.saveSettings()
-                        plugin.context?.config?.save()
-                    } catch (e: Exception) {
-                        JOptionPane.showMessageDialog(this@apply, "Error saving settings: ${e.message}", "Error", JOptionPane.ERROR_MESSAGE)
+                add(JScrollPane(customPanel).apply {
+                    border = ScaledEmptyBorder(0, 0, 0, 0)
+                }, BorderLayout.CENTER)
+
+                val btnBar = JPanel(FlowLayout(FlowLayout.RIGHT, 10.px, 10.px)).apply {
+                    border = ScaledEmptyBorder(8, 12, 12, 12)
+                    val btnSave = settingsButton("Save") {
+                        try {
+                            panelContributor.saveSettings()
+                            plugin.context?.config?.save()
+                        } catch (e: Exception) {
+                            JOptionPane.showMessageDialog(this@apply, "Error saving settings: ${e.message}", "Error", JOptionPane.ERROR_MESSAGE)
+                        }
+                        dispose()
                     }
-                    dispose()
+                    val btnCancel = settingsButton("Close") { dispose() }
+                    add(btnSave)
+                    add(btnCancel)
                 }
-                val btnCancel = settingsButton("Close") { dispose() }
-                add(btnSave)
-                add(btnCancel)
+                add(btnBar, BorderLayout.SOUTH)
             }
-            add(btnBar, BorderLayout.SOUTH)
+            dialog.isVisible = true
+        } catch (t: Throwable) {
+            Logger.error("Failed to load plugin settings panel for ${plugin.manifest.id}", t)
+            JOptionPane.showMessageDialog(window, "Failed to load plugin settings: ${t.message}", "Plugin Error", JOptionPane.ERROR_MESSAGE)
         }
-
-        dialog.isVisible = true
     }
 
     fun dispose() {

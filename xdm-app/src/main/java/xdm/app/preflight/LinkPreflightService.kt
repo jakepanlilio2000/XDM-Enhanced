@@ -194,7 +194,7 @@ object LinkPreflightService {
             }
             if (size == null) {
                 val cl = response.header("Content-Length")?.toLongOrNull()
-                if (cl != null && cl > 0) {
+                if (cl != null && cl >= 0) {
                     size = cl
                 }
             }
@@ -222,8 +222,8 @@ object LinkPreflightService {
         } finally {
             // Guarantee NO payload body is streamed or read into disk/memory during preflight
             try {
-                response.body?.close()
-                response.close()
+                response?.body?.close()
+                response?.close()
             } catch (_: Exception) {
             }
         }

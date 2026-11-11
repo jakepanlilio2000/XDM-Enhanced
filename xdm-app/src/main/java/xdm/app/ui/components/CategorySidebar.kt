@@ -4,6 +4,8 @@ import com.formdev.flatlaf.FlatClientProperties
 import xdm.app.AppContext
 import xdm.app.I8N.text
 import xdm.app.skins.SkinManager
+import xdm.app.skins.SkinRegion
+import xdm.app.skins.SkinStyleResolver
 import xdm.app.utils.FontIcon
 import xdm.app.utils.RemixIcon
 import xdm.app.utils.ScaledEmptyBorder
@@ -329,6 +331,13 @@ class CategorySidebar(
             return null
         }
         return find(rootNode)
+    }
+
+    override fun paintComponent(g: Graphics) {
+        val painted = SkinStyleResolver.paintRegionBackground(g, width, height, SkinRegion.SIDEBAR)
+        if (!painted) {
+            super.paintComponent(g)
+        }
     }
 
     private class CategoryTreeRenderer : DefaultTreeCellRenderer() {
