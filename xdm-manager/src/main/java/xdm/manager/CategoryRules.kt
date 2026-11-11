@@ -5,6 +5,7 @@
 package xdm.manager
 
 import xdm.core.util.FileUtils
+import xdm.core.util.extractCandidateFileNameFromUrl
 import xdm.core.util.fixExtension
 import xdm.core.util.getNameFromContentDisposition
 import java.util.Locale
@@ -55,32 +56,7 @@ object CategoryRules {
     /**
      * Extracts a filename from URL query parameters (e.g. ?file=document.pdf or ?name=photo.jpg).
      */
-    fun extractCandidateFileName(url: String?): String? {
-        if (url.isNullOrBlank()) return null
-        try {
-            val qIdx = url.indexOf('?')
-            if (qIdx >= 0 && qIdx < url.length - 1) {
-                val query = url.substring(qIdx + 1).substringBefore('#')
-                val params = query.split('&')
-                val candidateKeys = listOf("file", "filename", "name", "attachment", "fn", "path", "target", "download", "f", "doc", "media", "url")
-                for (param in params) {
-                    val eq = param.indexOf('=')
-                    if (eq > 0) {
-                        val key = param.substring(0, eq).trim().lowercase(Locale.ROOT)
-                        if (key in candidateKeys) {
-                            val rawValue = param.substring(eq + 1).trim()
-                            val decoded = FileUtils.decodeFileName(rawValue)
-                            val sanitized = FileUtils.sanitizeFileName(decoded)
-                            if (!sanitized.isNullOrBlank() && sanitized.contains('.') && !sanitized.endsWith('.')) {
-                                return sanitized
-                            }
-                        }
-                    }
-                }
-            }
-        } catch (_: Exception) {}
-        return null
-    }
+    fun extractCandidateFileName(url: String?): String? = extractCandidateFileNameFromUrl(url)
 
     /**
      * Resolves the best candidate file name from the given file name, url, content type, and content disposition.

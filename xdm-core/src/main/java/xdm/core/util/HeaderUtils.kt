@@ -5,6 +5,7 @@
 package xdm.core.util
 
 import xdm.core.util.FileUtils.decodeFileName
+import java.net.URLDecoder
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -100,10 +101,37 @@ fun getFileName(
     return fixExtension(oldName, contentType, replace = false)
 }
 
+private fun splitHeaderParameters(header: String): List<String> {
+    val result = mutableListOf<String>()
+    val current = StringBuilder()
+    var inQuotes = false
+    var escape = false
+    for (ch in header) {
+        if (escape) {
+            current.append(ch)
+            escape = false
+        } else if (ch == '\\') {
+            escape = true
+        } else if (ch == '"') {
+            inQuotes = !inQuotes
+            current.append(ch)
+        } else if (ch == ';' && !inQuotes) {
+            result.add(current.toString().trim())
+            current.setLength(0)
+        } else {
+            current.append(ch)
+        }
+    }
+    if (current.isNotEmpty()) {
+        result.add(current.toString().trim())
+    }
+    return result
+}
+
 // Parses the RFC 5987/6266 extended form: filename*=charset'lang'percent-encoded-value
 private fun getExtendedContentDisposition(header: String): String? {
     try {
-        for (segment in header.split(";")) {
+        for (segment in splitHeaderParameters(header)) {
             val str = segment.trim { it <= ' ' }
             if (!str.lowercase(Locale.ROOT).startsWith("filename*")) continue
             val eq = str.indexOf('=')
@@ -112,12 +140,18 @@ private fun getExtendedContentDisposition(header: String): String? {
             // Strip the leading charset'lang' prefix (if present) up to the last quote.
             val firstQuote = value.indexOf('\'')
             val lastQuote = value.lastIndexOf('\'')
-            if (firstQuote in 0 until lastQuote) {
+            val charset = if (firstQuote in 0 until lastQuote) {
+                val cs = value.substring(0, firstQuote).trim()
                 value = value.substring(lastQuote + 1)
-            }
+                cs
+            } else "UTF-8"
             value = value.replace("\"", "").removeSurrounding("'").trim { it <= ' ' }
             if (value.isEmpty()) continue
-            val name = decodeFileName(value)
+            val name = try {
+                URLDecoder.decode(value.replace("+", "%2B"), charset.ifEmpty { "UTF-8" })
+            } catch (_: Exception) {
+                decodeFileName(value)
+            }
             if (name.isNotEmpty()) return name
         }
     } catch (e: Exception) {
@@ -133,9 +167,8 @@ fun getNameFromContentDisposition(header: String?): String? {
         if (headerLow.startsWith("attachment") || headerLow.startsWith("inline") || headerLow.contains("filename")) {
             // RFC 6266: prefer the extended (filename*) form when present.
             getExtendedContentDisposition(header)?.let { return it }
-            val arr = header.split(";".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
-            for (i in arr.indices) {
-                val str = arr[i].trim { it <= ' ' }
+            val segments = splitHeaderParameters(header)
+            for (str in segments) {
                 val low = str.lowercase(Locale.ROOT)
                 // Skip the extended form here; it is handled above.
                 if (low.startsWith("filename") && !low.startsWith("filename*")) {
@@ -170,14 +203,21 @@ fun getFileName(url: String, contentDisposition: String? = null, contentType: St
     getNameFromContentDisposition(contentDisposition)?.let { FileUtils.sanitizeFileName(it) }?.let {
         return fixExtension(it, contentType, replace = false)
     }
-    FileUtils.getFileName(url)?.let {
-        if (StringUtils.containsIgnoreCase(contentType, "text/html")) {
-            if (it.endsWith(".html")) {
-                return it
-            }
-            return "$it.html"
+    val pathName = FileUtils.getFileName(url)
+    val ext = pathName.substringAfterLast('.', "").lowercase(Locale.ROOT)
+    if (ext.isEmpty() || ext in SCRIPT_EXTENSIONS) {
+        extractCandidateFileNameFromUrl(url)?.let {
+            return fixExtension(it, contentType, replace = false)
         }
-        return fixExtension(it, contentType, replace = false)
+    }
+    if (pathName.isNotEmpty() && pathName != "FILE") {
+        if (StringUtils.containsIgnoreCase(contentType, "text/html")) {
+            if (pathName.endsWith(".html")) {
+                return pathName
+            }
+            return "$pathName.html"
+        }
+        return fixExtension(pathName, contentType, replace = false)
     }
     return "FILE"
 }

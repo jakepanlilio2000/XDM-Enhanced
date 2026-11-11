@@ -68,3 +68,37 @@ fun getFileNameWithoutExtension(name: String): String {
         return name
     }
 }
+
+val SCRIPT_EXTENSIONS = setOf(
+    "php", "asp", "aspx", "jsp", "cgi", "pl", "py", "do", "action", "ashx", "htm", "html", "cfm", "shtml"
+)
+
+/**
+ * Extracts a candidate filename from URL query parameters (e.g. ?file=document.pdf or ?name=photo.jpg).
+ */
+fun extractCandidateFileNameFromUrl(url: String?): String? {
+    if (url.isNullOrBlank()) return null
+    try {
+        val qIdx = url.indexOf('?')
+        if (qIdx >= 0 && qIdx < url.length - 1) {
+            val query = url.substring(qIdx + 1).substringBefore('#')
+            val params = query.split('&')
+            val candidateKeys = listOf("file", "filename", "name", "attachment", "fn", "path", "target", "download", "f", "doc", "media", "url")
+            for (param in params) {
+                val eq = param.indexOf('=')
+                if (eq > 0) {
+                    val key = param.substring(0, eq).trim().lowercase(java.util.Locale.ROOT)
+                    if (key in candidateKeys) {
+                        val rawValue = param.substring(eq + 1).trim()
+                        val decoded = FileUtils.decodeFileName(rawValue)
+                        val sanitized = FileUtils.sanitizeFileName(decoded)
+                        if (!sanitized.isNullOrBlank() && sanitized.contains('.') && !sanitized.endsWith('.')) {
+                            return sanitized
+                        }
+                    }
+                }
+            }
+        }
+    } catch (_: Exception) {}
+    return null
+}
