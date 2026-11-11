@@ -6,7 +6,7 @@ Learn how to build, compile, and package a decoupled third-party plugin for **XD
 
 ## 1. Prerequisites
 
-- Liberica JDK 25 or OpenJDK 17+.
+- Liberica JDK 25 or OpenJDK 25 (or JDK 8+ for plugin compilation).
 - Apache Maven 3.9+.
 - Download [`xdm-plugin-api-1.0.0-beta.6.jar`](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.0.0-beta.6/xdm-plugin-api-1.0.0-beta.6.jar) (or install it to your local Maven repository).
 

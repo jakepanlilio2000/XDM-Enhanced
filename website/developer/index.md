@@ -23,7 +23,7 @@ XDM-Enhanced/
 
 | Submodule | Technology | Primary Responsibility |
 |:---|:---:|:---|
-| **`xdm-plugin-api`** | Java 17+ | Standalone public API published as `xdm-plugin-api.jar`. Declares `PluginService`, `PluginContext`, `PluginEventBus`, and capability annotations. |
+| **`xdm-plugin-api`** | Java 8+ | Standalone public API published as `xdm-plugin-api.jar`. Declares `PluginService`, `PluginContext`, `PluginEventBus`, and capability annotations. |
 | **`xdm-core`** | Kotlin / Java | High-throughput byte streaming, HTTP/HTTPS client with keep-alive pooling, direct block pre-allocation, and SHA-256 verifiers. |
 | **`xdm-manager`** | Kotlin | Download queue manager, category classification rules, retry schedulers, and global rate limiters. |
 | **`xdm-app`** | Kotlin / Swing | Desktop user interface, FlatLaf theming, `.xdmskin` archive parser, `PluginDownloadBridge` task adapter, and system tray integration. |
@@ -50,7 +50,7 @@ XDM Enhanced provides two distinct extension mechanisms:
 
 ## 3. Technology Stack & Toolchains
 
-- **Compiler & Runtime:** Liberica JDK 25 with Java 17 bytecode compatibility target.
+- **Compiler & Runtime:** Liberica JDK 25 (Java 25 target for desktop application; Java 8 target for plugin API).
 - **Build System:** Apache Maven 3.9.9 (`mvn clean package`).
 - **UI Framework:** Java Swing with FlatLaf modern styling and SVG rendering (`flatlaf-extras`).
 - **BitTorrent Engine:** `libtorrent4j` wrapping Rasterbar `libtorrent` 2.x native binaries.

@@ -22,7 +22,7 @@ The codebase is organized into four decoupled submodules:
 
 | Submodule | Target Runtime | Core Responsibilities |
 |:---|:---:|:---|
-| **`xdm-plugin-api`** | Java 17+ | Public Service Provider Interface (SPI). Contains no internal application dependencies. Declares `PluginService`, `PluginContext`, `PluginEventBus`, and capability tags. Published independently as `xdm-plugin-api.jar`. |
+| **`xdm-plugin-api`** | Java 8+ | Public Service Provider Interface (SPI). Contains no internal application dependencies. Declares `PluginService`, `PluginContext`, `PluginEventBus`, and capability tags. Published independently as `xdm-plugin-api.jar`. |
 | **`xdm-core`** | Kotlin / Java | High-throughput byte streaming engine, HTTP/HTTPS client pooling, direct disk block allocation, SHA-256 integrity verifiers, and `libtorrent4j` native wrappers. |
 | **`xdm-manager`** | Kotlin | Download task lifecycle management, priority queues, automated category routing, bandwidth throttle controllers, and resume schedulers. |
 | **`xdm-app`** | Kotlin / Swing | FlatLaf modern desktop user interface, `.xdmskin` package extraction, `PluginDownloadBridge` task adapter, local loopback HTTP server (`127.0.0.1:8597`), and system tray integration. |

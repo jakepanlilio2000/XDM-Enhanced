@@ -29,7 +29,7 @@ We welcome pull requests from community developers! To ensure seamless review an
 ## 2. Pull Request (PR) Checklist
 
 Before submitting your PR, confirm the following items:
-- [ ] Code compiles without warnings on JDK 25 and JDK 17.
+- [ ] Code compiles without warnings on JDK 25.
 - [ ] `mvn test` passes 100% cleanly.
 - [ ] No internal application classes (`xdm.app.*`) are leaked into `xdm-plugin-api`.
 - [ ] Subprocess executions strictly pass discrete array/list arguments (no command-line shell string concatenation).

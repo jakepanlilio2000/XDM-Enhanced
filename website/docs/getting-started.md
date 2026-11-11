@@ -17,12 +17,15 @@ This guide walks you through installing XDM Enhanced on your computer, configuri
 3. Double-click `xdm-app.exe` to launch. All configurations and temporary download chunks remain contained inside the portable folder.
 
 ### Option C: Universal Executable JAR (Linux / macOS)
-1. Ensure Java 17 or higher is installed (`java -version`).
+1. Ensure 64-bit Java 25 is installed (`java -version`).
 2. Download [`xdm-app-1.0.0-beta.6.jar`](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.0.0-beta.6/xdm-app-1.0.0-beta.6.jar).
 3. Launch via terminal:
    ```bash
    java -jar xdm-app-1.0.0-beta.6.jar
    ```
+
+> [!NOTE]
+> **Linux Wayland Notice:** Native Wayland rendering is supported when running on the JetBrains Runtime (`sun.awt.wl.WLToolkit`). Under standard OpenJDK runtimes, XDM Enhanced runs reliably via XWayland / X11 fallback.
 
 ---
 

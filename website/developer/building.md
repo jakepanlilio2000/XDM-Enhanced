@@ -10,7 +10,7 @@ Before building, verify the following tools are installed on your workstation:
 
 | Tool | Version Requirement | Verification Command |
 |:---|:---|:---|
-| **Java Development Kit** | Liberica JDK 25 (or OpenJDK 17+) | `java -version` |
+| **Java Development Kit** | Liberica JDK 25 (or OpenJDK 25) | `java -version` |
 | **Apache Maven** | 3.9.0 or higher | `mvn -v` |
 | **Git** | 2.30 or higher | `git --version` |
 

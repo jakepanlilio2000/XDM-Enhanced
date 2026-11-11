@@ -65,11 +65,11 @@ Download the latest release of **XDM Enhanced**. All packages listed below are b
     <div>
       <span class="badge-pill badge-stable">Cross-Platform</span>
       <h3 style="margin-top: 0.75rem;">Universal Executable JAR</h3>
-      <p>Standard runnable JAR suitable for Linux, macOS, and BSD systems with an existing Java 17+ or Java 25 runtime environment.</p>
+      <p>Standard runnable JAR suitable for Linux, macOS, and BSD systems with an existing 64-bit Java 25 runtime environment.</p>
       <ul style="font-size: 0.85rem; color: var(--vp-c-text-2); padding-left: 1.25rem; margin-top: 0.5rem;">
         <li>Format: Java Executable <code>.jar</code></li>
         <li>File Size: <strong>3.8 MB</strong></li>
-        <li>Requires: JRE / JDK 17 or higher</li>
+        <li>Requires: 64-bit JRE / JDK 25</li>
       </ul>
     </div>
     <div style="margin-top: 1.25rem;">

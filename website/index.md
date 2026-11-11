@@ -110,12 +110,12 @@ XDM Enhanced is built on a high-performance modular Java runtime bundled nativel
     <div>
       <span class="badge-pill badge-stable">Universal Binary</span>
       <h3 style="margin-top: 0.75rem;">Universal Application JAR</h3>
-      <p>Platform-agnostic executable JAR for Linux, macOS, and BSD systems with an existing Java 17+ or Java 25 runtime.</p>
+      <p>Platform-agnostic executable JAR for Linux, macOS, and BSD systems with an existing 64-bit Java 25 runtime.</p>
     </div>
     <div style="margin-top: 1.25rem;">
       <a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.0.0-beta.6/xdm-app-1.0.0-beta.6.jar" class="btn-secondary" style="width: 100%; box-sizing: border-box;">Download App .JAR (3.8 MB)</a>
       <div style="margin-top: 0.5rem; text-align: center; font-size: 0.8rem; color: var(--vp-c-text-3);">
-        Requires Java 17 or higher
+        Requires 64-bit Java 25
       </div>
     </div>
   </div>

@@ -8,7 +8,7 @@ Complete instructions for cloning, compiling, and running automated regression t
 
 | Component | Minimum Version | Recommended | Verification Command |
 |:---|:---|:---|:---|
-| **Java Development Kit** | OpenJDK 17 | Liberica JDK 25 | `java -version` |
+| **Java Development Kit** | OpenJDK 25 | Liberica JDK 25 | `java -version` |
 | **Apache Maven** | 3.9.0 | 3.9.9+ | `mvn -v` |
 | **Git** | 2.30 | Latest | `git --version` |
 

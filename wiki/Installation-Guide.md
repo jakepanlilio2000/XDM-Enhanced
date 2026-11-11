@@ -10,7 +10,7 @@ This guide covers installing and running **XDM Enhanced** across supported deskt
 |:---|:---|:---|:---:|
 | **Windows Setup (.exe)** | Windows 10 or 11 (64-bit) | None (Bundled Liberica JDK 25) | ~250 MB |
 | **Windows Portable (.zip)** | Windows 10 or 11 (64-bit) | None (Bundled Liberica JDK 25) | ~280 MB |
-| **Universal Executable (.jar)** | Linux, macOS 12+, BSD | Java 17 or higher (Java 25 recommended) | ~50 MB |
+| **Universal Executable (.jar)** | Linux, macOS 12+, BSD | 64-bit Java 25 | ~50 MB |
 
 ---
 
@@ -46,7 +46,7 @@ XDM Enhanced runs in standalone portable mode. Application configuration files a
 
 ## 3. Linux & macOS Installation (Universal JAR)
 
-1. Verify that Java 17 or higher is installed on your workstation:
+1. Verify that 64-bit Java 25 is installed on your workstation:
    ```bash
    java -version
    ```
@@ -55,6 +55,10 @@ XDM Enhanced runs in standalone portable mode. Application configuration files a
    ```bash
    java -jar xdm-app-1.0.0-beta.6.jar
    ```
+
+**Display Server & Toolkit Limitations on Linux:**
+- **Native Wayland:** Native Wayland toolkit rendering (`WLToolkit`) requires running on the JetBrains Runtime (`sun.awt.wl.WLToolkit`). Under standard OpenJDK runtimes, XDM Enhanced automatically falls back to XWayland / X11 rendering.
+- **File Chooser Override:** The "Built-in file chooser" toggle in Advanced Settings is functional only on Linux (Windows and macOS always use native operating system dialogs).
 
 **Expected Result:**
 The FlatLaf desktop GUI launches with native OS window decorations.
@@ -66,7 +70,7 @@ The FlatLaf desktop GUI launches with native OS window decorations.
 | Failure Symptom | Probable Cause | Recovery Action |
 |:---|:---|:---|
 | **Installer fails with "Access Denied"** | Missing admin privileges | Right-click the installer and choose **Run as administrator**. |
-| **Universal JAR fails to launch** | Java version is older than Java 17 | Install OpenJDK 17 or 21 (`sudo apt install openjdk-17-jre`). |
+| **Universal JAR fails to launch** | Java version is older than Java 25 | Install 64-bit Liberica JDK 25 or OpenJDK 25. |
 | **App launches but immediately exits** | Another XDM instance is already running | Check task manager for existing `xdm-app.exe` processes. |
 
 ---
