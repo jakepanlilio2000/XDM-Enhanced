@@ -244,7 +244,56 @@ class PluginFrameworkTest : DownloadManagerTestBase() {
         assertFalse(activated, "Activating faulty plugin should return false")
         assertEquals(PluginStatus.FAULTED, loaded.status, "Plugin should be marked as FAULTED")
         assertNotNull(loaded.faultReason, "Fault reason should be populated")
-        assertTrue(loaded.faultReason!!.contains("Simulated plugin crash"), "Fault reason must contain error message")
+        assertTrue(loaded.faultReason!!.contains("Simulated plugin crash"), "Faulty reason must contain error message")
+    }
+
+    @Test
+    fun testShutdownFaultIsolation() {
+        val faultPluginDir = File(testPluginsDir, "faulty-shutdown-plugin").apply { mkdirs() }
+        val manifest = PluginManifest(
+            id = "faulty-shutdown-plugin",
+            name = "Faulty Shutdown Plugin",
+            version = "1.0.0",
+            author = "Tester",
+            description = "A plugin that crashes in shutdown",
+            entryPoint = "xdm.FaultyShutdownPlugin"
+        )
+        File(faultPluginDir, "plugin.json").writeText(
+            kotlinx.serialization.json.Json.encodeToString(PluginManifest.serializer(), manifest)
+        )
+
+        PluginManager.discoverPlugins()
+        val loaded = PluginManager.installedPlugins.firstOrNull { it.manifest.id == "faulty-shutdown-plugin" }
+        assertNotNull(loaded, "Faulty shutdown plugin should be discovered")
+
+        val activated = PluginManager.activatePlugin(loaded!!)
+        assertTrue(activated, "Plugin should activate successfully")
+        assertEquals(PluginStatus.ACTIVE, loaded.status)
+
+        // Deactivating a plugin that throws in shutdown() must not crash and must complete deactivation
+        assertDoesNotThrow {
+            PluginManager.deactivatePlugin(loaded)
+        }
+        assertEquals(PluginStatus.DISABLED, loaded.status)
+        assertNull(loaded.instance, "Instance must be cleared even if shutdown threw")
+        assertNull(loaded.context, "Context must be cleared even if shutdown threw")
+    }
+
+    @Test
+    fun testEventBusSubscriberFaultIsolation() {
+        val receivedList = mutableListOf<String>()
+        PluginEventBus.subscribe("faulty-plugin", "test.topic", xdm.plugin.api.events.PluginEventListener<String> { _, _ ->
+            throw RuntimeException("Subscriber explosion")
+        })
+        PluginEventBus.subscribe("healthy-plugin", "test.topic", xdm.plugin.api.events.PluginEventListener<String> { _, data ->
+            receivedList.add(data)
+        })
+
+        assertDoesNotThrow {
+            PluginEventBus.publish("test.topic", "hello")
+        }
+        assertEquals(listOf("hello"), receivedList, "Healthy subscriber must receive event despite faulty subscriber crash")
+        PluginEventBus.clearAll()
     }
 
     @Test
@@ -457,4 +506,12 @@ class FaultyTestPlugin : XdmPlugin {
         throw RuntimeException("Simulated plugin crash during init()")
     }
     override fun shutdown() {}
+}
+
+class FaultyShutdownPlugin : XdmPlugin {
+    override fun getId(): String = "faulty-shutdown-plugin"
+    override fun init(context: PluginContext?) {}
+    override fun shutdown() {
+        throw RuntimeException("Simulated plugin crash during shutdown()")
+    }
 }

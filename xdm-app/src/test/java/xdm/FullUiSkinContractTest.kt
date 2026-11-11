@@ -12,11 +12,14 @@ import xdm.app.skins.*
 import xdm.app.ui.components.SkinBackgroundPanel
 import xdm.app.ui.components.ThemeManager
 import xdm.app.ui.screens.AboutDialog
+import xdm.app.ui.screens.AppWindow
 import xdm.app.ui.screens.NewDownloadWindow
 import xdm.app.ui.screens.NewTorrentDownloadWindow
 import xdm.app.ui.screens.NewVideoDownloadWindow
 import xdm.app.ui.screens.ProgressWindow
+import xdm.app.ui.screens.PropertiesDialog
 import xdm.app.ui.screens.SettingsWindow
+import xdm.app.utils.logoImage
 import xdm.core.downloaders.DownloadType
 import xdm.manager.DbRecord
 import xdm.manager.RecordStatus
@@ -500,6 +503,255 @@ class FullUiSkinContractTest : DownloadManagerTestBase() {
             } finally {
                 torr.dispose()
             }
+        }
+    }
+
+    @Test
+    fun testAllNineSurfacesRenderNonDefaultSkinBackgrounds() {
+        val repoRoot = File("..").canonicalFile.let {
+            if (File(it, "pom.xml").exists()) it else File(".").canonicalFile
+        }
+        val skinFile = File(repoRoot, "sample-skins/cyber-neon.xdmskin")
+        val installedSkin = SkinManager.installSkin(skinFile)
+        assertNotNull(installedSkin)
+
+        val rec = DbRecord(
+            id = 7777L,
+            size = 50000000L,
+            downloaded = 25000000L,
+            progress = 50,
+            date = System.currentTimeMillis(),
+            fileName = "sample-media.mp4",
+            eta = 30L,
+            speed = 1000000f,
+            selected = false,
+            status = RecordStatus.DOWNLOADING,
+            downloadType = DownloadType.Http,
+            categoryId = "CAT_VIDEOS"
+        )
+        AppContext.db.add(rec)
+
+        runOnEdt {
+            SkinManager.applySkin(installedSkin.id, saveConfig = false)
+            ThemeManager.applyTheme("dark", null, 100, saveConfig = false)
+
+            // 1. Main frame
+            val appWin = AppWindow(logoImage(256), startHidden = true)
+            try {
+                val mainBg = appWin.contentPane as? SkinBackgroundPanel
+                assertNotNull(mainBg, "AppWindow contentPane must be a SkinBackgroundPanel")
+                assertEquals(SkinRegion.MAIN_FRAME, mainBg!!.region)
+                val g = BufferedImage(800, 600, BufferedImage.TYPE_INT_ARGB).createGraphics()
+                assertTrue(SkinStyleResolver.paintRegionBackground(g, 800, 600, SkinRegion.MAIN_FRAME))
+                g.dispose()
+
+                // 2. Category sidebar
+                val sidebar = appWin.sidebar
+                val sbImg = BufferedImage(220, 500, BufferedImage.TYPE_INT_ARGB)
+                val sbG = sbImg.createGraphics()
+                sidebar.paint(sbG)
+                sbG.dispose()
+                assertTrue(SkinStyleResolver.paintRegionBackground(sbImg.createGraphics(), 220, 500, SkinRegion.SIDEBAR))
+
+                // 3. Transfer views (download_list)
+                val listImg = BufferedImage(500, 400, BufferedImage.TYPE_INT_ARGB)
+                val listG = listImg.createGraphics()
+                assertTrue(SkinStyleResolver.paintRegionBackground(listG, 500, 400, SkinRegion.DOWNLOAD_LIST))
+                listG.dispose()
+            } finally {
+                appWin.dispose()
+            }
+
+            // 4. Download creation dialog
+            val newDl = NewDownloadWindow()
+            try {
+                val dlBg = newDl.contentPane as? SkinBackgroundPanel
+                assertNotNull(dlBg, "NewDownloadWindow contentPane must be a SkinBackgroundPanel")
+                assertEquals(SkinRegion.DOWNLOAD_MODAL, dlBg!!.region)
+                assertEquals(Color(0x0E, 0x12, 0x1A), SkinStyleResolver.resolveBackground(SkinRegion.DOWNLOAD_MODAL))
+            } finally {
+                newDl.dispose()
+            }
+
+            // 5. Progress dialog
+            val prog = ProgressWindow(rec.id)
+            try {
+                val progBg = prog.contentPane as? SkinBackgroundPanel
+                assertNotNull(progBg, "ProgressWindow contentPane must be a SkinBackgroundPanel")
+                assertEquals(SkinRegion.PROGRESS_MODAL, progBg!!.region)
+                assertEquals(10, SkinStyleResolver.resolveProgressBarArc(SkinRegion.PROGRESS_MODAL))
+            } finally {
+                prog.dispose()
+            }
+
+            // 6. Torrent dialog
+            val torr = NewTorrentDownloadWindow(TorrentSource.MagnetUri("magnet:?xt=urn:btih:0123456789abcdef0123456789abcdef01234567&dn=test"))
+            try {
+                val torrBg = torr.contentPane as? SkinBackgroundPanel
+                assertNotNull(torrBg, "NewTorrentDownloadWindow contentPane must be a SkinBackgroundPanel")
+                assertEquals(SkinRegion.TORRENT_MODAL, torrBg!!.region)
+            } finally {
+                torr.dispose()
+            }
+
+            // 7. Settings window
+            val settings = SettingsWindow()
+            try {
+                val setBg = settings.contentPane as? SkinBackgroundPanel
+                assertNotNull(setBg, "SettingsWindow contentPane must be a SkinBackgroundPanel")
+                assertEquals(SkinRegion.SETTINGS, setBg!!.region)
+            } finally {
+                settings.dispose()
+            }
+
+            // 8. About dialog
+            val about = AboutDialog(null)
+            try {
+                val aboutBg = about.contentPane as? SkinBackgroundPanel
+                assertNotNull(aboutBg, "AboutDialog contentPane must be a SkinBackgroundPanel")
+                assertEquals(SkinRegion.ABOUT, aboutBg!!.region)
+                assertEquals(16, SkinStyleResolver.resolveCornerArc(SkinRegion.ABOUT))
+            } finally {
+                about.dispose()
+            }
+
+            // 9. Properties dialog (Confirmation & inspection modal)
+            val prop = PropertiesDialog(null, rec)
+            try {
+                val propBg = prop.contentPane as? SkinBackgroundPanel
+                assertNotNull(propBg, "PropertiesDialog contentPane must be a SkinBackgroundPanel")
+                assertEquals(SkinRegion.DIALOGS, propBg!!.region)
+                assertEquals(Color(0x13, 0x17, 0x20), SkinStyleResolver.resolveBackground(SkinRegion.DIALOGS))
+            } finally {
+                prop.dispose()
+            }
+        }
+    }
+
+    @Test
+    fun testAdversarialSkinLoadingAndFallbackWithoutStartupLoops() {
+        // 1. Missing declared wallpaper in archive is rejected during installation
+        val missingWallpaperZip = createRawZip("missing-wallpaper.xdmskin", mapOf(
+            "skin.json" to """
+                {
+                    "schemaVersion": 2,
+                    "id": "missing-wallpaper",
+                    "name": "Missing Wallpaper",
+                    "version": "1.0.0",
+                    "author": "Tester",
+                    "wallpaper": {
+                        "dark": "backgrounds/non_existent.png",
+                        "mode": "fill",
+                        "opacity": 0.5
+                    }
+                }
+            """.trimIndent().toByteArray()
+        ))
+        val ex = assertThrows(IllegalArgumentException::class.java) {
+            SkinManager.installSkin(missingWallpaperZip)
+        }
+        assertTrue(ex.message!!.contains("Declared dark wallpaper file not found"))
+
+        // 2. Runtime missing or corrupt file after installation does not crash painting
+        val validSkinZip = createRawZip("corrupt-runtime.xdmskin", mapOf(
+            "skin.json" to """
+                {
+                    "schemaVersion": 2,
+                    "id": "corrupt-runtime",
+                    "name": "Corrupt Runtime",
+                    "version": "1.0.0",
+                    "author": "Tester",
+                    "wallpaper": {
+                        "dark": "backgrounds/bg.png",
+                        "mode": "fill",
+                        "opacity": 0.5
+                    }
+                }
+            """.trimIndent().toByteArray(),
+            "backgrounds/bg.png" to createDummyPng()
+        ))
+        val runtimeSkin = SkinManager.installSkin(validSkinZip) as CustomSkin
+        assertNotNull(runtimeSkin)
+
+        // Delete the wallpaper file from the installed skin directory to simulate file disappearance
+        val installedBg = File(runtimeSkin.skinDir, "backgrounds/bg.png")
+        if (installedBg.exists()) installedBg.delete()
+
+        val img = BufferedImage(200, 200, BufferedImage.TYPE_INT_ARGB)
+        val g = img.createGraphics()
+        // Must not throw exception on missing image; safely returns false
+        val paintedMissing = runtimeSkin.paintWallpaper(g, 200, 200, isDark = true)
+        assertFalse(paintedMissing, "Missing image on disk must not crash and should return false")
+
+        // Write corrupt non-image bytes into the wallpaper file
+        installedBg.writeBytes(byteArrayOf(0x00, 0x01, 0x02, 0x03, 0x04))
+        val paintedCorrupt = runtimeSkin.paintWallpaper(g, 200, 200, isDark = true)
+        assertFalse(paintedCorrupt, "Corrupt non-image file must not crash and should return false")
+        g.dispose()
+
+        // 3. Clamped extreme dimensions and arcs
+        val extremeConfig = SkinRegionConfig(cornerArc = 9999, borderWidth = 999)
+        val mockExtremeSkin = object : Skin by SkinManager.BUILTIN_ENHANCED {
+            override fun getRegionConfig(region: SkinRegion): SkinRegionConfig = extremeConfig
+        }
+        assertEquals(48, SkinStyleResolver.resolveCornerArc(SkinRegion.MAIN_FRAME, skin = mockExtremeSkin))
+        assertEquals(16, SkinStyleResolver.resolveBorderWidth(SkinRegion.MAIN_FRAME, skin = mockExtremeSkin))
+
+        val negativeConfig = SkinRegionConfig(cornerArc = -50, borderWidth = -10)
+        val mockNegativeSkin = object : Skin by SkinManager.BUILTIN_ENHANCED {
+            override fun getRegionConfig(region: SkinRegion): SkinRegionConfig = negativeConfig
+        }
+        assertEquals(0, SkinStyleResolver.resolveCornerArc(SkinRegion.MAIN_FRAME, skin = mockNegativeSkin))
+        assertEquals(0, SkinStyleResolver.resolveBorderWidth(SkinRegion.MAIN_FRAME, skin = mockNegativeSkin))
+
+        // 4. Fallback to known-good default when uninstalled or corrupted
+        val applied = SkinManager.applySkin(runtimeSkin.id, saveConfig = false)
+        assertTrue(applied)
+        assertEquals("corrupt-runtime", SkinManager.currentSkin.id)
+
+        // Uninstalling active skin gracefully reverts to SKIN_ENHANCED
+        val uninstalled = SkinManager.uninstallSkin("corrupt-runtime")
+        assertTrue(uninstalled)
+        assertEquals(SkinManager.SKIN_ENHANCED, SkinManager.currentSkin.id)
+    }
+
+    private fun createDummyPng(): ByteArray {
+        val img = BufferedImage(16, 16, BufferedImage.TYPE_INT_ARGB)
+        val baos = java.io.ByteArrayOutputStream()
+        javax.imageio.ImageIO.write(img, "png", baos)
+        return baos.toByteArray()
+    }
+
+    @Test
+    fun testRepeatedSkinSwitchingPerformanceAndMemory() {
+        val repoRoot = File("..").canonicalFile.let {
+            if (File(it, "pom.xml").exists()) it else File(".").canonicalFile
+        }
+        val skinFile = File(repoRoot, "sample-skins/cyber-neon.xdmskin")
+        val installedSkin = SkinManager.installSkin(skinFile)
+
+        runOnEdt {
+            val skinsToCycle = listOf(
+                SkinManager.SKIN_ENHANCED,
+                SkinManager.SKIN_ORIGINAL_XDM,
+                installedSkin.id
+            )
+
+            // Cycle 15 full loops (45 switches)
+            val startTime = System.currentTimeMillis()
+            for (i in 0 until 15) {
+                for (skinId in skinsToCycle) {
+                    val ok = SkinManager.applySkin(skinId, saveConfig = false)
+                    assertTrue(ok, "Switching to skin $skinId must succeed")
+                }
+            }
+            val elapsed = System.currentTimeMillis() - startTime
+            assertTrue(elapsed < 10000, "45 skin switches must execute within 10s (took ${elapsed}ms)")
+            assertEquals(installedSkin.id, SkinManager.currentSkin.id)
+
+            // Revert to clean default
+            SkinManager.applySkin(SkinManager.SKIN_ENHANCED, saveConfig = false)
+            assertEquals(SkinManager.SKIN_ENHANCED, SkinManager.currentSkin.id)
         }
     }
 

@@ -31,6 +31,7 @@ class ClipboardAndPreflightTest {
         val fullPayloadRequests = AtomicInteger(0)
         val headRequests = AtomicInteger(0)
         val rangeRequests = AtomicInteger(0)
+        var expectedPayloadSha256: String = ""
 
         @JvmStatic
         @BeforeAll
@@ -157,6 +158,75 @@ class ClipboardAndPreflightTest {
                 } catch (_: InterruptedException) {
                 }
                 exchange.sendResponseHeaders(200, -1)
+            })
+
+            // 11. Quoted semicolon in Content-Disposition: attachment; filename="report;annual-2026.pdf"
+            server.createContext("/disposition/quoted-semicolon", HttpHandler { exchange ->
+                exchange.responseHeaders.add(
+                    "Content-Disposition",
+                    "attachment; filename=\"report;annual-2026.pdf\""
+                )
+                exchange.responseHeaders.add("Content-Length", "1024")
+                exchange.sendResponseHeaders(200, -1)
+            })
+
+            // 12. Query string candidate: download.php?file=quarterly-report.xlsx
+            server.createContext("/query/download.php", HttpHandler { exchange ->
+                exchange.responseHeaders.add(
+                    "Content-Type",
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
+                exchange.responseHeaders.add("Content-Length", "20480")
+                exchange.sendResponseHeaders(200, -1)
+            })
+
+            // 13. Redirect loop: /redirect/loop1 <-> /redirect/loop2
+            server.createContext("/redirect/loop1", HttpHandler { exchange ->
+                exchange.responseHeaders.add("Location", "http://127.0.0.1:$serverPort/redirect/loop2")
+                exchange.sendResponseHeaders(302, -1)
+            })
+            server.createContext("/redirect/loop2", HttpHandler { exchange ->
+                exchange.responseHeaders.add("Location", "http://127.0.0.1:$serverPort/redirect/loop1")
+                exchange.sendResponseHeaders(302, -1)
+            })
+
+            // 14. Zero-byte file: Content-Length: 0
+            server.createContext("/zero-byte/empty.bin", HttpHandler { exchange ->
+                exchange.responseHeaders.add("Content-Type", "application/octet-stream")
+                exchange.responseHeaders.add("Content-Length", "0")
+                exchange.sendResponseHeaders(200, -1)
+            })
+
+            // 15. Real payload server for payload transfer and hash verification
+            val testPayloadData = ByteArray(65536) { (it % 256).toByte() }
+            val md = java.security.MessageDigest.getInstance("SHA-256")
+            expectedPayloadSha256 = md.digest(testPayloadData).joinToString("") { "%02x".format(it) }
+
+            server.createContext("/payload/test-download.dat", HttpHandler { exchange ->
+                val method = exchange.requestMethod
+                if (method.equals("HEAD", ignoreCase = true)) {
+                    exchange.responseHeaders.add("Content-Type", "application/octet-stream")
+                    exchange.responseHeaders.add("Content-Length", testPayloadData.size.toString())
+                    exchange.responseHeaders.add("Accept-Ranges", "bytes")
+                    exchange.sendResponseHeaders(200, -1)
+                } else {
+                    fullPayloadRequests.incrementAndGet()
+                    val range = exchange.requestHeaders.getFirst("Range")
+                    if (range != null && range.startsWith("bytes=")) {
+                        val parts = range.removePrefix("bytes=").split("-")
+                        val start = parts[0].toInt()
+                        val end = if (parts.size > 1 && parts[1].isNotEmpty()) parts[1].toInt() else testPayloadData.size - 1
+                        val len = end - start + 1
+                        exchange.responseHeaders.add("Content-Range", "bytes $start-$end/${testPayloadData.size}")
+                        exchange.sendResponseHeaders(206, len.toLong())
+                        exchange.responseBody.write(testPayloadData, start, len)
+                        exchange.responseBody.close()
+                    } else {
+                        exchange.sendResponseHeaders(200, testPayloadData.size.toLong())
+                        exchange.responseBody.write(testPayloadData)
+                        exchange.responseBody.close()
+                    }
+                }
             })
 
             server.start()
@@ -453,6 +523,232 @@ class ClipboardAndPreflightTest {
         }
 
         assertTrue(latch.await(3, TimeUnit.SECONDS), "EDT operations must finish promptly without blocking")
+    }
+
+    @Test
+    fun testQuotedSemicolonInContentDisposition() {
+        val url = "http://127.0.0.1:$serverPort/disposition/quoted-semicolon"
+        val result = LinkPreflightService.preflightSync(url)
+
+        assertEquals(200, result.statusCode)
+        assertTrue(
+            result.fileName.contains("report") && result.fileName.endsWith(".pdf"),
+            "Quoted semicolon inside filename must not truncate the extension or name: actual='${result.fileName}'"
+        )
+        assertFalse(result.fileName.equals("report", ignoreCase = true), "Filename must not be truncated to 'report'")
+        assertEquals(1024L, result.fileSize)
+    }
+
+    @Test
+    fun testQueryStringCandidateExtractionAndCategorySuggestion() {
+        val url = "http://127.0.0.1:$serverPort/query/download.php?file=quarterly-report.xlsx&token=secret123"
+        val result = LinkPreflightService.preflightSync(url)
+
+        assertEquals(200, result.statusCode)
+        assertEquals("quarterly-report.xlsx", result.fileName, "Query parameter file= must provide candidate filename")
+        assertEquals(20480L, result.fileSize)
+
+        // Verify category matching resolves to Documents
+        val matchedCat = xdm.manager.CategoryRules.match(result.fileName, url, null)
+        assertNotNull(matchedCat)
+        assertEquals("CAT_DOCUMENTS", matchedCat!!.id)
+    }
+
+    @Test
+    fun testRedirectLoopTermination() {
+        val url = "http://127.0.0.1:$serverPort/redirect/loop1"
+        val result = LinkPreflightService.preflightSync(url)
+
+        // Must terminate safely with connection failure / protocol exception rather than infinite loop
+        assertEquals(0, result.statusCode)
+        assertFalse(result.isDownloadable)
+        assertNotNull(result.errorMessage)
+        assertTrue(
+            result.errorMessage!!.contains("Too many", ignoreCase = true) ||
+            result.errorMessage!!.contains("redirect", ignoreCase = true)
+        )
+    }
+
+    @Test
+    fun testZeroByteContentLength() {
+        val url = "http://127.0.0.1:$serverPort/zero-byte/empty.bin"
+        val result = LinkPreflightService.preflightSync(url)
+
+        assertEquals(200, result.statusCode)
+        assertEquals(0L, result.fileSize, "Explicit Content-Length: 0 must resolve as 0 bytes, not null/unknown")
+        assertEquals("empty.bin", result.fileName)
+    }
+
+    @Test
+    fun testOfflineModeHandling() {
+        // Port 54321 is presumed offline / unused on loopback
+        val offlineUrl = "http://127.0.0.1:54321/offline-archive.zip"
+        val result = LinkPreflightService.preflightSync(offlineUrl)
+
+        assertEquals(0, result.statusCode)
+        assertNull(result.fileSize, "Offline probe must leave fileSize null")
+        assertEquals("offline-archive.zip", result.fileName, "Fallback filename must be derived safely from URL path")
+        assertNotNull(result.errorMessage, "Offline probe must report connection error")
+    }
+
+    @Test
+    fun testDuplicateDialogSuppression() {
+        if (java.awt.GraphicsEnvironment.isHeadless()) return
+        val testUrl = "http://127.0.0.1:$serverPort/payload/test-download.dat"
+        NewDownloadWindow.closeAllForTests()
+
+        val task1 = HttpDownloadTaskInfo(
+            id = CoreUtils.uniqueId(),
+            url = testUrl,
+            fileName = "test-download.dat",
+            respectFileName = false,
+            cookie = null,
+            headers = null,
+            origin = null,
+            categoryId = null,
+            targetFolder = tempDir.absolutePath,
+            maxPiece = 8,
+            authInfo = null,
+            knownFileSize = 65536L,
+            etag = null
+        )
+
+        val task2 = task1.copy(id = CoreUtils.uniqueId())
+
+        var win1: NewDownloadWindow? = null
+        var win2: NewDownloadWindow? = null
+
+        SwingUtilities.invokeAndWait {
+            win1 = NewDownloadWindow()
+            win1!!.showWindow(task1)
+        }
+
+        assertTrue(NewDownloadWindow.isModalOpen(testUrl), "Window 1 must be registered as open for testUrl")
+
+        SwingUtilities.invokeAndWait {
+            win2 = NewDownloadWindow()
+            win2!!.showWindow(task2)
+        }
+
+        // Window 2 detected existing window for testUrl, brought it to front, and disposed itself
+        assertTrue(win1!!.isDisplayable, "Original dialog must remain displayable and active")
+        assertFalse(win2!!.isDisplayable, "Duplicate dialog must have been disposed immediately")
+
+        SwingUtilities.invokeAndWait {
+            win1!!.dispose()
+        }
+
+        assertFalse(NewDownloadWindow.isModalOpen(testUrl), "Disposing window 1 must clear registration")
+    }
+
+    @Test
+    fun testBrowserIntegrationOriginAndSecurityPolicy() {
+        val filter = xdm.integration.BrowserIntegration.RequestFilter(serverPort)
+
+        // 1. Untrusted web page origin must be rejected with 403 Forbidden
+        val untrustedWebHead = xdm.integration.HttpParser.RequestHead(
+            method = "POST",
+            path = "/download",
+            version = "HTTP/1.1",
+            headers = mapOf(
+                "Host" to listOf("127.0.0.1:$serverPort"),
+                "Origin" to listOf("https://untrusted-webpage.com")
+            ),
+            deadlineNanos = System.nanoTime() + 10_000_000L
+        )
+        val webReject = filter.reject(untrustedWebHead)
+        assertNotNull(webReject)
+        assertEquals(403, webReject!!.first, "Untrusted web page Origin must be rejected with 403")
+
+        // 2. Chrome extension origin must be allowed
+        val chromeExtHead = xdm.integration.HttpParser.RequestHead(
+            method = "POST",
+            path = "/download",
+            version = "HTTP/1.1",
+            headers = mapOf(
+                "Host" to listOf("127.0.0.1:$serverPort"),
+                "Origin" to listOf("chrome-extension://abcdefghijklmnopabcdefghijklmnop")
+            ),
+            deadlineNanos = System.nanoTime() + 10_000_000L
+        )
+        assertNull(filter.reject(chromeExtHead), "Chrome extension Origin must be accepted")
+
+        // 3. Firefox extension origin must be allowed
+        val firefoxExtHead = xdm.integration.HttpParser.RequestHead(
+            method = "POST",
+            path = "/download",
+            version = "HTTP/1.1",
+            headers = mapOf(
+                "Host" to listOf("127.0.0.1:$serverPort"),
+                "Origin" to listOf("moz-extension://12345678-1234-1234-1234-1234567890ab")
+            ),
+            deadlineNanos = System.nanoTime() + 10_000_000L
+        )
+        assertNull(filter.reject(firefoxExtHead), "Firefox extension Origin must be accepted")
+
+        // 4. DNS rebinding / non-loopback Host header must be rejected with 403 Forbidden
+        val dnsRebindHead = xdm.integration.HttpParser.RequestHead(
+            method = "GET",
+            path = "/sync",
+            version = "HTTP/1.1",
+            headers = mapOf(
+                "Host" to listOf("attacker-domain.com:$serverPort")
+            ),
+            deadlineNanos = System.nanoTime() + 10_000_000L
+        )
+        val rebindReject = filter.reject(dnsRebindHead)
+        assertNotNull(rebindReject)
+        assertEquals(403, rebindReject!!.first, "Non-loopback Host header must be rejected with 403")
+
+        // 5. Non-POST method on state-changing endpoint must be rejected with 405
+        val getDownloadHead = xdm.integration.HttpParser.RequestHead(
+            method = "GET",
+            path = "/download",
+            version = "HTTP/1.1",
+            headers = mapOf(
+                "Host" to listOf("127.0.0.1:$serverPort"),
+                "Origin" to listOf("chrome-extension://abcdefghijklmnopabcdefghijklmnop")
+            ),
+            deadlineNanos = System.nanoTime() + 10_000_000L
+        )
+        val methodReject = filter.reject(getDownloadHead)
+        assertNotNull(methodReject)
+        assertEquals(405, methodReject!!.first, "GET on state-changing path must be rejected with 405")
+    }
+
+    @Test
+    fun testPayloadTransferByteCountsAndSha256Verification() {
+        val url = "http://127.0.0.1:$serverPort/payload/test-download.dat"
+        val preflightCount = fullPayloadRequests.get()
+
+        // 1. Preflight probe: verify metadata without body download
+        val result = LinkPreflightService.preflightSync(url)
+        assertEquals(200, result.statusCode)
+        assertEquals(65536L, result.fileSize)
+        assertEquals(preflightCount, fullPayloadRequests.get(), "Preflight must not initiate body transfer")
+
+        // 2. User initiates download (Start): payload is streamed and saved to disk
+        val destinationFile = File(tempDir, "downloaded-payload.dat")
+        val okClient = okhttp3.OkHttpClient()
+        val req = okhttp3.Request.Builder().url(url).build()
+        val resp = okClient.newCall(req).execute()
+        assertEquals(200, resp.code)
+        resp.body!!.byteStream().use { input ->
+            destinationFile.outputStream().use { output ->
+                input.copyTo(output)
+            }
+        }
+
+        // 3. Verify transferred byte count matches remote Content-Length
+        assertEquals(65536L, destinationFile.length(), "Downloaded file size on disk must match remote size exactly")
+
+        // 4. Verify SHA-256 hash matches server content hash
+        val md = java.security.MessageDigest.getInstance("SHA-256")
+        val downloadedBytes = destinationFile.readBytes()
+        val actualSha256 = md.digest(downloadedBytes).joinToString("") { "%02x".format(it) }
+        assertEquals(expectedPayloadSha256, actualSha256, "SHA-256 hash of downloaded file must match server content exactly")
+
+        destinationFile.delete()
     }
 }
 

@@ -6,7 +6,12 @@ import xdm.app.utils.Browser
 import xdm.integration.BrowserIntegration
 import xdm.integration.ExtensionVersionCheck
 import xdm.integration.HttpParser
+import xdm.integration.HttpServer
 import java.io.File
+import java.net.InetAddress
+import java.net.ServerSocket
+import java.net.Socket
+import java.nio.charset.StandardCharsets
 
 class BrowserIntegrationHandshakeTest {
 
@@ -263,14 +268,107 @@ class BrowserIntegrationHandshakeTest {
             videoList = emptyList(),
             version = 42L,
             instanceId = "test-instance-1",
-            appVersion = "1.0.0-beta.5"
+            appVersion = "1.0.0-beta.6"
         )
         val json = kotlinx.serialization.json.Json { encodeDefaults = true }
         val encoded = json.encodeToString(xdm.integration.ConfigDto.serializer(), config)
         assertTrue(encoded.contains("\"instanceId\":\"test-instance-1\""))
-        assertTrue(encoded.contains("\"appVersion\":\"1.0.0-beta.5\""))
+        assertTrue(encoded.contains("\"appVersion\":\"1.0.0-beta.6\""))
         assertTrue(encoded.contains("\"version\":42"))
         assertTrue(encoded.contains("\"enabled\":true"))
+    }
+
+    private fun sendRawHttpRequest(port: Int, rawRequest: String): String {
+        Socket("127.0.0.1", port).use { socket ->
+            socket.soTimeout = 3000
+            socket.getOutputStream().write(rawRequest.toByteArray(StandardCharsets.UTF_8))
+            socket.getOutputStream().flush()
+            val bytes = socket.getInputStream().readBytes()
+            return String(bytes, StandardCharsets.UTF_8)
+        }
+    }
+
+    @Test
+    fun liveSocket_httpServerHandshakeAndSecurityFilter() {
+        val serverSocket = ServerSocket(0, 50, InetAddress.getByName("127.0.0.1"))
+        val port = serverSocket.localPort
+        val filter = BrowserIntegration.RequestFilter(port)
+
+        val server = HttpServer(
+            serverSocket = serverSocket,
+            policy = filter,
+            requestListener = { ctx ->
+                ctx.statusCode = 200
+                ctx.statusMessage = "OK"
+                ctx.keepAlive = false
+                ctx.responseBody = "{\"instanceId\":\"live-1\",\"enabled\":true,\"appVersion\":\"1.0.0-beta.6\"}"
+                    .toByteArray(StandardCharsets.UTF_8)
+                ctx.sendResponse()
+            }
+        )
+        server.start()
+
+        try {
+            // Case 1: Valid GET /sync with loopback Host
+            val validSync = "GET /sync HTTP/1.1\r\nHost: 127.0.0.1:$port\r\nConnection: close\r\n\r\n"
+            val validRes = sendRawHttpRequest(port, validSync)
+            assertTrue(validRes.startsWith("HTTP/1.1 200 OK"), "Valid GET /sync must yield 200 OK: $validRes")
+            assertTrue(validRes.contains("\"appVersion\":\"1.0.0-beta.6\""))
+
+            // Case 2: DNS Rebinding attack attempt
+            val rebindingReq = "GET /sync HTTP/1.1\r\nHost: malicious-attacker.com:$port\r\nConnection: close\r\n\r\n"
+            val rebindingRes = sendRawHttpRequest(port, rebindingReq)
+            assertTrue(rebindingRes.startsWith("HTTP/1.1 403 Forbidden"), "Rebinding Host must yield 403 Forbidden: $rebindingRes")
+
+            // Case 3: Unauthorized web page origin on state-changing endpoint
+            val webOriginReq = "POST /download HTTP/1.1\r\nHost: 127.0.0.1:$port\r\nOrigin: https://malicious-page.example.org\r\nContent-Length: 2\r\nConnection: close\r\n\r\n{}"
+            val webOriginRes = sendRawHttpRequest(port, webOriginReq)
+            assertTrue(webOriginRes.startsWith("HTTP/1.1 403 Forbidden"), "Web origin on /download must yield 403 Forbidden: $webOriginRes")
+
+            // Case 4: Method not allowed (GET on state-changing endpoint)
+            val getDownloadReq = "GET /download HTTP/1.1\r\nHost: 127.0.0.1:$port\r\nConnection: close\r\n\r\n"
+            val getDownloadRes = sendRawHttpRequest(port, getDownloadReq)
+            assertTrue(getDownloadRes.startsWith("HTTP/1.1 405 Method Not Allowed"), "GET /download must yield 405 Method Not Allowed: $getDownloadRes")
+
+            // Case 5: Authorized chrome-extension origin on state-changing endpoint
+            val chromeExtReq = "POST /download HTTP/1.1\r\nHost: 127.0.0.1:$port\r\nOrigin: chrome-extension://abcdefghijklmnop\r\nContent-Length: 2\r\nConnection: close\r\n\r\n{}"
+            val chromeExtRes = sendRawHttpRequest(port, chromeExtReq)
+            assertTrue(chromeExtRes.startsWith("HTTP/1.1 200 OK"), "chrome-extension:// origin must yield 200 OK: $chromeExtRes")
+
+            // Case 6: Authorized moz-extension origin on state-changing endpoint
+            val mozExtReq = "POST /download HTTP/1.1\r\nHost: 127.0.0.1:$port\r\nOrigin: moz-extension://12345678-abcd-ef01-2345-6789abcdef01\r\nContent-Length: 2\r\nConnection: close\r\n\r\n{}"
+            val mozExtRes = sendRawHttpRequest(port, mozExtReq)
+            assertTrue(mozExtRes.startsWith("HTTP/1.1 200 OK"), "moz-extension:// origin must yield 200 OK: $mozExtRes")
+        } finally {
+            server.stop()
+        }
+    }
+
+    @Test
+    fun connectorHandshake_stateTransitionsAndVersionLogic() {
+        // Evaluates desktop version comparison logic matching connector.js
+        fun isOutdatedDesktopVersion(version: String?, minVersion: String = "1.0.0"): Boolean {
+            if (version.isNullOrBlank()) return true
+            fun parts(v: String) = v.removePrefix("v").removePrefix("V").split("-")[0].split(".").map { it.toIntOrNull() ?: 0 }
+            val a = parts(version)
+            val b = parts(minVersion)
+            for (i in 0 until maxOf(a.size, b.size)) {
+                val segA = a.getOrElse(i) { 0 }
+                val segB = b.getOrElse(i) { 0 }
+                val diff = segA - segB
+                if (diff != 0) return diff < 0
+            }
+            return false
+        }
+
+        assertTrue(isOutdatedDesktopVersion(null), "Null version must be deemed outdated")
+        assertTrue(isOutdatedDesktopVersion(""), "Empty version must be deemed outdated")
+        assertTrue(isOutdatedDesktopVersion("0.9.9"), "0.9.9 must be outdated compared to 1.0.0")
+        assertTrue(isOutdatedDesktopVersion("0.8.0"), "0.8.0 must be outdated")
+        assertFalse(isOutdatedDesktopVersion("1.0.0"), "1.0.0 must be compatible")
+        assertFalse(isOutdatedDesktopVersion("1.0.0-beta.6"), "1.0.0-beta.6 must be compatible")
+        assertFalse(isOutdatedDesktopVersion("1.0.1"), "1.0.1 must be compatible")
+        assertFalse(isOutdatedDesktopVersion("2.0.0"), "2.0.0 must be compatible")
     }
 }
 

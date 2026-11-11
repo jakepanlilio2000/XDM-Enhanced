@@ -519,6 +519,80 @@ class PluginApiV2AndTaskAdapterTest : DownloadManagerTestBase() {
     }
 
     @Test
+    fun testUnsupportedPauseDistinctionVsCancellation() {
+        val manifest = PluginManifest(
+            id = "unsupported-pause-plugin",
+            name = "No Pause Plugin",
+            version = "1.0.0",
+            author = "Tester",
+            entryPoint = "com.example.NoPausePlugin",
+            capabilities = listOf("TASK_ADAPTER")
+        )
+        val loadedPlugin = LoadedPlugin(
+            manifest = manifest,
+            pluginDir = File(testPluginsDir, "unsupported-pause-plugin").apply { mkdirs() },
+            classLoader = null,
+            instance = object : xdm.plugin.api.XdmPlugin {
+                override fun getId(): String = "unsupported-pause-plugin"
+                override fun init(context: xdm.plugin.api.PluginContext) {}
+                override fun shutdown() {}
+            },
+            status = PluginStatus.ACTIVE
+        )
+        val hostMetadata = PluginMetadata(
+            manifest.id, manifest.name, manifest.version, manifest.author,
+            manifest.description, manifest.minAppVersion, manifest.minApiVersion,
+            manifest.entryPoint, manifest.capabilities.toSet(), manifest.dependencies,
+            manifest.license, manifest.homepage, loadedPlugin.sha256, loadedPlugin.isBuiltIn
+        )
+        val hostContext = PluginHostContext(
+            plugin = loadedPlugin,
+            hostMetadata = hostMetadata
+        )
+
+        val taskPaused = AtomicBoolean(false)
+        val taskCancelled = AtomicBoolean(false)
+
+        val noPauseTask = object : PluginDownloadTask {
+            override fun start() {}
+            override fun canPause(): Boolean = false
+            override fun canResume(): Boolean = false
+            override fun pause() {
+                taskPaused.set(true)
+            }
+            override fun resume() {}
+            override fun cancel() {
+                taskCancelled.set(true)
+            }
+            override fun getState(): PluginDownloadTask.TaskState = PluginDownloadTask.TaskState.DOWNLOADING
+            override fun getDownloadedBytes(): Long = 100L
+            override fun getTotalBytes(): Long = 500L
+            override fun getTransferSpeed(): Float = 50f
+            override fun getErrorMessage(): String? = null
+            override fun getOutputFile(): File? = null
+        }
+
+        val request = PluginDownloadRequest(
+            "https://example.com/stream.m3u8",
+            dir.absolutePath,
+            "stream.ts"
+        )
+        val taskId = hostContext.submitPluginTask(request, noPauseTask)
+        assertNotEquals(-1L, taskId)
+
+        // Calling pauseTask on a task that does NOT support pause must invoke cancel() on the provider task,
+        // distinguishing unsupported pause from a true pause without orphaning the process.
+        PluginDownloadBridge.pauseTask(taskId)
+        assertFalse(taskPaused.get(), "pause() must NOT be called on a task where canPause() == false")
+        assertTrue(taskCancelled.get(), "cancel() must be called to terminate provider execution when pause is unsupported")
+
+        // UI status is PAUSED so the user sees it stopped
+        val record = AppContext.db.getById(taskId)
+        assertNotNull(record)
+        assertEquals(RecordStatus.PAUSED, record!!.status)
+    }
+
+    @Test
     fun testUiResolversForPluginType() {
         val rec = DbRecord(
             id = 77771111L,

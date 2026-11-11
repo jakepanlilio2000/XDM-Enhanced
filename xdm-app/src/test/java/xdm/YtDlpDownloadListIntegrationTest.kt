@@ -83,11 +83,17 @@ class YtDlpDownloadListIntegrationTest : DownloadManagerTestBase() {
                                 return 0;
                             }
                             string allArgs = string.Join(" ", args);
+                            string outDir = AppDomain.CurrentDomain.BaseDirectory;
                             if (allArgs.IndexOf("error_fail_video", StringComparison.OrdinalIgnoreCase) >= 0) {
                                 Console.WriteLine("ERROR: [youtube] error_fail_video: Video unavailable. This video is private.");
                                 return 1;
                             }
-                            string outDir = AppDomain.CurrentDomain.BaseDirectory;
+                            if (allArgs.IndexOf("unicode_test", StringComparison.OrdinalIgnoreCase) >= 0) {
+                                Console.OutputEncoding = System.Text.Encoding.UTF8;
+                                Console.WriteLine("[download] Destination: " + Path.Combine(outDir, "\u30C6\u30B9\u30C8\u52D5\u753B_Unicode_Test.mp4"));
+                                Console.WriteLine("download: 100.0%#104857600B#10.0MiB/s#00:00#104857600B");
+                                return 0;
+                            }
                             Console.WriteLine("[download] Destination: " + Path.Combine(outDir, "Resolved_Video_Title.mp4"));
                             Console.WriteLine("download: 25.0%#104857600B#5.0MiB/s#00:15#26214400B");
                             Console.WriteLine("download: 75.0%#104857600B#10.0MiB/s#00:03#78643200B");
@@ -99,10 +105,13 @@ class YtDlpDownloadListIntegrationTest : DownloadManagerTestBase() {
                 )
             }
             val cscPath = "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\csc.exe"
-            val pb = ProcessBuilder(cscPath, "/nologo", "/out:${targetFile.absolutePath}", csFile.absolutePath)
+            val pb = ProcessBuilder(cscPath, "/nologo", "/codepage:65001", "/out:${targetFile.absolutePath}", csFile.absolutePath)
             pb.redirectErrorStream(true)
             val p = pb.start()
-            p.waitFor()
+            val compileOutput = p.inputStream.bufferedReader().readText()
+            val code = p.waitFor()
+            assertEquals(0, code, "csc.exe compilation failed: $compileOutput")
+            assertTrue(targetFile.exists(), "Target fake_ytdlp.exe must exist after compilation")
         } else {
             targetFile.writeText(
                 """
@@ -115,6 +124,11 @@ class YtDlpDownloadListIntegrationTest : DownloadManagerTestBase() {
                     *error_fail_video*)
                         echo "ERROR: [youtube] error_fail_video: Video unavailable. This video is private."
                         exit 1
+                        ;;
+                    *unicode_test*)
+                        echo "[download] Destination: $(dirname "$0")/テスト動画_Unicode_Test.mp4"
+                        echo "download: 100.0%#104857600B#10.0MiB/s#00:00#104857600B"
+                        exit 0
                         ;;
                 esac
                 echo "[download] Destination: $(dirname "$0")/Resolved_Video_Title.mp4"
@@ -434,6 +448,60 @@ class YtDlpDownloadListIntegrationTest : DownloadManagerTestBase() {
         val category = captureCategory("watch", mediaUrl, null)
         assertNotNull(category, "captureCategory must resolve Videos category for plugin media URL")
         assertEquals("CAT_VIDEOS", category!!.id)
+    }
+
+    @Test
+    fun testUnicodeFilenameAndMetadataHandling() {
+        val providerPair = PluginManager.findDownloadProvider("https://www.youtube.com/watch?v=unicode_test")!!
+        val provider = providerPair.second
+        val req = PluginDownloadRequest(
+            "https://www.youtube.com/watch?v=unicode_test",
+            dir.absolutePath,
+            "watch"
+        )
+        val task = provider.createDownloadTask(req)
+        val taskId = loadedPlugin.context!!.submitPluginTask(req, task)
+        assertNotEquals(-1L, taskId)
+
+        val record = awaitStatus(taskId, RecordStatus.FINISHED)
+        assertNotNull(record, "Unicode task must finish successfully")
+        assertEquals(RecordStatus.FINISHED, record!!.status)
+        assertEquals("テスト動画_Unicode_Test.mp4", record.fileName, "Record fileName must preserve full Unicode title")
+        assertEquals("CAT_VIDEOS", record.categoryId)
+
+        val meta = AppContext.taskInfoDB.getPluginTask(taskId)
+        assertNotNull(meta)
+        assertEquals("テスト動画_Unicode_Test.mp4", meta!!.fileName, "TaskInfoDB must persist full Unicode title")
+    }
+
+    @Test
+    fun testReproduceOriginalBugWhenPluginTaskUnbridged() {
+        // REPRODUCTION EVIDENCE OF HISTORICAL BUG:
+        // Prior to PluginDownloadBridge and submitPluginTask:
+        // 1. AppContext.downloader.store had NO record -> null
+        // 2. AppContext.db had NO row -> indexById() returned null
+        // 3. UI ViewModel / DownloadTableModel had 0 rows for the plugin task
+        // 4. No category mapping to CAT_VIDEOS
+        // 5. App restart lost any unbridged tasks completely
+        val unbridgedTaskId = 99999999L
+        assertNull(AppContext.downloader.store.getById(unbridgedTaskId), "Unbridged task does not exist in store")
+        assertNull(AppContext.db.getById(unbridgedTaskId), "Unbridged task does not exist in database")
+        assertNull(AppContext.taskInfoDB.getPluginTask(unbridgedTaskId), "Unbridged task does not exist in taskInfoDB")
+        val tableModel = DownloadTableModel()
+        assertEquals(-1, tableModel.findRowById(unbridgedTaskId), "Unbridged task is invisible in table view")
+
+        // IN CONTRAST: When submitted through loadedPlugin.context.submitPluginTask:
+        val req = PluginDownloadRequest("https://www.youtube.com/watch?v=bridged_proof", dir.absolutePath, "video.mp4")
+        val providerPair = PluginManager.findDownloadProvider(req.url)!!
+        val task = providerPair.second.createDownloadTask(req)
+        val bridgedTaskId = loadedPlugin.context!!.submitPluginTask(req, task)
+
+        // Now fully visible across all stores and views:
+        assertNotNull(AppContext.downloader.store.getById(bridgedTaskId), "Bridged task is registered in downloader store")
+        assertNotNull(AppContext.db.getById(bridgedTaskId), "Bridged task is registered in database")
+        assertNotNull(AppContext.taskInfoDB.getPluginTask(bridgedTaskId), "Bridged task is persisted in TaskInfoDB")
+        val row = tableModel.findRowById(bridgedTaskId)
+        assertTrue(row >= 0, "Bridged task is immediately visible in DownloadTableModel at row $row")
     }
 
     private fun filterMatches(filter: MainListViewFilter, model: MainListViewModel, id: Long): Boolean {
