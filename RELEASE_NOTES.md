@@ -1,6 +1,6 @@
-# XDM Enhanced v1.0.0-rc.1
+# XDM Enhanced v1.0.0 (Stable)
 
-First Release Candidate of **XDM Enhanced** — an independent, open-source download manager forked from Xtreme Download Manager (XDM). It pairs high-speed multi-connection segmented HTTP/HTTPS downloading and streaming video capture with native BitTorrent and magnet support, modern FlatLaf dynamic theming, custom skin packages, a public plugin framework, floating browser media grabbing, automated post-download rules, and companion browser extensions.
+Official Stable Release of **XDM Enhanced** — an independent, open-source download manager forked from Xtreme Download Manager (XDM). It pairs high-speed multi-connection segmented HTTP/HTTPS downloading and streaming video capture with native BitTorrent and magnet support, modern FlatLaf dynamic theming, custom skin packages, a public plugin framework, floating browser media grabbing, automated post-download rules, and companion browser extensions.
 
 ---
 
@@ -74,17 +74,17 @@ First Release Candidate of **XDM Enhanced** — an independent, open-source down
 
 | Asset | Size | SHA-256 Checksum |
 |---|---|---|
-| `XDM-Enhanced-Setup-v1.0.0-rc.1-win-x64.exe` | 89,720,692 bytes | `4d46a73574df3908c6766e484d14acf3c3b10d55d5235937172fa6a2c20f2b0c` |
-| `XDM-Enhanced-v1.0.0-rc.1-windows-x64.zip` | 111,821,592 bytes | `b93954154dbd06eb92640dfd21047ac74382c917f6ffb86f6d3b942dd7fb5d75` |
-| `XDM-Enhanced-Extension-Chromium-v1.0.0-rc.1.zip` | 106,507 bytes | `e4a9fbad42a9354318c9d410a8306f96af12f667197209b2295444033f975d00` |
-| `XDM-Enhanced-Extension-Firefox-v1.0.0-rc.1.zip` | 103,600 bytes | `8c3f2f1b90a113dbccd1ce771223779cb7dbcaa164bb024250a4e7b7ef9eeaac` |
-| `XDM-Enhanced-Extension-Firefox-v1.0.0-rc.1.xpi` | 103,600 bytes | `8c3f2f1b90a113dbccd1ce771223779cb7dbcaa164bb024250a4e7b7ef9eeaac` |
-| `xdm-app-1.0.0-rc.1.jar` | 95,042,279 bytes | `e1c68779c52921c156e20a4a0a46a1a03c1280656c70b742475706b9aa2b9055` |
-| `xdm-plugin-api-1.0.0-rc.1.jar` | 21,971 bytes | `925b39b2b1a15ea576aa656d75f7d87acfece8aeb27a865519b97d6e0b23129b` |
+| `XDM-Enhanced-Setup-v1.0.0-win-x64.exe` | 63,914,904 bytes | `6e8eca1d4e4b04f7131d707771aa866261f5135af2fd4f6cdc70a4f35eab0818` |
+| `XDM-Enhanced-v1.0.0-windows-x64.zip` | 74,731,561 bytes | `943ba068bb037544c14da8fecc14756998971f7a30dbe863702a6984de3239ce` |
+| `XDM-Enhanced-Extension-Chromium-v1.0.0.zip` | 106,503 bytes | `a5f76703341ec5e55d9a7036564c56b0ef2b8079e3635c9fc5bdb6d7d2106f2f` |
+| `XDM-Enhanced-Extension-Firefox-v1.0.0.zip` | 103,600 bytes | `f1a601f8a905f96d7fa38ac16ed6fb02578d0b0c8e7b8598ec94a9384e7def37` |
+| `XDM-Enhanced-Extension-Firefox-v1.0.0.xpi` | 103,600 bytes | `f1a601f8a905f96d7fa38ac16ed6fb02578d0b0c8e7b8598ec94a9384e7def37` |
+| `xdm-app-1.0.0.jar` | 95,042,120 bytes | `656003f88fa0d259d773d68ad26c6f9f6684739d5ac85438033802fc6bb2713a` |
+| `xdm-plugin-api-1.0.0.jar` | 21,963 bytes | `d08c6831d0ac0d7ae78ae292bd91d7fe556400198376f556e7a6c071a566fd53` |
 | `cyber-neon.xdmskin` | 34,446 bytes | `5e8293da37215dbafff6a41a88495bdefcc0faa3f942c878ada69664ec05ef0f` |
-| `checksum-verifier.xdmplugin` | 6,213 bytes | `d5f9439fe969c74b0b10ec400168607685946a96a19ea8cfb25acc7cf19d1882` |
-| `ytdlp-downloader.xdmplugin` | 28,567 bytes | `70270b4281ad36812cba8efc1ac056af95d2f425e76394d904ff5cf42004aaab` |
-| `SHA256SUMS.txt` | 1,023 bytes | Included in release |
+| `checksum-verifier.xdmplugin` | 6,204 bytes | `ee17b1f8823f4ff418d3ffd8a779cb61421bf35afb67afa9e3e995de1588050b` |
+| `ytdlp-downloader.xdmplugin` | 28,555 bytes | `7f5054463cd1f3174338b3c428990d55593db5a5ec3c2ff82e85ac57e352aaa9` |
+| `SHA256SUMS.txt` | 988 bytes | Included in release |
 
 ---
 

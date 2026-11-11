@@ -18,7 +18,7 @@
 > [🌐 Official Website](https://jakepanlilio2000.github.io/XDM-Enhanced/) • 
 > [📖 Documentation & Guides](docs/README.md) • 
 > [📚 Community Wiki](https://github.com/jakepanlilio2000/XDM-Enhanced/wiki) • 
-> [📦 Latest Release (v1.0.0-beta.6)](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/tag/v1.0.0-beta.6) • 
+> [📦 Latest Release (v1.0.0)](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/tag/v1.0.0) • 
 > [💬 Issue Tracker](https://github.com/jakepanlilio2000/XDM-Enhanced/issues)
 
 ---

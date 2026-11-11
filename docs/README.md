@@ -30,7 +30,7 @@ Working examples are included directly in the source tree to accelerate your dev
 
 - **Official Project Website:** [https://jakepanlilio2000.github.io/XDM-Enhanced/](https://jakepanlilio2000.github.io/XDM-Enhanced/) *(Pending deployment; source in [`website/`](../website/))*
 - **Community Wiki:** [https://github.com/jakepanlilio2000/XDM-Enhanced/wiki](https://github.com/jakepanlilio2000/XDM-Enhanced/wiki) *(Staged in [`wiki/`](../wiki/))*
-- **Latest Pre-release:** [GitHub Releases v1.0.0-beta.6](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/tag/v1.0.0-beta.6)
+- **Latest Stable Release:** [GitHub Releases v1.0.0](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/tag/v1.0.0)
 - **Contribution Guidelines:** [CONTRIBUTING.md](../CONTRIBUTING.md)
 - **Issue & Bug Tracker:** [GitHub Issues](https://github.com/jakepanlilio2000/XDM-Enhanced/issues)
 - **Upstream Attribution:** [README.UPSTREAM.md](../README.UPSTREAM.md)

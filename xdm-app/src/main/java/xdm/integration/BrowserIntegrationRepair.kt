@@ -109,7 +109,7 @@ object BrowserIntegrationRepair {
         val activeBrowsers = Browser.entries.filter { BrowserIntegration.isConnected(it) }
 
         // 5. Version
-        val appVersion = UpdateChecker.loadConfig()?.currentVersion ?: "1.0.0-beta.6"
+        val appVersion = UpdateChecker.loadConfig()?.currentVersion ?: UpdateChecker.DEFAULT_VERSION
 
         // 6. Assemble details and summary
         var canAutoRepair = false

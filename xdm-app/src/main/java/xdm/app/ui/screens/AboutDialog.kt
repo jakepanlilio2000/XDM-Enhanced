@@ -72,8 +72,8 @@ class AboutDialog constructor(owner: Window?) : JDialog(owner) {
         isModal = false
         isResizable = false
 
-        val rawVersion = UpdateChecker.loadConfig()?.currentVersion ?: "1.0.0-rc.1"
-        val version = rawVersion.ifBlank { "1.0.0-rc.1" }
+        val rawVersion = UpdateChecker.loadConfig()?.currentVersion ?: UpdateChecker.DEFAULT_VERSION
+        val version = rawVersion.ifBlank { UpdateChecker.DEFAULT_VERSION }
         val isPreRelease = version.contains("beta", ignoreCase = true) || version.contains("alpha", ignoreCase = true) || version.contains("rc", ignoreCase = true)
         val releaseChannel = if (isPreRelease) "Beta Channel" else "Stable Channel"
 
