@@ -6,9 +6,13 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import xdm.core.downloaders.DownloadType
+import xdm.core.downloaders.TaskInfoDB
 import xdm.manager.DbRecord
+import xdm.manager.DownloadCategory
+import xdm.manager.EngineContext
 import xdm.manager.RecordStatus
 import java.io.File
+import java.lang.reflect.Proxy
 import java.nio.file.Path
 
 class DownloadSchedulerTorrentTest {
@@ -23,7 +27,22 @@ class DownloadSchedulerTorrentTest {
     @BeforeEach
     fun setUp() {
         configDir = tempDir.resolve("config").toFile().apply { mkdirs() }
+        val config = AppConfig(configDir.absolutePath).apply {
+            defaultDownloadFolder = configDir.absolutePath
+            categories = DownloadCategory.defaults(configDir.absolutePath)
+        }
+        AppContext.config = config
+        AppContext.configDir = configDir.absolutePath
+        AppContext.taskInfoDB = TaskInfoDB(configDir.absolutePath)
+        AppContext.tempDir = configDir.absolutePath
+        AppContext.defaultDownloadFolder = configDir.absolutePath
+        AppContext.app = Proxy.newProxyInstance(
+            IAppInstance::class.java.classLoader, arrayOf(IAppInstance::class.java)
+        ) { _, _, _ -> null } as IAppInstance
+        EngineContext.host = DesktopEngineHost
+
         appDB = AppDB(configDir.absolutePath)
+        AppContext.db = appDB
         scheduler = DownloadScheduler(appDB, configDir.absolutePath)
     }
 
