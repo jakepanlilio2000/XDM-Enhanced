@@ -105,7 +105,9 @@ class AppDB(private val configDir: String) : DownloadStore {
     @Synchronized
     override fun add(rec: DbRecord) {
         if (rec.categoryId == null) {
-            rec.categoryId = CategoryRules.match(rec.fileName, null, null)?.id
+            runCatching {
+                rec.categoryId = CategoryRules.match(rec.fileName, null, null)?.id
+            }
         }
         addActive(rec)
         update(rec)

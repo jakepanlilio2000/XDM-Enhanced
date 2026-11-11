@@ -183,6 +183,7 @@ interface EngineHost {
 object EngineContext {
     lateinit var host: EngineHost
 
+    val isReady: Boolean get() = ::host.isInitialized
     val config: EngineConfig get() = host.config
     val ui: UiSink get() = host.ui
     val hooks: PlatformHooks get() = host.hooks

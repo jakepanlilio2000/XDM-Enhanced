@@ -10,6 +10,7 @@ Welcome to the internal technical documentation directory of **XDM Enhanced**. T
 | :--- | :---: | :--- |
 | [**Skin Development Specification**](SKIN_DEVELOPMENT.md) | Theming | Complete JSON schema, UI component slots, FlatLaf color keys, wallpaper scaling rules, and `.xdmskin` packaging instructions. |
 | [**Plugin Development Specification**](PLUGIN_DEVELOPMENT.md) | Extensibility | Decoupled Java SPI architecture, lifecycle states, manifest schema, event bus contracts, and isolated ClassLoader architecture. |
+| [**Storage & Migration Specification**](STORAGE_AND_MIGRATION.md) | Storage | Profile layout, binary tag schemas, atomic transactions, forward/backward compatibility, safe migrations, and credential protection. |
 | [**Browser Connection Troubleshooting**](BROWSER_CONNECTION_TROUBLESHOOTING.md) | Diagnostics | Step-by-step resolution for native messaging disconnects, loopback port 8597 bindings, firewall permissions, and manifest verification. |
 | [**Architectural Rationale**](why-a-download-manager.md) | Architecture | Detailed breakdown of multi-connection dynamic segmentation, disk assembly, and stream capture vs. standard browser downloads. |
 

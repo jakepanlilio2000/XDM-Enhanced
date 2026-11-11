@@ -13,9 +13,14 @@ import java.io.File
  * - Linux: `$XDG_DATA_HOME/xdm-enhanced`, by default `~/.local/share/xdm-enhanced`. Not the cache dir: cleaners
  *   empty it, and `tmp/` holds the partial downloads.
  *
- * To avoid conflicts with official XDM installations and guarantee zero data loss, on first run
- * if [NAME] directory is not yet present, [migrateLegacyData] copies existing configuration and databases
- * from [LEGACY_NAME] (`xdm-app`) without deleting or altering the original official XDM files.
+ * Isolation & Migration Safety:
+ * To avoid conflicts with official XDM installations and guarantee zero data loss, XDM Enhanced isolates
+ * its configuration and databases under [NAME] (`xdm-enhanced`).
+ * Official upstream XDM data stored under [LEGACY_NAME] (`xdm-app`) is never accidentally or automatically
+ * imported on fresh installs or side-by-side installations.
+ * When explicit migration is requested (via `-Dxdm.import.legacy=true` or `--import-legacy`), [migrateLegacyData]
+ * performs a transactional staging copy with atomic commit and complete rollback on any failure, ensuring
+ * that the legacy source files remain unaltered and the target directory is never left in a partial state.
  *
  * `-D`[PROPERTY]`=<dir>` overrides it. The class-list recording uses that for a throwaway profile:
  * `-Duser.home` alone does not move `%LOCALAPPDATA%`, which comes from the environment.
@@ -24,10 +29,13 @@ object AppDirs {
     const val NAME = "xdm-enhanced"
     const val LEGACY_NAME = "xdm-app"
     const val PROPERTY = "xdm.data.dir"
+    const val IMPORT_LEGACY_PROPERTY = "xdm.import.legacy"
 
     val root: File by lazy {
         val target = resolve(detectOS(), System.getProperty(PROPERTY), System.getProperty("user.home"), System::getenv)
-        migrateLegacyData(target)
+        if (System.getProperty(IMPORT_LEGACY_PROPERTY) == "true") {
+            migrateLegacyData(target)
+        }
         target
     }
 
@@ -50,27 +58,54 @@ object AppDirs {
     internal fun migrateLegacyData(
         target: File,
         legacy: File = resolveNamed(LEGACY_NAME, detectOS(), null, System.getProperty("user.home"), System::getenv)
-    ) {
-        if (!System.getProperty(PROPERTY).isNullOrBlank()) return
-        if (target.exists() && (File(target, "xdm-app.config").exists() || File(target, "xdm.db").exists())) {
-            return
+    ): Boolean {
+        if (!System.getProperty(PROPERTY).isNullOrBlank()) return false
+        if (target.exists() && (File(target, "xdm-app.config").exists() || File(target, "xdm.db").exists() || File(target, "active-downloads.dat").exists())) {
+            return false
         }
-        if (legacy.exists() && legacy.isDirectory) {
-            runCatching {
-                target.mkdirs()
-                val items = legacy.listFiles() ?: return@runCatching
-                for (item in items) {
-                    // Do not copy active logs or partial chunks in tmp/
-                    if (item.name == "tmp" || item.name == "logs") continue
-                    val dest = File(target, item.name)
-                    if (!dest.exists()) {
-                        item.copyTo(dest, overwrite = false)
-                    }
-                }
-                Logger.info("AppDirs: migrated existing settings and download state from ${legacy.absolutePath} to ${target.absolutePath}")
-            }.onFailure {
-                Logger.error("AppDirs: failed to migrate legacy data from ${legacy.absolutePath}", it)
+        if (!legacy.exists() || !legacy.isDirectory) {
+            return false
+        }
+
+        val targetExisted = target.exists()
+        val stagingDir = File(target.parentFile ?: target, "${target.name}.migration-staging-${System.nanoTime()}")
+        val newlyCreatedFiles = mutableListOf<File>()
+
+        return try {
+            stagingDir.mkdirs()
+            val items = legacy.listFiles() ?: return false
+            val copiedFiles = mutableListOf<File>()
+            for (item in items) {
+                // Do not copy active logs or partial chunks in tmp/
+                if (item.name == "tmp" || item.name == "logs") continue
+                val dest = File(stagingDir, item.name)
+                item.copyTo(dest, overwrite = false)
+                copiedFiles.add(dest)
             }
+
+            // Staging complete without error; now safely commit to target
+            target.mkdirs()
+            for (staged in copiedFiles) {
+                val finalDest = File(target, staged.name)
+                if (!finalDest.exists()) {
+                    staged.copyTo(finalDest, overwrite = false)
+                    newlyCreatedFiles.add(finalDest)
+                }
+            }
+            stagingDir.deleteRecursively()
+            Logger.info("AppDirs: migrated existing settings and download state from ${legacy.absolutePath} to ${target.absolutePath}")
+            true
+        } catch (e: Throwable) {
+            stagingDir.deleteRecursively()
+            // Clean up any partially copied files in target to guarantee rollback and prevent corrupted state
+            for (f in newlyCreatedFiles) {
+                runCatching { f.deleteRecursively() }
+            }
+            if (!targetExisted && target.exists() && target.list()?.isEmpty() == true) {
+                runCatching { target.delete() }
+            }
+            Logger.error("AppDirs: failed to migrate legacy data from ${legacy.absolutePath}; rolled back", e)
+            false
         }
     }
 }

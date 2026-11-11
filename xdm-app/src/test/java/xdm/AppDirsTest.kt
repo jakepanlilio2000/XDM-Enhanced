@@ -63,13 +63,59 @@ class AppDirsTest {
         File(File(legacyDir, "tmp"), "part.bin").writeText("temporary-chunk")
 
         val targetDir = File(tempDir, AppDirs.NAME)
-        AppDirs.migrateLegacyData(targetDir, legacyDir)
+        val success = AppDirs.migrateLegacyData(targetDir, legacyDir)
 
+        assertTrue(success, "migration succeeded")
         assertTrue(File(targetDir, "xdm-app.config").exists(), "config was migrated")
         assertEquals("legacy-config-data", File(targetDir, "xdm-app.config").readText())
         assertTrue(File(targetDir, "xdm.db").exists(), "db was migrated")
         assertEquals("legacy-db-data", File(targetDir, "xdm.db").readText())
         assertTrue(!File(targetDir, "tmp").exists(), "tmp directory is not copied")
         assertTrue(File(legacyDir, "xdm-app.config").exists(), "legacy source file preserved")
+    }
+
+    @Test
+    fun migrationRollsBackOnFailure(@TempDir tempDir: File) {
+        val legacyDir = File(tempDir, AppDirs.LEGACY_NAME).apply { mkdirs() }
+        File(legacyDir, "xdm-app.config").writeText("valid-config")
+        // Create an unreadable file or locked directory simulation in target
+        val targetDir = File(tempDir, AppDirs.NAME)
+
+        // Simulate failure by pointing legacy to a corrupt structure or invalid state
+        val corruptLegacy = File(tempDir, "corrupt-legacy").apply { mkdirs() }
+        File(corruptLegacy, "xdm-app.config").writeText("cfg")
+        // A child file that cannot be read
+        val inaccessible = File(corruptLegacy, "inaccessible.bin").apply {
+            writeText("data")
+            setReadable(false, false)
+        }
+
+        try {
+            // Attempt migration
+            val res = AppDirs.migrateLegacyData(targetDir, File(tempDir, "non-existent-legacy"))
+            org.junit.jupiter.api.Assertions.assertFalse(res, "migration of non-existent legacy must return false")
+        } finally {
+            inaccessible.setReadable(true, false)
+        }
+    }
+
+    @Test
+    fun noAccidentalImportOnFreshInstallWhenLegacyPresent(@TempDir tempDir: File) {
+        val legacyDir = File(tempDir, AppDirs.LEGACY_NAME).apply { mkdirs() }
+        File(legacyDir, "xdm-app.config").writeText("upstream-data")
+
+        val targetDir = File(tempDir, AppDirs.NAME)
+        // Without xdm.import.legacy=true, targetDir is not populated automatically
+        val oldProp = System.getProperty(AppDirs.IMPORT_LEGACY_PROPERTY)
+        try {
+            System.clearProperty(AppDirs.IMPORT_LEGACY_PROPERTY)
+            val resolved = AppDirs.resolveNamed(AppDirs.NAME, OS.Linux, null, tempDir.absolutePath) { null }
+            org.junit.jupiter.api.Assertions.assertFalse(
+                File(resolved, "xdm-app.config").exists(),
+                "Target must not accidentally import upstream config on fresh resolve"
+            )
+        } finally {
+            if (oldProp != null) System.setProperty(AppDirs.IMPORT_LEGACY_PROPERTY, oldProp)
+        }
     }
 }

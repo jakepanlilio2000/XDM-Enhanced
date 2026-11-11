@@ -95,7 +95,7 @@ object CategoryRules {
         fileName: String?,
         url: String?,
         pageUrl: String?,
-        categories: List<DownloadCategory> = EngineContext.config.categories,
+        categories: List<DownloadCategory> = if (EngineContext.isReady) EngineContext.config.categories else emptyList(),
         contentType: String? = null,
         contentDisposition: String? = null,
     ): DownloadCategory? {

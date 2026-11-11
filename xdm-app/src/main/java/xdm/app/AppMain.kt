@@ -52,6 +52,10 @@ object AppMain {
             exitProcess(HeadlessCli.run(args))
         }
 
+        if (args.contains("--import-legacy")) {
+            System.setProperty(AppDirs.IMPORT_LEGACY_PROPERTY, "true")
+        }
+
         val configDir = AppDirs.root.path
         val tempDir = "$configDir${File.separatorChar}tmp"
 
