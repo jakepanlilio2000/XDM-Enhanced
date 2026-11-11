@@ -136,6 +136,20 @@ object PluginManager {
                     }
                 } catch (e: Exception) {
                     Logger.error("Failed to load plugin manifest from ${dir.absolutePath}", e)
+                    val dummyManifest = PluginManifest(
+                        id = dir.name,
+                        name = dir.name,
+                        version = "unknown",
+                        entryPoint = ""
+                    )
+                    val loaded = LoadedPlugin(
+                        manifest = dummyManifest,
+                        pluginDir = dir,
+                        archiveFile = dir.listFiles { f -> f.name.endsWith(".jar") }?.firstOrNull(),
+                        status = PluginStatus.FAULTED,
+                        faultReason = "Failed to parse plugin.json: ${e.message}"
+                    )
+                    installedPlugins.add(loaded)
                 }
             }
         }

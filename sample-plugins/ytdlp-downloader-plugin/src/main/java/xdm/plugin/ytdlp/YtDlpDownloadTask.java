@@ -387,10 +387,20 @@ public class YtDlpDownloadTask implements PluginDownloadTask {
         listeners.remove(listener);
     }
 
-    private static String sanitizeUrl(String url) {
+    public static String sanitizeUrl(String url) {
         if (url == null) return "";
-        int q = url.indexOf('?');
-        return q > 0 ? url.substring(0, q) : url;
+        String sanitized = url;
+        try {
+            int atIndex = sanitized.indexOf('@');
+            int slashIndex = sanitized.indexOf("://");
+            if (slashIndex > 0 && atIndex > slashIndex + 3) {
+                String prefix = sanitized.substring(0, slashIndex + 3);
+                String rest = sanitized.substring(atIndex + 1);
+                sanitized = prefix + "***:***@" + rest;
+            }
+        } catch (Exception ignored) {}
+        int q = sanitized.indexOf('?');
+        return q > 0 ? sanitized.substring(0, q) : sanitized;
     }
 
     public static long parseBytes(String str) {

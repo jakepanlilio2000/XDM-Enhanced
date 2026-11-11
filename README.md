@@ -65,7 +65,7 @@ The original upstream documentation is preserved in [README.UPSTREAM.md](README.
 
 ### 5. Plugin Architecture & Developer SDK
 - **Decoupled Plugin SPI:** Extensible Java architecture (`xdm-plugin-api`) enabling third-party developers to integrate new download providers and capabilities without modifying core source code.
-- **Sandboxed Lifecycle Management:** Automatic plugin discovery, archive validation, quarantine by default, user-confirmed trust activation, and safe uninstallation.
+- **Isolated Lifecycle Management & Quarantine:** Automatic plugin discovery, archive validation, quarantine by default, user-confirmed trust activation, and safe uninstallation.
 - **Dedicated Plugins Dashboard:** In-app management interface under Settings > Plugins displaying capabilities, status badges, and custom configuration panels.
 - **Reference Implementations:** Checksum Verifier plugin and optional yt-dlp downloader integration demonstrating provider registration, progress reporting, and task cancellation.
 
