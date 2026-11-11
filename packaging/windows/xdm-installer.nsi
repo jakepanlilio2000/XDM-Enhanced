@@ -398,8 +398,8 @@ Section "Uninstall"
   MessageBox MB_YESNO|MB_ICONQUESTION \
     "Do you want to delete your personal settings and download history?$\r$\n$\r$\nNote: Your downloaded files will NEVER be deleted." \
     IDNO SkipDataPrompt
-      RMDir /r "$APPDATA\xdm-app"
-      RMDir /r "$PROFILE\.xdm"
+      RMDir /r "$LOCALAPPDATA\xdm-enhanced"
+      RMDir /r "$APPDATA\xdm-enhanced"
   SkipDataPrompt:
 
   ; Delete application files

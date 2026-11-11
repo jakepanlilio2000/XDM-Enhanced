@@ -100,10 +100,17 @@ object UpdateChecker {
 
         val (statusCode, body) = fetchReleasesWithStatus(url)
 
-        if (statusCode == 403) {
+        if (statusCode == 403 || statusCode == 429) {
             return UpdateCheckResult.Error(
-                message = "GitHub API rate limit exceeded. Please try again later or visit the releases page directly.",
+                message = "GitHub API rate limit exceeded (HTTP $statusCode). Please try again later or visit the releases page directly.",
                 isRateLimit = true
+            )
+        }
+
+        if (statusCode == 404) {
+            return UpdateCheckResult.Error(
+                message = "Release repository not found (HTTP 404).",
+                isNetworkError = false
             )
         }
 
