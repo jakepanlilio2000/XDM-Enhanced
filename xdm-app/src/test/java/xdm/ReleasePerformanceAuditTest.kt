@@ -54,6 +54,21 @@ class ReleasePerformanceAuditTest {
         SkinManager.restoreDefaults()
         PluginEventBus.clearAll()
         ClipboardMonitor.stop()
+        runCatching {
+            val disposeWindows = {
+                java.awt.Window.getWindows().forEach { w ->
+                    runCatching {
+                        w.isVisible = false
+                        w.dispose()
+                    }
+                }
+            }
+            if (javax.swing.SwingUtilities.isEventDispatchThread()) {
+                disposeWindows()
+            } else {
+                javax.swing.SwingUtilities.invokeAndWait(disposeWindows)
+            }
+        }
         if (::tempDir.isInitialized) {
             tempDir.deleteRecursively()
         }

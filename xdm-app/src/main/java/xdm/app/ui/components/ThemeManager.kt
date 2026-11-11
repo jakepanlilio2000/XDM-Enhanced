@@ -314,7 +314,11 @@ object ThemeManager {
         JOptionPane.getRootFrame().iconImages = windowIconImages
 
         // Update all component trees in every displayable Window
-        FlatLaf.updateUI()
+        runCatching {
+            FlatLaf.updateUI()
+        }.onFailure { e ->
+            Logger.error("ThemeManager", "Non-fatal error updating UI across windows: ${e.message}")
+        }
 
         // Notify custom components
         notifyListeners()
