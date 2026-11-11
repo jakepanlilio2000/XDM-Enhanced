@@ -39,6 +39,7 @@ import java.awt.GridBagConstraints
 import java.awt.GridBagLayout
 import java.awt.Insets
 import java.awt.Window
+import java.awt.event.KeyEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.io.File
@@ -56,6 +57,7 @@ import javax.swing.JScrollPane
 import javax.swing.JTabbedPane
 import javax.swing.JTable
 import javax.swing.JTextField
+import javax.swing.KeyStroke
 import javax.swing.ListSelectionModel
 import javax.swing.UIManager
 import javax.swing.table.AbstractTableModel
@@ -300,6 +302,11 @@ class PropertiesDialog(private val owner: Window?, ent: DbRecord) : JDialog(owne
         layout = BoxLayout(this, BoxLayout.X_AXIS)
         val btnClose = JButton(text("LBL_CLOSE")).apply { addActionListener { dispose() } }
         this@PropertiesDialog.rootPane.defaultButton = btnClose
+        this@PropertiesDialog.rootPane.registerKeyboardAction(
+            { dispose() },
+            KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
+            JComponent.WHEN_IN_FOCUSED_WINDOW
+        )
         // Only a finished single-URL HTTP download has one file to check against one published sum.
         val folder = details.folder
         if (ent.downloadType == DownloadType.Http && ent.status == RecordStatus.FINISHED && details.url != null && folder != null) {

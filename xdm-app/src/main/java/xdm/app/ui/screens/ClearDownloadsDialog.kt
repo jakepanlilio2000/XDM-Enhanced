@@ -13,6 +13,7 @@ import java.awt.Component
 import java.awt.Dimension
 import java.awt.FlowLayout
 import java.awt.Window
+import java.awt.event.KeyEvent
 import java.util.concurrent.TimeUnit
 import javax.swing.*
 
@@ -87,6 +88,11 @@ class ClearDownloadsDialog(owner: Window?) : JDialog(owner, text("CLR_TITLE"), M
         contentPane.add(content, BorderLayout.CENTER)
         contentPane.add(buttons, BorderLayout.SOUTH)
         getRootPane().defaultButton = btnClear
+        rootPane.registerKeyboardAction(
+            { dispose() },
+            KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
+            JComponent.WHEN_IN_FOCUSED_WINDOW
+        )
 
         listOf(chkFinished, chkPaused, chkFailed).forEach { it.addActionListener { updateCount() } }
         cmbAge.addActionListener { updateCount() }

@@ -141,6 +141,7 @@ class AppToolBar(
         val a = createMenuListener()
         val ctx = JPopupMenu()
         mSettings = addMenuItem("TITLE_SETTINGS", ctx, a)
+        addMenuItem("MSG_LANG1", ctx, a)
         mBatchImport = addMenuItem("MENU_BATCH_DOWNLOAD", ctx, a)
         addMenuItem("MENU_STREAM_DOWNLOAD", ctx, a)
         mUpdate = addMenuItem("MENU_UPDATE", ctx, a)
@@ -219,8 +220,8 @@ class AppToolBar(
                     AppMenuHandler.showStreamDialog(SwingUtilities.windowForComponent(toolbar))
                 }
 
-                "MENU_LANG" -> {
-
+                "MENU_LANG", "MSG_LANG1" -> {
+                    showLanguage()
                 }
 
                 "MENU_UPDATE" -> {
@@ -250,6 +251,19 @@ class AppToolBar(
                 loadConfig()
             }
         }
+    }
+
+    private fun showLanguage() {
+        val settings = SingleWindows.show(SettingsWindow::class) {
+            SettingsWindow().apply {
+                onSaved = settingsSavedCallback
+                setLocationRelativeTo(shownWindow(toolbar))
+                loadConfig()
+            }
+        }
+        settings.selectPage("MSG_LANG1")
+        settings.toFront()
+        settings.requestFocus()
     }
 
     val component: Component

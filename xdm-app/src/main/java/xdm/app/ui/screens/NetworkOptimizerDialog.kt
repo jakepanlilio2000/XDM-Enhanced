@@ -23,6 +23,7 @@ import java.awt.Font
 import java.awt.GridBagConstraints
 import java.awt.GridBagLayout
 import java.awt.Window
+import java.awt.event.KeyEvent
 import javax.swing.BorderFactory
 import javax.swing.Box
 import javax.swing.BoxLayout
@@ -34,6 +35,7 @@ import javax.swing.JDialog
 import javax.swing.JLabel
 import javax.swing.JPanel
 import javax.swing.JSpinner
+import javax.swing.KeyStroke
 import javax.swing.SpinnerNumberModel
 import javax.swing.UIManager
 
@@ -254,6 +256,12 @@ class NetworkOptimizerDialog(owner: Window?) : JDialog(owner) {
         root.add(btnBar, BorderLayout.SOUTH)
 
         contentPane.add(root)
+        rootPane.defaultButton = btnApply
+        rootPane.registerKeyboardAction(
+            { dispose() },
+            KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
+            JComponent.WHEN_IN_FOCUSED_WINDOW
+        )
 
         // Event listeners
         cmbProfile.addActionListener {

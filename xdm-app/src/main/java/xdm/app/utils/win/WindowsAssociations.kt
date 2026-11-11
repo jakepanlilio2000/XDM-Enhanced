@@ -196,7 +196,7 @@ object WindowsAssociations {
 
     /**
      * Opens Windows Default Apps settings so the user can review and configure system-level associations.
-     * Uses native Windows shell invocation for ms-settings:defaultapps directly, avoiding browser delegation.
+     * Tries Java Desktop browse, then native ShellExecuteEx via Win32Shell, before falling back to cmd.exe/control.exe.
      */
     fun openDefaultAppsSettings(): Boolean {
         if (!isWindows) {
@@ -210,6 +210,28 @@ object WindowsAssociations {
         }
         lastOpenTime = now
 
+        // 1. Try standard Java Desktop API first
+        val browseSuccess = runCatching {
+            if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
+                Desktop.getDesktop().browse(URI.create("ms-settings:defaultapps"))
+                Logger.info("WindowsAssociations: opened Windows Default Apps settings via Desktop.browse")
+                true
+            } else false
+        }.getOrDefault(false)
+
+        if (browseSuccess) return true
+
+        // 2. Try native Win32Shell execute with ShellExecuteExW
+        val win32Success = runCatching {
+            Win32Shell.execute("ms-settings:defaultapps")
+        }.getOrDefault(false)
+
+        if (win32Success) {
+            Logger.info("WindowsAssociations: opened Windows Default Apps settings via Win32Shell.execute")
+            return true
+        }
+
+        // 3. Fallback to cmd.exe /c start "" ms-settings:defaultapps
         return runCatching {
             // "start" requires an explicit empty title "" before the target URI when arguments are quoted
             val pb = ProcessBuilder("cmd.exe", "/c", "start", "", "ms-settings:defaultapps")
@@ -219,7 +241,7 @@ object WindowsAssociations {
             if (finished && proc.exitValue() != 0) {
                 throw IllegalStateException("cmd start ms-settings exited with code ${proc.exitValue()}")
             }
-            Logger.info("WindowsAssociations: opened Windows Default Apps settings via ms-settings:defaultapps")
+            Logger.info("WindowsAssociations: opened Windows Default Apps settings via cmd start fallback")
             true
         }.recoverCatching { err ->
             Logger.info("WindowsAssociations", "ms-settings:defaultapps failed, trying Control Panel fallback: ${err.message}")

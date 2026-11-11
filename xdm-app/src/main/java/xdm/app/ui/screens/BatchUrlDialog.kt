@@ -13,14 +13,17 @@ import xdm.app.utils.validateURL
 import java.awt.BorderLayout
 import java.awt.Dimension
 import java.awt.Window
+import java.awt.event.KeyEvent
 import javax.swing.Box
 import javax.swing.BoxLayout
 import javax.swing.JButton
+import javax.swing.JComponent
 import javax.swing.JDialog
 import javax.swing.JLabel
 import javax.swing.JPanel
 import javax.swing.JScrollPane
 import javax.swing.JTextArea
+import javax.swing.KeyStroke
 
 /**
  * First step of "Batch download" from the menu: the user types or pastes links, one per line. OK
@@ -51,6 +54,12 @@ class BatchUrlDialog(private val owner: Window?) : JDialog(owner) {
         val btnOk = JButton(text("BTN_OK")).apply { addActionListener { onOk() } }
         val btnCancel = JButton(text("ND_CANCEL")).apply { addActionListener { dispose() } }
         sameWidth(btnOk, btnCancel)
+        rootPane.defaultButton = btnOk
+        rootPane.registerKeyboardAction(
+            { dispose() },
+            KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
+            JComponent.WHEN_IN_FOCUSED_WINDOW
+        )
         return JPanel().apply {
             layout = BoxLayout(this, BoxLayout.X_AXIS)
             border = ScaledEmptyBorder(0, 10, 10, 10)
