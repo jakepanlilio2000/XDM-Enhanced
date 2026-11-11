@@ -265,4 +265,6 @@ $summary = foreach ($pkg in $packages) {
 
 $summary | Format-Table -AutoSize
 
-Write-Host "`nDistribution folder: $OutDir" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "Distribution folder: $OutDir" -ForegroundColor Cyan
+
