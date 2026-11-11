@@ -35,12 +35,11 @@ The extension self-diagnostics panel surfaces specific error codes to explain co
   ```
 - **Solution:** Terminate conflicting processes or reboot your computer.
 
-### `host_missing` (Windows Native Messaging Bridge)
-- **Cause:** The browser cannot locate the native messaging host manifest registered in the Windows registry, often caused by moving the XDM portable folder to another location.
-- **Solution:** Run **Repair Integration** inside the desktop application under Settings > Browser. This re-registers the absolute manifest paths in Windows registry:
-  - Chrome: `HKCU\Software\Google\Chrome\NativeMessagingHosts\xdm_bridge`
-  - Edge: `HKCU\Software\Microsoft\Edge\NativeMessagingHosts\xdm_bridge`
-  - Firefox: `HKCU\Software\Mozilla\NativeMessagingHosts\xdm_bridge`
+### `host_missing` / `host_not_installed` (Integration Host or Protocol Handler Missing)
+- **Cause:** The browser extension cannot reach the desktop integration service (HTTP 404) or the `xdm-app://` protocol handler is missing or points to a deleted/moved executable path after an upgrade.
+- **Registry Key Verification (Windows):**
+  - Protocol Handler: `HKCU\Software\Classes\xdm-app\shell\open\command`
+- **Solution:** Run **Repair Integration** inside the desktop application under Settings > Browser. This automatically validates the binary location and re-registers the `xdm-app://` protocol handler in the user registry (`HKCU\Software\Classes\xdm-app`).
 
 ### `permission_denied` / Firewall Block
 - **Cause:** Third-party firewall or antivirus software is blocking loopback socket communication on `127.0.0.1`.

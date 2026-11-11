@@ -35,13 +35,11 @@ Click **Diagnostics** inside the extension popup or error screen to inspect the 
   ```
 - **Resolution:** If another process owns port 8597, terminate the conflicting process or reboot your workstation.
 
-### `host_missing` (Native Messaging Bridge Missing)
-- **What it means:** The browser attempted to communicate via Native Messaging, but the Windows registry host entry pointing to `xdm_bridge` is invalid or points to an executable that was moved/deleted.
-- **Registry Key Verification:**
-  - **Google Chrome:** `HKCU\Software\Google\Chrome\NativeMessagingHosts\xdm_bridge`
-  - **Microsoft Edge:** `HKCU\Software\Microsoft\Edge\NativeMessagingHosts\xdm_bridge`
-  - **Mozilla Firefox:** `HKCU\Software\Mozilla\NativeMessagingHosts\xdm_bridge`
-- **Resolution:** Open desktop XDM Enhanced &rarr; **Settings > Browser** &rarr; click **Repair Integration**. This rewrites the JSON manifest with the current absolute paths on disk.
+### `host_missing` / `host_not_installed` (Integration Host or Protocol Handler Missing)
+- **What it means:** The browser extension attempted to connect to the desktop integration service or invoke the application launcher, but the endpoint returned HTTP 404 or the `xdm-app://` URL protocol handler is missing/points to a stale or moved executable path.
+- **Registry Key Verification (Windows):**
+  - Protocol Handler: `HKCU\Software\Classes\xdm-app\shell\open\command`
+- **Resolution:** Open desktop XDM Enhanced &rarr; **Settings > Browser** &rarr; click **Repair Integration**. This automatically re-registers the `xdm-app://` protocol handler with the verified executable path on disk.
 
 ### `permission_denied` / Firewall Block
 - **What it means:** Localhost loopback packets on `127.0.0.1` are being dropped by aggressive third-party firewall software.

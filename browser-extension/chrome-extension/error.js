@@ -38,6 +38,14 @@ window.onload = function () {
             noticeElem.className = "notice warn";
             statusElem.textContent = "Incompatible Desktop Version";
             detailElem.textContent = response.statusDetails || "XDM Enhanced desktop app is older than required.";
+        } else if (response.status === "host_missing") {
+            noticeElem.className = "notice warn";
+            statusElem.textContent = "Host Not Installed";
+            detailElem.textContent = response.statusDetails || "XDM Enhanced host endpoint or protocol handler could not be found.";
+        } else if (response.status === "launch_failure") {
+            noticeElem.className = "notice warn";
+            statusElem.textContent = "Launch Failed";
+            detailElem.textContent = response.statusDetails || "Could not launch desktop application via protocol handler.";
         } else {
             noticeElem.className = "notice warn";
             statusElem.textContent = "XDM Enhanced isn't running";
