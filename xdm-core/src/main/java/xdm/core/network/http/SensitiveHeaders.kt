@@ -14,7 +14,7 @@ import java.util.concurrent.ConcurrentHashMap
  * 401 and the user has to start the download again from the browser.
  */
 object SensitiveHeaders {
-    private val NAMES = setOf("authorization")
+    private val NAMES = setOf("authorization", "proxy-authorization")
 
     private val byId = ConcurrentHashMap<Long, HeaderMap>()
 

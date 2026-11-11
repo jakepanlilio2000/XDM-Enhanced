@@ -86,11 +86,30 @@ object Logger {
         }
     }
 
+    private val USER_INFO_REGEX = Regex("://([^:@\\s]+):([^@\\s]+)@")
+    private val AUTH_HEADER_REGEX = Regex("(?i)\\b(Authorization|Proxy-Authorization):\\s*(Bearer|Basic)\\s+[^\\s,\"]+")
+    private val COOKIE_HEADER_REGEX = Regex("(?i)\\bCookie:\\s*[^\\r\\n]+")
+
+    fun sanitizeLog(msg: String): String {
+        var s = msg
+        if (s.contains("://") && s.contains("@")) {
+            s = USER_INFO_REGEX.replace(s, "://$1:***@")
+        }
+        if (s.contains("Authorization", ignoreCase = true)) {
+            s = AUTH_HEADER_REGEX.replace(s, "$1: $2 [REDACTED]")
+        }
+        if (s.contains("Cookie:", ignoreCase = true)) {
+            s = COOKIE_HEADER_REGEX.replace(s, "Cookie: [REDACTED]")
+        }
+        return s
+    }
+
     private fun writeLine(line: String) {
+        val sanitized = sanitizeLog(line)
         fileStream?.let {
             it.print(timestamp)
             it.print(' ')
-            it.println(line)
+            it.println(sanitized)
         }
     }
 
@@ -100,14 +119,16 @@ object Logger {
     }
 
     fun info(tag: String, msg: String) {
-        val line = "[ $tag ] $msg"
+        val cleanMsg = sanitizeLog(msg)
+        val line = "[ $tag ] $cleanMsg"
         consoleOut.println(line)
         writeLine(line)
     }
 
     @JvmOverloads
     fun error(tag: String, msg: String, ex: Throwable? = null) {
-        val line = "[ $tag ] $msg"
+        val cleanMsg = sanitizeLog(msg)
+        val line = "[ $tag ] $cleanMsg"
         consoleErr.println(line)
         ex?.printStackTrace(consoleErr)
         writeLine(line)
@@ -119,17 +140,19 @@ object Logger {
         if (obj is Throwable) {
             consoleErr.print("[ $thread ] ")
             obj.printStackTrace(consoleErr)
-            writeLine("[ $thread ] ${obj.message}")
+            writeLine("[ $thread ] ${obj.message ?: obj.javaClass.simpleName}")
             writeThrowable(obj)
         } else {
-            val line = "[ $thread ] $obj"
+            val cleanObj = if (obj is String) sanitizeLog(obj) else obj.toString()
+            val line = "[ $thread ] $cleanObj"
             consoleOut.println(line)
             writeLine(line)
         }
     }
 
     fun error(msg: String) {
-        val line = "[ " + Thread.currentThread().name + " ] " + msg
+        val cleanMsg = sanitizeLog(msg)
+        val line = "[ " + Thread.currentThread().name + " ] " + cleanMsg
         consoleErr.println(line)
         writeLine(line)
     }
@@ -138,12 +161,13 @@ object Logger {
         val prefix = "[ " + Thread.currentThread().name + " ] "
         consoleErr.print(prefix)
         t.printStackTrace(consoleErr)
-        writeLine(prefix + t.message)
+        writeLine(prefix + (t.message ?: t.javaClass.simpleName))
         writeThrowable(t)
     }
 
     fun error(msg: String?, t: Throwable?) {
-        val line = "[ " + Thread.currentThread().name + " ] " + msg
+        val cleanMsg = if (msg != null) sanitizeLog(msg) else ""
+        val line = "[ " + Thread.currentThread().name + " ] " + cleanMsg
         consoleErr.println(line)
         consoleErr.print("[ " + Thread.currentThread().name + " ] ")
         t?.printStackTrace(consoleErr)

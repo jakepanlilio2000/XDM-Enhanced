@@ -288,8 +288,8 @@ object PluginManager {
                 val entries = zip.entries()
                 while (entries.hasMoreElements()) {
                     val entry = entries.nextElement()
-                    val destFile = File(targetDir, entry.name)
-                    if (!destFile.canonicalPath.startsWith(targetDir.canonicalPath)) {
+                    val destFile = File(targetDir, entry.name).canonicalFile
+                    if (!destFile.toPath().startsWith(targetDir.canonicalFile.toPath())) {
                         throw SecurityException("Zip Slip attack detected in archive entry: ${entry.name}")
                     }
                     if (entry.isDirectory) {
