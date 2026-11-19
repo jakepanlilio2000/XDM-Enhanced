@@ -8,6 +8,7 @@ import org.libtorrent4j.alerts.Alert
 import org.libtorrent4j.alerts.AlertType
 import org.libtorrent4j.alerts.FastresumeRejectedAlert
 import org.libtorrent4j.alerts.FileErrorAlert
+import org.libtorrent4j.alerts.HashFailedAlert
 import org.libtorrent4j.alerts.MetadataReceivedAlert
 import org.libtorrent4j.alerts.PieceFinishedAlert
 import org.libtorrent4j.alerts.SaveResumeDataAlert
@@ -390,7 +391,8 @@ class TorrentDownloadManager(
                 AlertType.METADATA_RECEIVED.swig(),
                 AlertType.SAVE_RESUME_DATA.swig(),
                 AlertType.SAVE_RESUME_DATA_FAILED.swig(),
-                AlertType.FASTRESUME_REJECTED.swig()
+                AlertType.FASTRESUME_REJECTED.swig(),
+                AlertType.HASH_FAILED.swig()
             )
         }
 
@@ -421,6 +423,16 @@ class TorrentDownloadManager(
                             val hash = handle.infoHash().toHex().lowercase()
                             val task = tasksByInfoHash[hash]
                             task?.onPieceFinished(alert.pieceIndex())
+                        }
+                    } catch (_: Throwable) {}
+                }
+                is HashFailedAlert -> {
+                    try {
+                        val handle = alert.handle()
+                        if (handle != null && handle.isValid) {
+                            val hash = handle.infoHash().toHex().lowercase()
+                            val task = tasksByInfoHash[hash] ?: tasksById.values.find { it.infoHash == hash }
+                            task?.onHashFailed(alert.pieceIndex())
                         }
                     } catch (_: Throwable) {}
                 }

@@ -78,6 +78,9 @@ class TorrentDownloadTask(
     var seedingRule: SeedingRule = SeedingRule()
 
     var forceRecheckOnStart: Boolean = false
+    private val failedPiecesCount = java.util.concurrent.atomic.AtomicInteger(0)
+
+    fun getFailedPieces(): Int = failedPiecesCount.get()
 
     val isPrivate: Boolean
         get() = parsedInfo?.isPrivate() ?: false
@@ -934,7 +937,8 @@ class TorrentDownloadTask(
                 verifiedPieces = if (isCompleted) numPieces else 0,
                 totalPieces = numPieces,
                 etaSeconds = 0L,
-                errorMessage = lastError.get()
+                errorMessage = lastError.get(),
+                failedPieces = failedPiecesCount.get()
             )
         }
         val totalDone = st.totalDone()
@@ -1056,7 +1060,8 @@ class TorrentDownloadTask(
             seedingDurationSeconds = seedSecs,
             queuePosition = queuePos,
             isPrivate = isPrivate,
-            checkingProgressPercent = checkingPrg
+            checkingProgressPercent = checkingPrg,
+            failedPieces = failedPiecesCount.get()
         )
         listeners.forEach { it.onProgress(this, snapshot) }
         return snapshot
@@ -1097,6 +1102,11 @@ class TorrentDownloadTask(
         val verifiedCount = try { handle?.status()?.verifiedPieces()?.count() ?: 0 } catch (_: Throwable) { 0 }
         val totalPieces = parsedInfo?.numPieces() ?: 0
         listeners.forEach { it.onPieceFinished(this, pieceIndex, verifiedCount, totalPieces) }
+    }
+
+    internal fun onHashFailed(pieceIndex: Int) {
+        failedPiecesCount.incrementAndGet()
+        listeners.forEach { it.onHashFailed(this, pieceIndex) }
     }
 
     internal fun onCompleted(finalSize: Long) {

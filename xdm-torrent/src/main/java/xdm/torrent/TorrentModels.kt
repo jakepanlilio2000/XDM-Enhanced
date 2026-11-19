@@ -241,7 +241,8 @@ data class TorrentProgressSnapshot(
     val seedingDurationSeconds: Long = 0L,
     val queuePosition: Int = -1,
     val isPrivate: Boolean = false,
-    val checkingProgressPercent: Int = 0
+    val checkingProgressPercent: Int = 0,
+    val failedPieces: Int = 0
 )
 
 /**
@@ -251,6 +252,7 @@ interface TorrentTaskListener {
     fun onStateChanged(task: TorrentDownloadTask, oldState: TorrentTaskState, newState: TorrentTaskState) {}
     fun onProgress(task: TorrentDownloadTask, snapshot: TorrentProgressSnapshot) {}
     fun onPieceFinished(task: TorrentDownloadTask, pieceIndex: Int, verifiedCount: Int, totalPieces: Int) {}
+    fun onHashFailed(task: TorrentDownloadTask, pieceIndex: Int) {}
     fun onFinished(task: TorrentDownloadTask) {}
     fun onError(task: TorrentDownloadTask, message: String, error: DownloadError?) {}
     fun onMetadataReceived(task: TorrentDownloadTask, metadata: TorrentMetadata) {}
