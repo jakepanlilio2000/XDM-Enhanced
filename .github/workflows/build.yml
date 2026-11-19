@@ -7,6 +7,15 @@ on:
     branches: [ "master" ]
   workflow_dispatch:
 
+# Least-privilege permissions by default
+permissions:
+  contents: read
+
+# Cancel redundant in-progress CI runs for the same branch or PR ref
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   MAVEN_OPTS: >-
     -Dhttp.keepAlive=false

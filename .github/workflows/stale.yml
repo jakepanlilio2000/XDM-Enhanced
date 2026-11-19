@@ -43,7 +43,7 @@ jobs:
               ].join(' '),
               [
                 "Good news: the latest version of XDM fixes the bulk of previously reported issues.",
-                "When you get a chance, please give the [latest release](https://github.com/subhra74/xdm/releases/latest) a try.",
+                "When you get a chance, please give the [latest release](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/latest) a try.",
                 "If the problem still persists, we'd love to hear from you, so please open a new issue with the details",
                 "and we'll be happy to take a fresh look. Thanks again for your patience and support! 💙",
               ].join(' '),
@@ -145,4 +145,4 @@ jobs:
           close-issue-message: |
             Hi there! 👋 Thank you so much for taking the time to report this, it really helps make XDM better. Since there hasn't been any activity for a while, we're closing this issue to keep the tracker tidy.
 
-            Good news: the latest version of XDM fixes the bulk of previously reported issues. When you get a chance, please give the [latest release](https://github.com/subhra74/xdm/releases/latest) a try. If the problem still persists, we'd love to hear from you, so please open a new issue with the details and we'll be happy to take a fresh look. Thanks again for your patience and support! 💙
+            Good news: the latest version of XDM fixes the bulk of previously reported issues. When you get a chance, please give the [latest release](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/latest) a try. If the problem still persists, we'd love to hear from you, so please open a new issue with the details and we'll be happy to take a fresh look. Thanks again for your patience and support! 💙

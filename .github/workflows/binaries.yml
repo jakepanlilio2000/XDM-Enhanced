@@ -106,6 +106,20 @@ jobs:
           path: xdm-app/target/xdm-app.jar
           if-no-files-found: error
 
+      - name: Stage Universal JARs for Release
+        run: |
+          mkdir -p build/dist/jars
+          version="$(sed -n 's/.*"currentVersion"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' \
+            xdm-app/src/main/resources/app-version.json | head -1)"
+          cp "xdm-app/target/xdm-app-$version.jar" "build/dist/jars/xdm-app-$version.jar" 2>/dev/null || cp xdm-app/target/xdm-app.jar "build/dist/jars/xdm-app-$version.jar"
+          cp "xdm-plugin-api/target/xdm-plugin-api-$version.jar" "build/dist/jars/xdm-plugin-api-$version.jar" 2>/dev/null || true
+
+      - uses: actions/upload-artifact@v7
+        with:
+          path: build/dist/jars/*.jar
+          archive: false
+          if-no-files-found: warn
+
   macos:
     needs: jar
     strategy:
@@ -222,7 +236,7 @@ jobs:
         run: |
           powershell -NoProfile -ExecutionPolicy Bypass -File browser-extension\package-extensions.ps1
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          Get-ChildItem build\dist\extensions\*.zip | ForEach-Object {
+          Get-ChildItem build\dist\extensions\* -Include *.zip,*.xpi | ForEach-Object {
             Copy-Item $_.FullName "build\dist\windows-x64\$($_.Name)" -Force
             Copy-Item $_.FullName "build\dist\windows-x64\$($_.Name).bin" -Force
           }
@@ -262,6 +276,13 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           path: build/dist/windows-x64/*Extension-Firefox*.zip.bin
+          archive: false
+          if-no-files-found: error
+
+      - if: matrix.arch == 'x64' && env.SIGNPATH_SIGNING_POLICY == 'unsigned'
+        uses: actions/upload-artifact@v7
+        with:
+          path: build/dist/windows-x64/*Extension-Firefox*.xpi.bin
           archive: false
           if-no-files-found: error
 
@@ -357,7 +378,8 @@ jobs:
     needs: [ jar, macos, windows, linux ]
     if: >-
       always() && needs.jar.result == 'success' && !cancelled() &&
-      (github.event_name == 'push' || inputs.release != false)
+      ((github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) ||
+       (github.event_name == 'workflow_dispatch' && inputs.release == true))
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -374,10 +396,10 @@ jobs:
 
       # XDM 8 from the Microsoft Store looks for xdmsetup-<v>.msi in the release for its update notice, so the x64 MSI
       # also goes up under that name (after signing: a byte copy, the signature stays valid).
-      - name: Copy x64 MSI for XDM 8 Store update notice and restore zip files
+      - name: Copy x64 MSI for XDM 8 Store update notice and restore zip/extension files
         run: |
           shopt -s nullglob
-          for f in dist/*.zip.bin; do
+          for f in dist/*.bin; do
             mv "$f" "${f%.bin}"
           done
           msi=(dist/xdm-*-x64.msi)
@@ -385,6 +407,8 @@ jobs:
             v="${msi[0]##*/xdm-}"; v="${v%-x64.msi}"
             cp "${msi[0]}" "dist/xdmsetup-$v.msi"
           fi
+          # Ensure verified sample plugins and skins from repo are included in dist
+          cp sample-plugins/*.xdmplugin sample-skins/*.xdmskin dist/ 2>/dev/null || true
 
       - name: Publish release
         env:
@@ -410,7 +434,16 @@ jobs:
             fi
           fi
           shopt -s nullglob
-          files=(dist/*.dmg dist/*.msi dist/*.exe dist/*.zip dist/*.deb dist/*.rpm dist/*.pkg.tar.zst dist/*.tar.gz)
+          echo "Generating SHA256SUMS.txt for release assets..."
+          (
+            cd dist
+            rm -f SHA256SUMS.txt
+            sha256sum *.dmg *.msi *.exe *.zip *.xpi *.deb *.rpm *.pkg.tar.zst *.tar.gz *.xdmplugin *.xdmskin *.jar > SHA256SUMS.txt 2>/dev/null || true
+          )
+          if [ -f dist/SHA256SUMS.txt ]; then
+            cat dist/SHA256SUMS.txt
+          fi
+          files=(dist/*.dmg dist/*.msi dist/*.exe dist/*.zip dist/*.xpi dist/*.deb dist/*.rpm dist/*.pkg.tar.zst dist/*.tar.gz dist/*.xdmplugin dist/*.xdmskin dist/*.jar dist/SHA256SUMS.txt)
           ls -la "${files[@]}" || true
           # Download table: one row per installer actually built (a failed macOS job just has no rows).
           base="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/download/$tag"
@@ -425,7 +458,8 @@ jobs:
               case "$name" in
                 *Setup*.exe)              note="Windows x64 NSIS Setup Installer (Recommended)" ;;
                 *Extension-Chromium*.zip) note="Chromium Browser Extension (Chrome, Edge, Brave, Opera, Vivaldi)" ;;
-                *Extension-Firefox*.zip)  note="Firefox Browser Extension (Firefox, Floorp, LibreWolf)" ;;
+                *Extension-Firefox*.xpi)  note="Firefox Browser Extension Add-on (Firefox, Floorp, LibreWolf)" ;;
+                *Extension-Firefox*.zip)  note="Firefox Browser Extension Source/Zip (Firefox, Floorp, LibreWolf)" ;;
                 *windows*.zip)            note="Windows $cpu Portable (Standalone directory, no install)" ;;
                 xdmsetup-*.msi)           note="Same as the x64 MSI; for legacy XDM 8 update notices" ;;
                 *.msi)                    note="Windows $cpu MSI Installer" ;;
@@ -434,6 +468,11 @@ jobs:
                 *.rpm)                    note="For Fedora / RHEL / openSUSE $cpu" ;;
                 *.pkg.tar.zst)            note="For Arch Linux / Manjaro $cpu" ;;
                 *.tar.gz)                 note="For any Linux $cpu (portable, no install)" ;;
+                xdm-app-*.jar)            note="Universal Java Application Standalone JAR (requires Java 25+)" ;;
+                xdm-plugin-api-*.jar)     note="XDM Plugin Developer API JAR" ;;
+                *.xdmplugin)              note="Verified XDM Plugin package" ;;
+                *.xdmskin)                note="Verified XDM Custom Skin package" ;;
+                SHA256SUMS.txt)           note="Cryptographic SHA-256 Checksums for all release assets" ;;
                 *)                        note="" ;;
               esac
               echo "| [$name]($base/$name) | $note |"
@@ -456,9 +495,13 @@ jobs:
             { cat downloads.md; [[ -z "$changelog" ]] || printf "\n## What's Changed\n\n%s\n" "$changelog"; } > notes.md
           fi
           
-          # A release drafted on the GitHub web page pushes its tag and already exists: attach the files and
-          # put the table above the notes written there (replacing a table from an earlier run).
+          # Protect established releases: if release exists, verify it is a draft before deleting/updating assets
           if gh release view "$tag" >/dev/null 2>&1; then
+            is_draft="$(gh release view "$tag" --json isDraft -q '.isDraft' 2>/dev/null || echo "false")"
+            if [ "$is_draft" = "false" ]; then
+              echo "ERROR: Release $tag already exists and is published (not a draft). Releases are immutable to protect prior releases." >&2
+              exit 1
+            fi
             for asset in $(gh release view "$tag" --json assets -q '.assets[].name' 2>/dev/null || true); do
               [ -n "$asset" ] && gh release delete-asset "$tag" "$asset" -y >/dev/null 2>&1 || true
             done
