@@ -158,17 +158,10 @@ class TestTransmuxer {
 
         private fun int32(v: Int) = byteArrayOf((v shr 24).toByte(), (v shr 16).toByte(), (v shr 8).toByte(), v.toByte())
 
-        private fun which(cmd: String): String? {
-            val path = System.getenv("PATH") ?: return null
-            for (dir in path.split(File.pathSeparator)) {
-                val f = File(dir, cmd)
-                if (f.canExecute()) return f.absolutePath
-            }
-            return null
-        }
+        private fun which(cmd: String): String? = StreamingE2EBase.which(cmd)
 
         private fun run(vararg cmd: String) {
-            val p = ProcessBuilder(*cmd).redirectErrorStream(true).start()
+            val p = ProcessBuilder(*cmd).directory(workDir).redirectErrorStream(true).start()
             p.inputStream.readBytes()
             check(p.waitFor() == 0) { "command failed: ${cmd.joinToString(" ")}" }
         }
@@ -176,7 +169,7 @@ class TestTransmuxer {
         /** Like [run] but tolerates failure (e.g. a missing encoder), leaving the fixture absent. */
         private fun runSoft(vararg cmd: String) {
             try {
-                val p = ProcessBuilder(*cmd).redirectErrorStream(true).start()
+                val p = ProcessBuilder(*cmd).directory(workDir).redirectErrorStream(true).start()
                 p.inputStream.readBytes()
                 p.waitFor()
             } catch (_: Exception) { /* fixture simply won't exist */ }

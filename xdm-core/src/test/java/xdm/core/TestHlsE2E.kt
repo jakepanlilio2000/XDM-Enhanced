@@ -64,7 +64,8 @@ maxPiece = 0, authInfo = null,
     /** Generate a muxed H.264+AAC TS rendition (index.m3u8 + seg*.ts) into [caseName]/. */
     private fun genMuxedTs(caseName: String, dur: Int = 3, vararg extra: String) {
         val d = caseDir(caseName)
-        ffmpeg(
+        ffmpegIn(
+            d,
             "-f", "lavfi", "-i", "testsrc=size=320x240:rate=25",
             "-f", "lavfi", "-i", "sine=frequency=440:sample_rate=44100",
             "-t", "$dur", "-c:v", "libx264", "-profile:v", "baseline", "-pix_fmt", "yuv420p", "-g", "25",
@@ -134,7 +135,8 @@ maxPiece = 0, authInfo = null,
     @Test fun h2_masterAbrPicksVariant() {
         requireFfmpeg()
         val d = caseDir("h2")
-        ffmpeg(
+        ffmpegIn(
+            d,
             "-f", "lavfi", "-i", "testsrc=size=320x240:rate=25",
             "-f", "lavfi", "-i", "sine=frequency=440:sample_rate=44100", "-t", "2",
             "-filter_complex", "[0:v]split=2[v1][v2];[v1]scale=320:240,format=yuv420p[a];[v2]scale=160:120,format=yuv420p[b]",
@@ -155,7 +157,8 @@ maxPiece = 0, authInfo = null,
     @Test fun h3_alternateAudio() {
         requireFfmpeg()
         val d = caseDir("h3")
-        ffmpeg(
+        ffmpegIn(
+            d,
             "-f", "lavfi", "-i", "testsrc=size=320x240:rate=25",
             "-f", "lavfi", "-i", "sine=frequency=440:sample_rate=44100", "-t", "2",
             "-map", "0:v", "-map", "1:a", "-c:v", "libx264", "-profile:v", "baseline", "-pix_fmt", "yuv420p",
@@ -175,7 +178,8 @@ maxPiece = 0, authInfo = null,
     @Test fun h4_fragmentedMp4() {
         requireFfmpeg()
         val d = caseDir("h4")
-        ffmpeg(
+        ffmpegIn(
+            d,
             "-f", "lavfi", "-i", "testsrc=size=320x240:rate=25",
             "-f", "lavfi", "-i", "sine=frequency=440:sample_rate=44100", "-t", "3",
             "-c:v", "libx264", "-profile:v", "main", "-pix_fmt", "yuv420p", "-g", "25",
@@ -192,7 +196,8 @@ maxPiece = 0, authInfo = null,
     @Test fun h5_singleFileByteRange() {
         requireFfmpeg()
         val d = caseDir("h5")
-        ffmpeg(
+        ffmpegIn(
+            d,
             "-f", "lavfi", "-i", "testsrc=size=320x240:rate=25",
             "-f", "lavfi", "-i", "sine=frequency=440:sample_rate=44100", "-t", "3",
             "-c:v", "libx264", "-profile:v", "baseline", "-pix_fmt", "yuv420p", "-g", "25",
@@ -211,7 +216,8 @@ maxPiece = 0, authInfo = null,
     @Test fun h5b_singleFileDownloadsAsPlainHttp() {
         requireFfmpeg()
         val d = caseDir("h5b")
-        ffmpeg(
+        ffmpegIn(
+            d,
             "-f", "lavfi", "-i", "testsrc=size=320x240:rate=25",
             "-f", "lavfi", "-i", "sine=frequency=440:sample_rate=44100", "-t", "3",
             "-c:v", "libx264", "-profile:v", "baseline", "-pix_fmt", "yuv420p", "-g", "25",
@@ -280,7 +286,8 @@ maxPiece = 0, authInfo = null,
     ): String {
         val d = caseDir(caseName)
         // Plain source segments (video-only keeps decryption round-trip assertions simple).
-        ffmpeg(
+        ffmpegIn(
+            d,
             "-f", "lavfi", "-i", "testsrc=size=320x240:rate=25", "-t", "3", "-an",
             "-c:v", "libx264", "-profile:v", "baseline", "-pix_fmt", "yuv420p", "-g", "25",
             "-f", "hls", "-hls_time", "1", "-hls_segment_type", "mpegts", "-hls_list_size", "0",
@@ -342,7 +349,8 @@ maxPiece = 0, authInfo = null,
         requireFfmpeg()
         val d = caseDir("h10")
         // Two independently-encoded clips; each restarts its TS timeline at ~0.
-        ffmpeg(
+        ffmpegIn(
+            d,
             "-f", "lavfi", "-i", "testsrc=size=320x240:rate=25",
             "-f", "lavfi", "-i", "sine=frequency=440:sample_rate=44100", "-t", "2",
             "-c:v", "libx264", "-profile:v", "baseline", "-pix_fmt", "yuv420p", "-g", "25",
@@ -350,7 +358,8 @@ maxPiece = 0, authInfo = null,
             "-f", "hls", "-hls_time", "1", "-hls_segment_type", "mpegts", "-hls_list_size", "0",
             "-hls_segment_filename", File(d, "a%d.ts").path, File(d, "a.m3u8").path
         )
-        ffmpeg(
+        ffmpegIn(
+            d,
             "-f", "lavfi", "-i", "testsrc=size=320x240:rate=25",
             "-f", "lavfi", "-i", "sine=frequency=660:sample_rate=44100", "-t", "2",
             "-c:v", "libx264", "-profile:v", "baseline", "-pix_fmt", "yuv420p", "-g", "25",
@@ -374,7 +383,8 @@ maxPiece = 0, authInfo = null,
         requireFfmpeg()
         Assumptions.assumeTrue(hasEncoder("libx265"), "libx265 not available")
         val d = caseDir("h11")
-        ffmpeg(
+        ffmpegIn(
+            d,
             "-f", "lavfi", "-i", "testsrc=size=320x240:rate=25",
             "-f", "lavfi", "-i", "sine=frequency=440:sample_rate=44100", "-t", "2",
             "-c:v", "libx265", "-tag:v", "hvc1", "-pix_fmt", "yuv420p", "-g", "25",
@@ -394,7 +404,8 @@ maxPiece = 0, authInfo = null,
         requireFfmpeg()
         Assumptions.assumeTrue(hasEncoder("ac3"), "ac3 encoder not available")
         val d = caseDir("h12")
-        ffmpeg(
+        ffmpegIn(
+            d,
             "-f", "lavfi", "-i", "testsrc=size=320x240:rate=25",
             "-f", "lavfi", "-i", "sine=frequency=440:sample_rate=48000", "-t", "2",
             "-c:v", "libx264", "-profile:v", "baseline", "-pix_fmt", "yuv420p", "-g", "25",
@@ -410,7 +421,8 @@ maxPiece = 0, authInfo = null,
     @Test fun h13_audioOnly() {
         requireFfmpeg()
         val d = caseDir("h13")
-        ffmpeg(
+        ffmpegIn(
+            d,
             "-f", "lavfi", "-i", "sine=frequency=440:sample_rate=44100", "-t", "3", "-vn",
             "-c:a", "aac", "-ar", "44100", "-ac", "2",
             "-f", "hls", "-hls_time", "1", "-hls_segment_type", "mpegts", "-hls_list_size", "0",

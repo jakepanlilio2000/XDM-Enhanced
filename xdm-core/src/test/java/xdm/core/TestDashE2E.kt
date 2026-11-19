@@ -53,12 +53,13 @@ maxPiece = 0, authInfo = null,
     /** Generate a standard H.264+AAC DASH package into [caseName]/ with the given addressing opts. */
     private fun genDash(caseName: String, vararg dashOpts: String) {
         val d = caseDir(caseName)
-        ffmpeg(
+        ffmpegIn(
+            d,
             "-f", "lavfi", "-i", "testsrc=size=320x240:rate=25",
             "-f", "lavfi", "-i", "sine=frequency=440:sample_rate=44100", "-t", "3",
             "-map", "0:v", "-map", "1:a", "-c:v", "libx264", "-profile:v", "main", "-pix_fmt", "yuv420p",
             "-g", "25", "-c:a", "aac", "-ar", "44100", "-ac", "2",
-            "-f", "dash", "-seg_duration", "1", *dashOpts, File(d, "manifest.mpd").path
+            "-f", "dash", "-seg_duration", "1", *dashOpts, "manifest.mpd"
         )
     }
 
@@ -106,7 +107,8 @@ maxPiece = 0, authInfo = null,
     @Test fun d6_multiRepresentationAbr() {
         requireFfmpeg()
         val d = caseDir("d6")
-        ffmpeg(
+        ffmpegIn(
+            d,
             "-f", "lavfi", "-i", "testsrc=size=320x240:rate=25",
             "-f", "lavfi", "-i", "sine=frequency=440:sample_rate=44100", "-t", "3",
             "-filter_complex", "[0:v]split=2[hi][lo];[hi]scale=320:240,format=yuv420p[a];[lo]scale=160:120,format=yuv420p[b]",
@@ -114,7 +116,7 @@ maxPiece = 0, authInfo = null,
             "-c:v", "libx264", "-profile:v", "main", "-g", "25", "-c:a", "aac", "-ar", "44100",
             "-adaptation_sets", "id=0,streams=0,1 id=1,streams=2",
             "-f", "dash", "-seg_duration", "1", "-use_template", "1", "-use_timeline", "0",
-            File(d, "manifest.mpd").path
+            "manifest.mpd"
         )
         val h = runDash("d6", "d6/manifest.mpd")
         verifyOutput(h, expectVideo = true, expectAudio = true, minDuration = 2.0)
@@ -161,13 +163,14 @@ maxPiece = 0, authInfo = null,
         requireFfmpeg()
         Assumptions.assumeTrue(hasEncoder("libx265"), "libx265 not available")
         val d = caseDir("d9")
-        ffmpeg(
+        ffmpegIn(
+            d,
             "-f", "lavfi", "-i", "testsrc=size=320x240:rate=25",
             "-f", "lavfi", "-i", "sine=frequency=440:sample_rate=44100", "-t", "2",
             "-map", "0:v", "-map", "1:a", "-c:v", "libx265", "-tag:v", "hvc1", "-pix_fmt", "yuv420p",
             "-g", "25", "-c:a", "aac", "-ar", "44100", "-ac", "2",
             "-f", "dash", "-seg_duration", "1", "-use_template", "1", "-use_timeline", "0",
-            File(d, "manifest.mpd").path
+            "manifest.mpd"
         )
         val h = runDash("d9", "d9/manifest.mpd")
         verifyOutput(h, expectVideo = true, expectAudio = true, minDuration = 1.0)
@@ -178,13 +181,14 @@ maxPiece = 0, authInfo = null,
         requireFfmpeg()
         Assumptions.assumeTrue(hasEncoder("libvpx-vp9") && hasEncoder("libopus"), "vp9/opus not available")
         val d = caseDir("d10")
-        val ok = ffmpegSoft(
+        val ok = ffmpegSoftIn(
+            d,
             "-f", "lavfi", "-i", "testsrc=size=320x240:rate=25",
             "-f", "lavfi", "-i", "sine=frequency=440:sample_rate=48000", "-t", "2",
             "-map", "0:v", "-map", "1:a", "-c:v", "libvpx-vp9", "-b:v", "300k", "-g", "25",
             "-c:a", "libopus", "-ar", "48000", "-ac", "2",
             "-f", "dash", "-seg_duration", "1", "-dash_segment_type", "webm",
-            "-use_template", "1", "-use_timeline", "0", File(d, "manifest.mpd").path
+            "-use_template", "1", "-use_timeline", "0", "manifest.mpd"
         )
         Assumptions.assumeTrue(ok && File(d, "manifest.mpd").exists(), "webm DASH packaging failed on this ffmpeg")
         val h = runDash("d10", "d10/manifest.mpd", expectMkv = true)

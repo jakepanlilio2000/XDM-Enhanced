@@ -63,11 +63,10 @@ class TestAvSync {
 
         private fun f(name: String) = File(dir, name).path
 
-        private fun which(cmd: String): String? = System.getenv("PATH")?.split(File.pathSeparator)
-            ?.map { File(it, cmd) }?.firstOrNull { it.canExecute() }?.absolutePath
+        private fun which(cmd: String): String? = StreamingE2EBase.which(cmd)
 
         private fun run(vararg cmd: String): String {
-            val p = ProcessBuilder(*cmd).redirectErrorStream(true).start()
+            val p = ProcessBuilder(*cmd).directory(dir).redirectErrorStream(true).start()
             val out = p.inputStream.readBytes().toString(Charsets.UTF_8)
             check(p.waitFor() == 0) { "command failed: ${cmd.joinToString(" ")}\n$out" }
             return out

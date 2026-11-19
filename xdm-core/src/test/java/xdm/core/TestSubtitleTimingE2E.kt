@@ -118,7 +118,8 @@ class TestSubtitleTimingE2E : StreamingE2EBase() {
     @Test fun t8_dashSidecarVtt() {
         requireTools()
         val d = caseDir("t8")
-        ffmpeg(
+        ffmpegIn(
+            d,
             "-f", "lavfi", "-i", "testsrc=size=160x120:rate=25",
             "-f", "lavfi", "-i", "sine=frequency=440:sample_rate=44100", "-t", "6",
             "-map", "0:v", "-map", "1:a", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-g", "25",
@@ -175,7 +176,8 @@ class TestSubtitleTimingE2E : StreamingE2EBase() {
             })
         }
         val ext = if (segmentType == "fmp4") "m4s" else "ts"
-        ffmpeg(
+        ffmpegIn(
+            d,
             "-f", "lavfi", "-i", "testsrc=size=160x120:rate=25",
             "-f", "lavfi", "-i", "sine=frequency=440:sample_rate=44100", "-i", srt.path, "-t", "6",
             "-map", "0:v", "-map", "1:a", "-map", "2:s", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-g", "25",

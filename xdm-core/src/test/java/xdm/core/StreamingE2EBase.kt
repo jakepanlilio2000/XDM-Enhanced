@@ -103,17 +103,42 @@ abstract class StreamingE2EBase {
         val ffprobe: String? by lazy { which("ffprobe") }
 
         fun which(cmd: String): String? {
-            val path = System.getenv("PATH") ?: return null
-            for (dir in path.split(File.pathSeparator)) {
-                val f = File(dir, cmd)
-                if (f.canExecute()) return f.absolutePath
+            val isWin = System.getProperty("os.name")?.lowercase()?.contains("win") == true
+            val exts = if (isWin) listOf(".exe", ".cmd", ".bat", "") else listOf("")
+            val path = System.getenv("PATH")
+            if (path != null) {
+                for (dir in path.split(File.pathSeparator)) {
+                    if (dir.isBlank()) continue
+                    for (ext in exts) {
+                        val f = File(dir, "$cmd$ext")
+                        if (f.isFile && f.canExecute()) return f.absolutePath
+                    }
+                }
+            }
+            if (isWin) {
+                val fallbackDirs = listOfNotNull(
+                    System.getenv("FFMPEG_HOME")?.let { File(it, "bin") },
+                    System.getenv("FFMPEG_HOME")?.let { File(it) },
+                    File("C:\\ffmpeg\\bin"),
+                    File("C:\\ffmpeg")
+                )
+                for (dir in fallbackDirs) {
+                    for (ext in exts) {
+                        val f = File(dir, "$cmd$ext")
+                        if (f.isFile && f.canExecute()) return f.absolutePath
+                    }
+                }
             }
             return null
         }
 
         /** Runs a command, returns (exit, combined-output). */
-        fun exec(vararg cmd: String): Pair<Int, String> {
-            val p = ProcessBuilder(*cmd).redirectErrorStream(true).start()
+        fun exec(vararg cmd: String): Pair<Int, String> = execIn(null, *cmd)
+
+        fun execIn(dir: File?, vararg cmd: String): Pair<Int, String> {
+            val p = ProcessBuilder(*cmd).apply {
+                if (dir != null) directory(dir)
+            }.redirectErrorStream(true).start()
             val out = p.inputStream.readBytes().toString(Charsets.UTF_8)
             return p.waitFor() to out
         }
@@ -124,14 +149,18 @@ abstract class StreamingE2EBase {
     }
 
     /** Runs ffmpeg; fails the test on non-zero exit. */
-    protected fun ffmpeg(vararg args: String) {
-        val (code, out) = exec(ffmpeg!!, "-y", "-loglevel", "error", *args)
+    protected fun ffmpeg(vararg args: String) = ffmpegIn(null, *args)
+
+    protected fun ffmpegIn(dir: File?, vararg args: String) {
+        val (code, out) = execIn(dir, ffmpeg!!, "-y", "-loglevel", "error", *args)
         check(code == 0) { "ffmpeg failed (${args.joinToString(" ")}):\n$out" }
     }
 
     /** Runs ffmpeg tolerantly (missing encoder etc.); returns true on success. */
-    protected fun ffmpegSoft(vararg args: String): Boolean =
-        runCatching { exec(ffmpeg!!, "-y", "-loglevel", "error", *args).first == 0 }.getOrDefault(false)
+    protected fun ffmpegSoft(vararg args: String): Boolean = ffmpegSoftIn(null, *args)
+
+    protected fun ffmpegSoftIn(dir: File?, vararg args: String): Boolean =
+        runCatching { execIn(dir, ffmpeg!!, "-y", "-loglevel", "error", *args).first == 0 }.getOrDefault(false)
 
     /** True when ffmpeg lists [encoder] among its encoders. */
     protected fun hasEncoder(encoder: String): Boolean {
