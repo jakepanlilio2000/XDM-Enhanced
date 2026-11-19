@@ -124,6 +124,7 @@ object BrowserIntegrationRepair {
             details.add("Another application may be bound to port $port, or the process is busy.")
         } else if (!protocolRegistered) {
             summary = "xdm-app:// protocol handler is missing or not registered for your user account."
+            details.add("Integration service is listening on http://$LOOPBACK_HOST:$port.")
             details.add("Browser extensions cannot launch XDM automatically without this protocol handler.")
             canAutoRepair = (os == OS.Windows)
         } else if (activeBrowsers.isEmpty()) {
