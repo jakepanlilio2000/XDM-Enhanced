@@ -35,18 +35,39 @@ class ClassicListView(
             }
         }
 
-        // Rows are covered by the hover editor, so the table itself only sees clicks below the last row.
         table.addMouseListener(object : MouseAdapter() {
             override fun mousePressed(e: MouseEvent) {
+                if (e.isPopupTrigger || xdm.app.utils.isMacPopupTrigger(e) || SwingUtilities.isRightMouseButton(e)) {
+                    val row = table.rowAtPoint(e.point)
+                    if (row != -1) {
+                        if (!table.isRowSelected(row)) {
+                            table.changeSelection(row, 0, false, false)
+                        }
+                        DownloadContextMenu.showAt(selectedItems, table, e.x, e.y, window)
+                    }
+                    return
+                }
                 if (SwingUtilities.isLeftMouseButton(e) && table.rowAtPoint(e.point) == -1) {
                     table.clearSelection()
+                }
+            }
+
+            override fun mouseReleased(e: MouseEvent) {
+                if (e.isPopupTrigger || xdm.app.utils.isMacPopupTrigger(e) || SwingUtilities.isRightMouseButton(e)) {
+                    val row = table.rowAtPoint(e.point)
+                    if (row != -1) {
+                        if (!table.isRowSelected(row)) {
+                            table.changeSelection(row, 0, false, false)
+                        }
+                        DownloadContextMenu.showAt(selectedItems, table, e.x, e.y, window)
+                    }
                 }
             }
         })
 
         editor.apply {
             onMenuClick = { entry: DbRecord -> showMenuUnderButton(menu.forRow(entry, jsp)) }
-            onContextMenu = { invoker, x, y -> menu.showAt(selectedItems, invoker, x, y) }
+            onContextMenu = { invoker, x, y -> DownloadContextMenu.showAt(selectedItems, invoker, x, y, window) }
             onOpen = { e: DbRecord ->
                 if (e.status == RecordStatus.FINISHED) {
                     AppMenuHandler.openFile(e, window)

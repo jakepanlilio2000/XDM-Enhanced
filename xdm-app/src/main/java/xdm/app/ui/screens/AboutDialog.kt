@@ -310,7 +310,7 @@ class AboutDialog constructor(owner: Window?) : JDialog(owner) {
 
         panel.add(createSectionTitle("License Information"))
         panel.add(Box.createVerticalStrut(4.px))
-        panel.add(createBodyText("Free and Open Source Software licensed under the <b>GNU General Public License v2.0 (GPL-2.0)</b>. You are free to run, copy, distribute, study, change, and improve this software."))
+        panel.add(createBodyText("Free and Open Source Software licensed under the <b>GNU General Public License v3.0 (GPL-3.0-or-later)</b>. You are free to run, copy, distribute, study, change, and improve this software."))
 
         return JScrollPane(panel).apply {
             border = BorderFactory.createEmptyBorder()
@@ -423,7 +423,7 @@ class AboutDialog constructor(owner: Window?) : JDialog(owner) {
         }
 
         val credits = listOf(
-            Triple("Original XDM", "Subhra Das Gupta & Contributors", "GPL-2.0 — Original download management architecture"),
+            Triple("Original XDM", "Subhra Das Gupta & Contributors", "GPL-3.0-or-later — Original download management architecture"),
             Triple("FlatLaf", "FormDev Software GmbH", "Apache-2.0 — Modern desktop Look and Feel framework"),
             Triple("libtorrent & libtorrent4j", "Arvid Norberg, Alden Torres", "BSD-3-Clause — High-performance C++ BitTorrent engine"),
             Triple("Remix Icon", "Remix Design", "Apache-2.0 — Open-source system icon design"),

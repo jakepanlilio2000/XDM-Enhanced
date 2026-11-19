@@ -104,6 +104,7 @@ class HttpChunkRetriever(
                         } else {
                             // Nothing received on this attempt, e.g. a server that stalls: count it.
                             retryCount += 1
+                            context.chunks[id]?.status?.set(ChunkStatus.Retrying)
                             onRetry(retryCount)
                         }
                     }.also { context.chunks[id]?.response?.compareAndSet(connectResult.response, null) }
@@ -139,6 +140,7 @@ class HttpChunkRetriever(
                         false
                     } else {
                         retryCount += 1
+                        context.chunks[id]?.status?.set(ChunkStatus.Retrying)
                         retryAfter = connectResult.delay
                         onRetry(retryCount)
                     }

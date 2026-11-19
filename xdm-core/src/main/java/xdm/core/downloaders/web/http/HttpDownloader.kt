@@ -238,6 +238,7 @@ class HttpDownloaderTask : ChunkController {
         Thread {
             context.downloadHost.onDownloadActivated(context.id)
             progressTracker.totalDownloadedBytes = context.downloaded.get()
+            progressTracker.resetResumeTiming()
             if (context.completed.get() || context.chunks.values.all { it.status.get() == ChunkStatus.Finished }) {
                 finishDownload()
             } else {
@@ -281,6 +282,9 @@ class HttpDownloaderTask : ChunkController {
                 context.stopFlag.set(true)
                 cancelRacers()
                 context.chunks.values.forEach {
+                    if (it.status.get() != ChunkStatus.Finished) {
+                        it.status.set(ChunkStatus.Paused)
+                    }
                     try {
                         it.fileHandle.get()?.close()
                     } catch (error: IOException) {

@@ -307,7 +307,7 @@ JAR_PATH="$PROJECT_ROOT/xdm-app/target/$MAIN_JAR"
 
 APP_VERSION="$(sed -n 's/.*"currentVersion"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' \
   xdm-app/src/main/resources/app-version.json | head -1)"
-: "${APP_VERSION:=1.0.0}"
+: "${APP_VERSION:=1.0.1}"
 
 # --------------------------------------------------------------------------
 # Drop the bundled natives for every platform except this build's target.
@@ -602,7 +602,7 @@ PKG_VERSION="${APP_VERSION%%-*}"
 ARGS=(
   --type "$JPACKAGE_TYPE"
   --name "$IMAGE_NAME"
-  --app-version "${PKG_VERSION:-1.0.0}"
+  --app-version "${PKG_VERSION:-1.0.1}"
   --vendor "$VENDOR"
   --description "$DESCRIPTION"
   --copyright "$COPYRIGHT"

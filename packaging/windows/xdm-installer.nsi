@@ -1,19 +1,20 @@
 ; ==============================================================================
 ; XDM Enhanced — NSIS Windows Installer Script
 ; Modern UI 2 installer for Windows x64 (perMachineOrUser)
-; Package: XDM-Enhanced-Setup-v1.0.0-win-x64.exe
+; Package: XDM-Enhanced-Setup-v1.0.1-win-x64.exe
 ; ==============================================================================
 
 Unicode True
+ManifestDPIAware true
 SetCompressor /SOLID lzma
 RequestExecutionLevel user
 
 ; --- Product Definitions ---
 !define PRODUCT_NAME "XDM Enhanced"
 !ifndef PRODUCT_VERSION
-  !define PRODUCT_VERSION "1.0.0"
+  !define PRODUCT_VERSION "1.0.1"
 !endif
-!define PRODUCT_VERSION_NUM "1.0.0.0"
+!define PRODUCT_VERSION_NUM "1.0.1.0"
 !define PRODUCT_PUBLISHER "XDM Enhanced Contributors"
 !define PRODUCT_WEB_SITE "https://github.com/jakepanlilio2000/XDM-Enhanced"
 !define PRODUCT_SUPPORT_URL "https://github.com/jakepanlilio2000/XDM-Enhanced/issues"
@@ -26,7 +27,7 @@ RequestExecutionLevel user
 !endif
 
 !ifndef OUT_FILE
-  !define OUT_FILE "..\..\build\dist\windows-x64\XDM-Enhanced-Setup-v1.0.0-win-x64.exe"
+  !define OUT_FILE "..\..\build\dist\windows-x64\XDM-Enhanced-Setup-v1.0.1-win-x64.exe"
 !endif
 
 !ifndef ICON_FILE
@@ -51,6 +52,8 @@ OutFile "${OUT_FILE}"
 Var IsAdmin
 Var RegRoot
 Var CustomDir
+Var RunningPid
+Var ForceCloseOpt
 
 ; --- Modern UI Configuration ---
 !define MUI_ABORTWARNING
@@ -99,48 +102,174 @@ VIAddVersionKey "CompanyName" "${PRODUCT_PUBLISHER}"
 VIAddVersionKey "FileDescription" "${PRODUCT_NAME} Setup"
 VIAddVersionKey "FileVersion" "${PRODUCT_VERSION_NUM}"
 VIAddVersionKey "LegalCopyright" "Copyright (C) 2026 XDM Enhanced Contributors"
-VIAddVersionKey "OriginalFilename" "XDM-Enhanced-Setup-v1.0.0-win-x64.exe"
+VIAddVersionKey "OriginalFilename" "XDM-Enhanced-Setup-v1.0.1-win-x64.exe"
 
 ; ==============================================================================
 ; Helper Function: Check & Prompt If App Is Running
 ; ==============================================================================
 Function CheckAppRunning
-  IfSilent SilentClose
+  InitPluginsDir
+  File /oname=$PLUGINSDIR\process-manager.ps1 "resources\process-manager.ps1"
+
+  ; Detect /FORCE_CLOSE or /FORCECLOSE in command line parameters
+  StrCpy $ForceCloseOpt "0"
+  ${GetParameters} $R0
+  ClearErrors
+  ${GetOptions} $R0 "/FORCE_CLOSE" $R1
+  ${If} ${Errors}
+    ClearErrors
+    ${GetOptions} $R0 "/FORCECLOSE" $R1
+  ${EndIf}
+  ${IfNot} ${Errors}
+    StrCpy $ForceCloseOpt "1"
+  ${EndIf}
+
   CheckLoop:
-    nsExec::ExecToStack 'cmd /c "tasklist /FI \"IMAGENAME eq ${APP_EXE}\" | findstr /i /c:\"${APP_EXE}\""'
-    Pop $0 ; exit code (0 if found, 1 if not)
+    ; Check if an installed instance of XDM Enhanced is running
+    nsExec::ExecToStack 'powershell -NoProfile -ExecutionPolicy Bypass -File "$PLUGINSDIR\process-manager.ps1" -TargetDir "$INSTDIR" -Action check'
+    Pop $0 ; return code
     Pop $1 ; stdout
-    ${If} $0 == 0
-      MessageBox MB_RETRYCANCEL|MB_ICONEXCLAMATION \
-        "${PRODUCT_NAME} is currently running.$\r$\n$\r$\nPlease close ${PRODUCT_NAME} before continuing." \
-        IDRETRY CheckLoop IDCANCEL Cancel
-      Cancel:
-        Abort
+    ${If} $1 == "NOT_RUNNING"
+      Goto DoneCheck
     ${EndIf}
-    Goto DoneCheck
-  SilentClose:
-    nsExec::Exec 'taskkill /im ${APP_EXE}'
-    Sleep 1000
+
+    ; Parse PID from RUNNING:<PID>
+    StrCpy $R1 $1 8
+    ${If} $R1 == "RUNNING:"
+      StrCpy $RunningPid $1 "" 8
+    ${Else}
+      Goto DoneCheck
+    ${EndIf}
+
+    ; Step 1: Request graceful shutdown with bounded wait
+    DetailPrint "Requesting graceful shutdown of ${PRODUCT_NAME} (PID: $RunningPid)..."
+    nsExec::ExecToStack 'powershell -NoProfile -ExecutionPolicy Bypass -File "$PLUGINSDIR\process-manager.ps1" -TargetDir "$INSTDIR" -Action shutdown -PidToWait $RunningPid -TimeoutSec 6'
+    Pop $0
+    Pop $1
+    ${If} $1 == "CLOSED"
+      DetailPrint "${PRODUCT_NAME} closed gracefully."
+      Goto DoneCheck
+    ${EndIf}
+
+    ; Step 2: Escalation if process did not terminate within bounded timeout
+    IfSilent SilentEscalation PromptUser
+
+    PromptUser:
+      MessageBox MB_YESNOCANCEL|MB_ICONEXCLAMATION \
+        "${PRODUCT_NAME} is currently running and did not close automatically after a shutdown request.$\r$\n$\r$\nWould you like Setup to force-close ${PRODUCT_NAME} (PID: $RunningPid) to continue installation?$\r$\n$\r$\nWarning: Force termination may result in loss of active transfer progress." \
+        IDYES DoForceClose IDNO WaitAgain
+      Goto CancelInstall
+
+    WaitAgain:
+      MessageBox MB_RETRYCANCEL|MB_ICONINFORMATION \
+        "Please close ${PRODUCT_NAME} manually, then click Retry." \
+        IDRETRY CheckLoop IDCANCEL CancelInstall
+
+    DoForceClose:
+      DetailPrint "Force-closing ${PRODUCT_NAME} (PID: $RunningPid)..."
+      nsExec::Exec 'powershell -NoProfile -ExecutionPolicy Bypass -File "$PLUGINSDIR\process-manager.ps1" -Action force -PidToWait $RunningPid'
+      Sleep 500
+      Goto DoneCheck
+
+    CancelInstall:
+      DetailPrint "Installation cancelled by user."
+      Abort
+
+    SilentEscalation:
+      ${If} $ForceCloseOpt == "1"
+        DetailPrint "Silent mode with /FORCE_CLOSE: Terminating PID $RunningPid..."
+        nsExec::Exec 'powershell -NoProfile -ExecutionPolicy Bypass -File "$PLUGINSDIR\process-manager.ps1" -Action force -PidToWait $RunningPid'
+        Sleep 500
+        Goto DoneCheck
+      ${Else}
+        DetailPrint "Silent mode: ${PRODUCT_NAME} (PID: $RunningPid) is running and /FORCE_CLOSE was not specified. Aborting installation."
+        SetErrorLevel 2
+        Abort
+      ${EndIf}
+
   DoneCheck:
 FunctionEnd
 
 Function un.CheckAppRunning
-  IfSilent UnSilentClose
+  InitPluginsDir
+  File /oname=$PLUGINSDIR\process-manager.ps1 "resources\process-manager.ps1"
+
+  ; Detect /FORCE_CLOSE or /FORCECLOSE in command line parameters
+  StrCpy $ForceCloseOpt "0"
+  ${GetParameters} $R0
+  ClearErrors
+  ${GetOptions} $R0 "/FORCE_CLOSE" $R1
+  ${If} ${Errors}
+    ClearErrors
+    ${GetOptions} $R0 "/FORCECLOSE" $R1
+  ${EndIf}
+  ${IfNot} ${Errors}
+    StrCpy $ForceCloseOpt "1"
+  ${EndIf}
+
   UnCheckLoop:
-    nsExec::ExecToStack 'cmd /c "tasklist /FI \"IMAGENAME eq ${APP_EXE}\" | findstr /i /c:\"${APP_EXE}\""'
+    ; Check if an installed instance of XDM Enhanced is running
+    nsExec::ExecToStack 'powershell -NoProfile -ExecutionPolicy Bypass -File "$PLUGINSDIR\process-manager.ps1" -TargetDir "$INSTDIR" -Action check'
     Pop $0
     Pop $1
-    ${If} $0 == 0
-      MessageBox MB_RETRYCANCEL|MB_ICONEXCLAMATION \
-        "${PRODUCT_NAME} is currently running.$\r$\n$\r$\nPlease close ${PRODUCT_NAME} before continuing with uninstallation." \
-        IDRETRY UnCheckLoop IDCANCEL UnCancel
-      UnCancel:
-        Abort
+    ${If} $1 == "NOT_RUNNING"
+      Goto UnDoneCheck
     ${EndIf}
-    Goto UnDoneCheck
-  UnSilentClose:
-    nsExec::Exec 'taskkill /im ${APP_EXE}'
-    Sleep 1000
+
+    ; Parse PID from RUNNING:<PID>
+    StrCpy $R1 $1 8
+    ${If} $R1 == "RUNNING:"
+      StrCpy $RunningPid $1 "" 8
+    ${Else}
+      Goto UnDoneCheck
+    ${EndIf}
+
+    ; Step 1: Request graceful shutdown with bounded wait
+    DetailPrint "Requesting graceful shutdown of ${PRODUCT_NAME} (PID: $RunningPid)..."
+    nsExec::ExecToStack 'powershell -NoProfile -ExecutionPolicy Bypass -File "$PLUGINSDIR\process-manager.ps1" -TargetDir "$INSTDIR" -Action shutdown -PidToWait $RunningPid -TimeoutSec 6'
+    Pop $0
+    Pop $1
+    ${If} $1 == "CLOSED"
+      DetailPrint "${PRODUCT_NAME} closed gracefully."
+      Goto UnDoneCheck
+    ${EndIf}
+
+    ; Step 2: Escalation if process did not terminate within bounded timeout
+    IfSilent UnSilentEscalation UnPromptUser
+
+    UnPromptUser:
+      MessageBox MB_YESNOCANCEL|MB_ICONEXCLAMATION \
+        "${PRODUCT_NAME} is currently running and did not close automatically after a shutdown request.$\r$\n$\r$\nWould you like Uninstaller to force-close ${PRODUCT_NAME} (PID: $RunningPid) to continue uninstallation?$\r$\n$\r$\nWarning: Force termination may result in loss of active transfer progress." \
+        IDYES UnDoForceClose IDNO UnWaitAgain
+      Goto UnCancelInstall
+
+    UnWaitAgain:
+      MessageBox MB_RETRYCANCEL|MB_ICONINFORMATION \
+        "Please close ${PRODUCT_NAME} manually, then click Retry." \
+        IDRETRY UnCheckLoop IDCANCEL UnCancelInstall
+
+    UnDoForceClose:
+      DetailPrint "Force-closing ${PRODUCT_NAME} (PID: $RunningPid)..."
+      nsExec::Exec 'powershell -NoProfile -ExecutionPolicy Bypass -File "$PLUGINSDIR\process-manager.ps1" -Action force -PidToWait $RunningPid'
+      Sleep 500
+      Goto UnDoneCheck
+
+    UnCancelInstall:
+      DetailPrint "Uninstallation cancelled by user."
+      Abort
+
+    UnSilentEscalation:
+      ${If} $ForceCloseOpt == "1"
+        DetailPrint "Silent mode with /FORCE_CLOSE: Terminating PID $RunningPid..."
+        nsExec::Exec 'powershell -NoProfile -ExecutionPolicy Bypass -File "$PLUGINSDIR\process-manager.ps1" -Action force -PidToWait $RunningPid'
+        Sleep 500
+        Goto UnDoneCheck
+      ${Else}
+        DetailPrint "Silent mode: ${PRODUCT_NAME} (PID: $RunningPid) is running and /FORCE_CLOSE was not specified. Aborting uninstallation."
+        SetErrorLevel 2
+        Abort
+      ${EndIf}
+
   UnDoneCheck:
 FunctionEnd
 
@@ -153,9 +282,6 @@ Function .onInit
     MessageBox MB_OK|MB_ICONSTOP "${PRODUCT_NAME} requires a 64-bit version of Windows."
     Abort
   ${EndIf}
-
-  ; Check running process
-  Call CheckAppRunning
 
   ; Determine privilege level & default install location
   StrCpy $CustomDir "0"
@@ -183,16 +309,21 @@ Function .onInit
     ${EndIf}
   ${EndIf}
 
-  ; Upgrade check: if previously installed, reuse that location
-  ReadRegStr $1 HKLM "${PRODUCT_DIR_REGKEY}" "InstallDir"
-  ${If} $1 != ""
-    StrCpy $INSTDIR $1
-  ${Else}
-    ReadRegStr $1 HKCU "${PRODUCT_DIR_REGKEY}" "InstallDir"
+  ; Upgrade check: if previously installed and no custom dir specified, reuse that location
+  ${If} $CustomDir == "0"
+    ReadRegStr $1 HKLM "${PRODUCT_DIR_REGKEY}" "InstallDir"
     ${If} $1 != ""
       StrCpy $INSTDIR $1
+    ${Else}
+      ReadRegStr $1 HKCU "${PRODUCT_DIR_REGKEY}" "InstallDir"
+      ${If} $1 != ""
+        StrCpy $INSTDIR $1
+      ${EndIf}
     ${EndIf}
   ${EndIf}
+
+  ; Check running process in verified target directory
+  Call CheckAppRunning
 FunctionEnd
 
 ; ==============================================================================

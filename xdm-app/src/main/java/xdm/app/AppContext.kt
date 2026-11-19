@@ -190,6 +190,10 @@ object AppContext {
             // the window are up; connections that arrive meanwhile wait in the listen backlog.
             when (BrowserIntegration.acquire(args)) {
                 BrowserIntegration.Acquired.Primary -> {
+                    if (args.any { it.equals("--shutdown", ignoreCase = true) || it.equals("--exit", ignoreCase = true) || it.equals("--quit", ignoreCase = true) }) {
+                        Logger.info("XDM", "--shutdown called but no primary instance was running.")
+                        exitProcess(0)
+                    }
                     db.loadRecords()
                     app.run(args)
                     // Class-list recording only (packaging/recording); the class isn't touched otherwise.

@@ -321,6 +321,6 @@ class FilterListPanel(
         get() = this.root
 
     private companion object {
-        const val SUPPORT_URL = "https://github.com/subhra74/xdm/blob/master/SUPPORT.md"
+        const val SUPPORT_URL = "https://github.com/jakepanlilio2000/XDM-Enhanced/blob/master/SUPPORT.md"
     }
 }

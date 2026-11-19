@@ -279,7 +279,7 @@ try {
 } finally {
   $zip.Dispose()
 }
-if (-not $AppVersion) { $AppVersion = '1.0.0' }
+if (-not $AppVersion) { $AppVersion = '1.0.1' }
 $PkgVersion = ($AppVersion -replace '-.*$', '')
 
 # --------------------------------------------------------------------------

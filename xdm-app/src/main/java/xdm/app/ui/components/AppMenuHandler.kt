@@ -10,10 +10,14 @@ import xdm.app.ui.screens.ChangeFolderDialog
 import xdm.app.ui.screens.NetworkOptimizerDialog
 import xdm.app.ui.screens.SettingsWindow
 import xdm.app.ui.screens.StreamDownloadDialog
+import xdm.app.utils.GITHUB_ISSUES_URL
+import xdm.app.utils.GITHUB_WIKI_URL
 import xdm.app.utils.SingleWindows
+import xdm.app.utils.WEBSITE_HELP_URL
 import xdm.app.utils.captureDestination
 import xdm.app.utils.openFileExternal
 import xdm.app.utils.openFolderExternal
+import xdm.app.utils.openInDefaultBrowser
 import xdm.app.utils.setClipBoardText
 import xdm.core.downloaders.DownloadType
 import xdm.core.util.CoreUtils
@@ -236,15 +240,15 @@ object AppMenuHandler {
     }
 
     fun openTranslationPage() {
-        //XDMUtils.browseURL("https://github.com/subhra74/xdm/wiki/Submitting-translations-for-XDM")
+        openInDefaultBrowser("$GITHUB_WIKI_URL/Contributing-and-Security")
     }
 
     fun openSupportPage() {
-        //XDMUtils.browseURL("https://github.com/subhra74/xdm/wiki")
+        openInDefaultBrowser(WEBSITE_HELP_URL)
     }
 
     fun openBugReportPage() {
-        //XDMUtils.browseURL("https://github.com/subhra74/xdm/issues")
+        openInDefaultBrowser(GITHUB_ISSUES_URL)
     }
 
     fun showNetworkOptimizer(window: Window?) {

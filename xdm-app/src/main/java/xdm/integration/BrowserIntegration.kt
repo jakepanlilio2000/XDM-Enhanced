@@ -77,7 +77,7 @@ object BrowserIntegration {
         "safari-web-extension://"
     )
     private val stateChangingPaths =
-        setOf("/download", "/media", "/vid", "/batch", "/clear", "/clear-tab", "/tab-update", "/show", "/poll", "/preview")
+        setOf("/download", "/media", "/vid", "/batch", "/clear", "/clear-tab", "/tab-update", "/show", "/poll", "/preview", "/shutdown")
 
     /** What [acquire] found when it tried to take ownership of [PORT]. */
     sealed interface Acquired {
@@ -219,6 +219,7 @@ object BrowserIntegration {
                 "/clear-tab" -> onClearTabMessage(context)
                 "/tab-update" -> onTabUpdateMessage(context)
                 "/show" -> onShowMessage(context)
+                "/shutdown" -> onShutdownMessage(context)
             }
         } catch (e: Exception) {
             Logger.error("INTEGRATION", "Failed to handle ${context.requestPath}", e)
@@ -371,9 +372,40 @@ object BrowserIntegration {
         val req = runCatching { decodeBody<ShowRequest>(context) }.getOrNull()
         if (req != null && req.args.isNotEmpty()) {
             Logger.info("INTEGRATION", "Launch arguments: ${req.args}")
+            if (req.args.any { it.equals("--shutdown", ignoreCase = true) || it.equals("--exit", ignoreCase = true) || it.equals("--quit", ignoreCase = true) }) {
+                context.apply {
+                    statusCode = 200
+                    statusMessage = "OK"
+                    addResponseHeader("Content-Type", "application/json")
+                    responseBody = """{"status":"shutting_down"}""".toByteArray(StandardCharsets.UTF_8)
+                }.sendResponse()
+                Thread({
+                    try {
+                        Thread.sleep(150)
+                    } catch (_: InterruptedException) {}
+                    AppContext.app.gracefulShutdown()
+                }, "XDM-IpcShutdown").start()
+                return
+            }
             AppContext.app.handleLaunchArgs(req.args)
         }
         AppContext.app.showAppWindow()
+    }
+
+    private fun onShutdownMessage(context: RequestContext) {
+        Logger.info("INTEGRATION", "Received /shutdown request")
+        context.apply {
+            statusCode = 200
+            statusMessage = "OK"
+            addResponseHeader("Content-Type", "application/json")
+            responseBody = """{"status":"shutting_down"}""".toByteArray(StandardCharsets.UTF_8)
+        }.sendResponse()
+        Thread({
+            try {
+                Thread.sleep(150)
+            } catch (_: InterruptedException) {}
+            AppContext.app.gracefulShutdown()
+        }, "XDM-IpcShutdown").start()
     }
 
     private fun onClearTabMessage(context: RequestContext) {

@@ -207,6 +207,21 @@ class DownloadRowPanel(val root: JPanel = JPanel()) {
         showMenu(btnMenu, menu)
     }
 
+    /**
+     * Recursively installs mouse listener on non-button components so clicks anywhere on the row
+     * handle selection or popup triggers.
+     */
+    fun attachMouseListener(listener: java.awt.event.MouseListener) {
+        fun attach(comp: Component) {
+            if (comp is JButton) return
+            comp.addMouseListener(listener)
+            if (comp is Container) {
+                comp.components.forEach { attach(it) }
+            }
+        }
+        attach(root)
+    }
+
     private fun getStatusText(ent: DbRecord): String {
         val text = StringBuilder(80)
         text.append(formatDateShort(ent.date))

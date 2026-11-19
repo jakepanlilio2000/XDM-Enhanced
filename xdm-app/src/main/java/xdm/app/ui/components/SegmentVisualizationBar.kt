@@ -19,6 +19,8 @@ class SegmentVisualizationBar : SegmentPanel() {
     private val colorComplete = Color(0x2E, 0xCC, 0x71)
     private val colorActiveStart = Color(0x3B, 0x82, 0xF6)
     private val colorActiveEnd = Color(0x60, 0xA5, 0xFA)
+    private val colorPaused = Color(0xF5, 0x9E, 0x0B)
+    private val colorRetrying = Color(0xEC, 0x48, 0x99)
     private val colorFailed = Color(0xEF, 0x44, 0x44)
     private val colorDivider = Color(0xE1, 0x1D, 0x48)
 
@@ -97,6 +99,8 @@ class SegmentVisualizationBar : SegmentPanel() {
                 val downloaded = info.downloaded.coerceAtMost(if (len > 0) len else Long.MAX_VALUE)
                 val isComplete = len > 0 && downloaded >= len
                 val isFailed = info.status.equals("Failed", ignoreCase = true)
+                val isPaused = info.status.equals("Paused", ignoreCase = true)
+                val isRetrying = info.status.startsWith("Retry", ignoreCase = true)
 
                 // Fill progress inside this segment
                 val fillRatio = when {
@@ -112,6 +116,14 @@ class SegmentVisualizationBar : SegmentPanel() {
                     when {
                         isFailed -> {
                             g2.color = colorFailed
+                            g2.fill(fillRect)
+                        }
+                        isPaused -> {
+                            g2.color = colorPaused
+                            g2.fill(fillRect)
+                        }
+                        isRetrying -> {
+                            g2.color = colorRetrying
                             g2.fill(fillRect)
                         }
                         isComplete -> {

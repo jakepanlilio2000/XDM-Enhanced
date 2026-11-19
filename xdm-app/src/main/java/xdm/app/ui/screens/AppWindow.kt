@@ -588,7 +588,7 @@ class AppWindow(image: Image, startHidden: Boolean = false) : JFrame(), ActionLi
                 addActionListener { openInDefaultBrowser(WEBSITE_HELP_URL) }
             })
             add(JMenuItem("Home Page", FontIcon(RemixIcon.GLOBAL_LINE, 16.px)).apply {
-                addActionListener { openInDefaultBrowser(WEBSITE_URL) }
+                addActionListener { openInDefaultBrowser(FORK_WEBSITE_URL) }
             })
             add(JMenuItem("Check for Updates...", FontIcon(RemixIcon.NOTIFICATION_3_LINE, 16.px)).apply {
                 addActionListener {

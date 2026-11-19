@@ -1,72 +1,37 @@
-# XDM Enhanced v1.0.0 (Stable)
+# XDM Enhanced v1.0.1 (Maintenance Release)
 
-Official Stable Release of **XDM Enhanced** — an independent, open-source download manager forked from Xtreme Download Manager (XDM). It pairs high-speed multi-connection segmented HTTP/HTTPS downloading and streaming video capture with native BitTorrent and magnet support, modern FlatLaf dynamic theming, custom skin packages, a public plugin framework, floating browser media grabbing, automated post-download rules, and companion browser extensions.
+Maintenance Release of **XDM Enhanced** — an independent, open-source download manager forked from Xtreme Download Manager (XDM). It pairs high-speed multi-connection segmented HTTP/HTTPS downloading and streaming media capture with native BitTorrent and magnet support, modern FlatLaf dynamic theming, custom skin packages, a public plugin framework, automated post-download rules, and companion browser extensions.
 
 ---
 
 ## Release Highlights
 
-- **Skin Background & Modal Customization System:** Extends the skinning engine to support declarative custom background images and colors for windows, sidebars, toolbars, and modal dialogs via `skin.json`. Adds `SkinBackgroundPanel` with tiling, scaling, centering, and opacity control, along with modal dimming and contrast-preserving legibility.
-- **User-Controlled Clipboard Monitoring & Non-Intrusive Preflight:** Enhanced clipboard security and network efficiency. Only single HTTP/HTTPS URLs (<= 2,048 chars) are evaluated when clipboard monitoring is enabled; credentials, multi-line blocks, and unrelated text are rejected immediately. Performs lightweight `HEAD`/range metadata discovery with **zero payload bytes** downloaded before explicit user confirmation.
-- **Public Plugin API v2 & Task Adapter Bridge:** Introduces semantic version-range compatibility matching (`[1.0.0, 2.0.0)`) preventing minor host updates from breaking plugins. Decouples plugin messaging via a publish-subscribe `PluginEventBus` and provides a public task adapter bridge (`PluginDownloadBridge`) routing tasks into the core download manager.
-- **Central Download List Integration for yt-dlp Plugin:** Solves missing yt-dlp tasks in the main download list. Tasks now register immediately with persistent IDs, `CAT_VIDEOS` categorization, real-time speed/ETA progress reporting, lifecycle state transitions (initialization through completion/failure), and safe `ProcessBuilder` argument isolation.
-- **Browser Connection Self-Diagnostics & Safe Repair:** Eliminates false "XDM Enhanced Disconnected" warnings via resilient loopback handshake verification and exponential backoff retry. Features an in-extension diagnostic panel reporting precise failure reasons, plus a non-blocking "Repair Browser Integration" tool in Desktop Settings that repairs Windows native messaging manifests and protocol registrations safely without silent registry hijacking.
+- **Active Chunk Visualization & Live Connection Details:** High-contrast visual pulse animation in `SegmentVisualizationBar` and a detailed connection table (`SegmentDetailTable`) displaying real-time stream bounds, byte offsets, transfer rates, status flags, and IP addresses.
+- **High-Frequency Telemetry & UI Responsiveness:** Transitioned speed calculation to a ~10ms moving-average sampling window with 100ms batched UI coalescing, preventing EDT thread congestion under gigabit download speeds while providing fluid transfer telemetry.
+- **BitTorrent Modal Workspace Bounding:** Strictly bounded dialog dimensions to usable monitor workspace geometry and constrained magnet URI input field width, preventing modal dialog expansion off-screen with 2,000+ character magnet links. Added a dedicated "Copy Source" clipboard button.
+- **Modern Cards Context Menu Parity:** Restored full right-click context menu parity across Modern Cards View, matching Table View and Classic View capabilities while preventing left-click selection misfires.
+- **Robust Running-Application Handling in Installer:** Isolated target detection verifying executable path and directory containment (`process-manager.ps1`), authenticated loopback HTTP graceful shutdown (`/system/shutdown`) with persistent state preservation, interactive user escalation, and silent `/FORCE_CLOSE` support.
+- **Canonical Help, Documentation & Wiki Links:** Restored all Help actions and sidebar navigation to point to authoritative fork documentation (`https://jakepanlilio2000.github.io/XDM-Enhanced/`), repository guides, and community support destinations with scheme validation and fallback handlers.
+- **NSIS License RTF Formatting:** Fixed control word escaping (`\widowctrl\hyphauto`) in `gpl-3.0-notice.rtf`, eliminating raw markup tokens from rendering as literal text in the installer license screen.
 
 ---
 
 ## Changes & Fixes
 
 ### Added
-
-- **Skin Engine (`xdm-app`):**
-  - Declarative background image and color customization for windows, panels, sidebars, toolbars, and dialogs.
-  - `SkinBackgroundPanel` supporting tile, scale, center, and adjustable opacity modes.
-  - Dialog backdrop tinting with contrast preservation for accessibility.
-  - Component styling resolver (`SkinStyleResolver`) for unified button radii, padding, and borders across dialogs.
-  - Live skin hot-reloading regression test coverage in `SkinEngineTest` and `FullUiSkinContractTest`.
-- **Clipboard & Preflight Architecture (`xdm-app`):**
-  - Strict privacy filter: discards passwords, tokens, multiple URLs, and arbitrary text immediately.
-  - Non-intrusive metadata preflight via HTTP `HEAD` or fallback `Range: bytes=0-0`.
-  - Zero-payload preflight guarantee: no chunk files or payload bytes are downloaded before user confirmation.
-  - In-flight socket cancellation when dialog is dismissed.
-- **Plugin Architecture (`xdm-plugin-api`, `xdm-app`):**
-  - Semantic version-range compatibility matching (`[minVersion, maxVersion)`).
-  - Decoupled `PluginEventBus` with typed `PluginProgressEvent` and listener contracts.
-  - Public `PluginDownloadBridge` and `PluginTaskAdapter` routing third-party downloads to the central download queue.
-- **yt-dlp Media Downloader Plugin (`sample-plugins`):**
-  - Full task registration and tracking in central download list across all views (table, cards, rows).
-  - Progress tracking with speed, ETA, and state persistence.
-  - Process argument hardening with list-based execution.
-- **Browser Integration & Diagnostics (`browser-extension`, `xdm-app`):**
-  - In-extension diagnostics reporting exact status (`host_missing`, `permission_denied`, `app_not_running`).
-  - Desktop Settings "Repair Browser Integration" utility with asynchronous execution on background threads.
-  - Comprehensive guide: [`docs/BROWSER_CONNECTION_TROUBLESHOOTING.md`](docs/BROWSER_CONNECTION_TROUBLESHOOTING.md).
+- **Segment Visualization Bar (`xdm-app`):** High-contrast active chunk animation providing visual clarity on active stream boundaries.
+- **Segment Detail Table (`xdm-app`):** Tabular connection inspection displaying chunk index, byte start/end ranges, current offset, active transfer rate, state, and remote IP address.
+- **Copy Source Action (`xdm-app`):** Convenient button in the Add BitTorrent Download dialog to copy the entire raw magnet URI or source string to the clipboard.
 
 ### Changed
-
-- **Version Alignment:** Synchronized project and artifact version declarations to `1.0.0-beta.6` across all Maven modules, NSIS installer, build configurations, and companion extensions.
-- **Documentation:** Updated `README.md` and distribution guides with troubleshooting references.
+- **Transfer Rate Telemetry (`xdm-core`, `xdm-app`):** Real-time sub-second byte counting (~10ms) with moving-average rate smoothing and 100ms EDT coalescing.
+- **Help & Support Navigation (`xdm-app`):** Synchronized all Help menus, About dialog links, and sidebar navigation to canonical fork documentation and support channels. Hardened `UrlHelper` with URI scheme validation (`isHttpOrHttpsUrl`), ASCII encoding fallback, and native Windows shell execution.
 
 ### Fixed
-
-- **Browser Extension Handshake:** Fixed false "Disconnected" warnings caused by startup race conditions using exponential backoff retry.
-- **EDT Responsiveness:** Prevented Swing UI freezes during browser connection checks and integration repairs by dispatching network and registry I/O to background daemon threads.
-- **Stale Registry Handlers:** Auto-detected invalid or missing executable paths in the Windows `xdm-app://` protocol registry handler.
-
-### Security
-
-- **Clipboard Privacy Guard:** Enforces strict length limits (<= 2048 chars) and single-URL validation; never inspects or logs sensitive clipboard history.
-- **Preflight Isolation:** Guarantees headers-only inspection; no payload bytes downloaded before user confirmation.
-- **Subprocess Argument Hardening:** Enforces array/list arguments for yt-dlp executions, rejecting command-line shell string concatenation.
-- **Loopback Origin & Header Verification:** Strict host and origin verification on `127.0.0.1:8597` rejecting DNS rebinding with HTTP 403 Forbidden.
-
----
-
-## Known Issues
-
-- **Unsigned Firefox Add-ons:** Standard Firefox release channels require unlisted Mozilla AMO signing (`web-ext sign`) for permanent `.xpi` add-on installation. Unsigned extensions can be loaded as temporary add-ons via `about:debugging` or permanently on Firefox Developer Edition/Nightly with `xpinstall.signatures.required = false`.
-- **Consumer Chrome Extension Loading:** Google Chrome consumer builds require Developer Mode to load unpacked `.zip` extension folders from outside the Chrome Web Store.
-- **Platform File Dialog Styling:** Native OS file pickers retain operating system look-and-feel rather than custom skin backgrounds.
+- **BitTorrent Modal Layout (`xdm-app`):** Constrained dialog size and input components to fit within the visible display bounds across single- and multi-monitor setups.
+- **Context Menu Action Parity (`xdm-app`):** Unified `DownloadContextMenu` across Table View, Modern Cards View, and Classic View with left-click misfire guards.
+- **NSIS License Formatting (`packaging/windows`):** Corrected single-backslash RTF syntax in `gpl-3.0-notice.rtf` preventing `\widowctrl` from appearing as raw text in the installer.
+- **Installer Process Management (`packaging/windows`):** Verified directory containment before process termination, authenticated loopback graceful shutdown with state flush, interactive prompts, and silent automated flag handling.
 
 ---
 
@@ -74,23 +39,23 @@ Official Stable Release of **XDM Enhanced** — an independent, open-source down
 
 | Asset | Size | SHA-256 Checksum |
 |---|---|---|
-| `XDM-Enhanced-Setup-v1.0.0-win-x64.exe` | 63,914,904 bytes | `6e8eca1d4e4b04f7131d707771aa866261f5135af2fd4f6cdc70a4f35eab0818` |
-| `XDM-Enhanced-v1.0.0-windows-x64.zip` | 74,731,561 bytes | `943ba068bb037544c14da8fecc14756998971f7a30dbe863702a6984de3239ce` |
-| `XDM-Enhanced-Extension-Chromium-v1.0.0.zip` | 106,503 bytes | `a5f76703341ec5e55d9a7036564c56b0ef2b8079e3635c9fc5bdb6d7d2106f2f` |
-| `XDM-Enhanced-Extension-Firefox-v1.0.0.zip` | 103,600 bytes | `f1a601f8a905f96d7fa38ac16ed6fb02578d0b0c8e7b8598ec94a9384e7def37` |
-| `XDM-Enhanced-Extension-Firefox-v1.0.0.xpi` | 103,600 bytes | `f1a601f8a905f96d7fa38ac16ed6fb02578d0b0c8e7b8598ec94a9384e7def37` |
-| `xdm-app-1.0.0.jar` | 95,042,120 bytes | `656003f88fa0d259d773d68ad26c6f9f6684739d5ac85438033802fc6bb2713a` |
-| `xdm-plugin-api-1.0.0.jar` | 21,963 bytes | `d08c6831d0ac0d7ae78ae292bd91d7fe556400198376f556e7a6c071a566fd53` |
+| `XDM-Enhanced-Extension-Chromium-v1.0.1.zip` | 106,503 bytes | `6db9d41834af3decb57d4c36a13d16e0eb72c8441556d667e82b6fbd3d72b1cd` |
+| `XDM-Enhanced-Extension-Firefox-v1.0.1.xpi` | 103,600 bytes | `8c3f2f1b90a113dbccd1ce771223779cb7dbcaa164bb024250a4e7b7ef9eeaac` |
+| `XDM-Enhanced-Extension-Firefox-v1.0.1.zip` | 103,600 bytes | `8c3f2f1b90a113dbccd1ce771223779cb7dbcaa164bb024250a4e7b7ef9eeaac` |
+| `XDM-Enhanced-Setup-v1.0.1-win-x64.exe` | 63,960,863 bytes | `68be3296248f3f7704dba8cf1945ecc0dda125ed9ba898e468c9bc207b8de76c` |
+| `XDM-Enhanced-v1.0.1-windows-x64.zip` | 74,296,378 bytes | `2fc4b10348f2eb198cdc01159d6d8fc7bd14eeabd3d3d991645902487a6537f1` |
+| `checksum-verifier.xdmplugin` | 6,211 bytes | `c8f915c32a984515db8991537089f9324be18ab5c67421d419c5d30a83582806` |
 | `cyber-neon.xdmskin` | 34,446 bytes | `5e8293da37215dbafff6a41a88495bdefcc0faa3f942c878ada69664ec05ef0f` |
-| `checksum-verifier.xdmplugin` | 6,204 bytes | `ee17b1f8823f4ff418d3ffd8a779cb61421bf35afb67afa9e3e995de1588050b` |
-| `ytdlp-downloader.xdmplugin` | 28,555 bytes | `7f5054463cd1f3174338b3c428990d55593db5a5ec3c2ff82e85ac57e352aaa9` |
+| `xdm-app-1.0.1.jar` | 95,109,075 bytes | `31870f5068bfb6f49ad260fff4a010c2bb2efa3a6df1573bb2bb84399d830011` |
+| `xdm-plugin-api-1.0.1.jar` | 21,965 bytes | `5636b47925d6957554fb5a4313af0e478fa1ac764d2c5cf30f5c30cba4de4cc7` |
+| `ytdlp-downloader.xdmplugin` | 28,561 bytes | `8a484eff37e95d961e028c80b353ff84580d275a51e166860f5cfec29a5bf189` |
 | `SHA256SUMS.txt` | 988 bytes | Included in release |
 
 ---
 
 ## Acknowledgments & Upstream Attribution
 
-- Original XDM project created by Subhra Das Gupta ([subhra74/xdm](https://github.com/subhra74/xdm)) and upstream contributors.
+- Original XDM project created by Subhra Das Gupta ([subhra74/xdm](https://github.com/subhra74/xdm)) and upstream contributors. Upstream documentation is preserved in [README.UPSTREAM.md](README.UPSTREAM.md).
 - `libtorrent4j` wrapper created by Alden Torres and the FrostWire team.
 - `libtorrent` (Rasterbar) BitTorrent library developed by Arvid Norberg.
 - `FlatLaf` look-and-feel developed by FormDev Software GmbH.

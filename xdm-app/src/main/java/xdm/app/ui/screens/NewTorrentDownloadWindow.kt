@@ -33,12 +33,13 @@ import java.awt.Color
 import java.awt.Component
 import java.awt.Dimension
 import java.awt.Font
-import javax.swing.DefaultListCellRenderer
-import javax.swing.JList
+import java.awt.GraphicsEnvironment
 import java.awt.GridBagConstraints
 import java.awt.GridBagLayout
 import java.awt.Insets
+import java.awt.Toolkit
 import java.awt.Window
+import java.awt.datatransfer.StringSelection
 import java.io.File
 import javax.swing.*
 import javax.swing.table.AbstractTableModel
@@ -64,26 +65,66 @@ class NewTorrentDownloadWindow(
         btnStart.putClientProperty("Button.arc", btnArc)
         btnQueue.putClientProperty("Button.arc", btnArc)
         btnCancel.putClientProperty("Button.arc", btnArc)
+        btnCopySource.putClientProperty("Button.arc", btnArc)
     }
 
-    private val txtSource = JTextField().apply {
+    val fullSourceText: String = when (source) {
+        is TorrentSource.TorrentFile -> source.file.absolutePath
+        is TorrentSource.MagnetUri -> source.uri
+        is TorrentSource.TorrentBytes -> source.torrentName
+    }
+
+    val txtSource = object : JTextField(fullSourceText) {
+        override fun getPreferredSize(): Dimension {
+            val d = super.getPreferredSize()
+            return Dimension(minOf(d.width, 240.px), d.height)
+        }
+        override fun getMinimumSize(): Dimension {
+            val d = super.getMinimumSize()
+            return Dimension(120.px, d.height)
+        }
+    }.apply {
         isEditable = false
+        caretPosition = 0
         putClientProperty(FlatClientProperties.STYLE, "arc: 8")
-        text = when (source) {
-            is TorrentSource.TorrentFile -> source.file.absolutePath
-            is TorrentSource.MagnetUri -> source.uri
-            is TorrentSource.TorrentBytes -> source.torrentName
+        toolTipText = fullSourceText
+    }
+
+    val btnCopySource = JButton("Copy", FontIcon(RemixIcon.FILE_COPY_LINE, 16.px)).apply {
+        toolTipText = "Copy complete source to clipboard"
+        addActionListener {
+            val clipboard = Toolkit.getDefaultToolkit().systemClipboard
+            clipboard.setContents(StringSelection(fullSourceText), null)
+            val prevText = text
+            text = "Copied!"
+            Timer(1500) { text = prevText }.apply { isRepeats = false; start() }
         }
     }
 
-    private val txtName = JTextField().apply {
+    val txtName = object : JTextField(metadata?.name ?: source.name) {
+        override fun getPreferredSize(): Dimension {
+            val d = super.getPreferredSize()
+            return Dimension(minOf(d.width, 240.px), d.height)
+        }
+        override fun getMinimumSize(): Dimension {
+            val d = super.getMinimumSize()
+            return Dimension(120.px, d.height)
+        }
+    }.apply {
         putClientProperty(FlatClientProperties.STYLE, "arc: 8")
-        text = metadata?.name ?: source.name
     }
 
-    val txtFolder = JTextField().apply {
+    val txtFolder = object : JTextField(initialSaveDir?.absolutePath ?: AppContext.config.defaultDownloadFolder) {
+        override fun getPreferredSize(): Dimension {
+            val d = super.getPreferredSize()
+            return Dimension(minOf(d.width, 240.px), d.height)
+        }
+        override fun getMinimumSize(): Dimension {
+            val d = super.getMinimumSize()
+            return Dimension(120.px, d.height)
+        }
+    }.apply {
         putClientProperty(FlatClientProperties.STYLE, "arc: 8")
-        text = initialSaveDir?.absolutePath ?: AppContext.config.defaultDownloadFolder
     }
 
     private val cmbCategory = JComboBox<String>().apply {
@@ -231,10 +272,12 @@ class NewTorrentDownloadWindow(
         }
 
         // Row 0: Source
-        gbc.gridx = 0; gbc.gridy = 0; gbc.weightx = 0.0
+        gbc.gridx = 0; gbc.gridy = 0; gbc.weightx = 0.0; gbc.gridwidth = 1
         formPanel.add(JLabel("Source:"), gbc)
-        gbc.gridx = 1; gbc.gridy = 0; gbc.weightx = 1.0; gbc.gridwidth = 2
+        gbc.gridx = 1; gbc.gridy = 0; gbc.weightx = 1.0; gbc.gridwidth = 1
         formPanel.add(txtSource, gbc)
+        gbc.gridx = 2; gbc.gridy = 0; gbc.weightx = 0.0; gbc.gridwidth = 1
+        formPanel.add(btnCopySource, gbc)
 
         // Row 1: Status
         gbc.gridx = 0; gbc.gridy = 1; gbc.weightx = 0.0; gbc.gridwidth = 1
@@ -386,8 +429,25 @@ class NewTorrentDownloadWindow(
             KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_ESCAPE, 0),
             JComponent.WHEN_IN_FOCUSED_WINDOW
         )
+        isResizable = true
         pack()
-        size = Dimension(max(width, 580.px), max(height, 420.px))
+
+        val gc = parent?.graphicsConfiguration ?: graphicsConfiguration
+            ?: GraphicsEnvironment.getLocalGraphicsEnvironment().defaultScreenDevice.defaultConfiguration
+        val screenBounds = gc.bounds
+        val screenInsets = Toolkit.getDefaultToolkit().getScreenInsets(gc)
+        val usableWidth = screenBounds.width - screenInsets.left - screenInsets.right
+        val usableHeight = screenBounds.height - screenInsets.top - screenInsets.bottom
+
+        val targetWidth = minOf(usableWidth - 32.px, maxOf(580.px, minOf(width, 700.px)))
+        val targetHeight = minOf(usableHeight - 32.px, maxOf(420.px, minOf(height, 560.px)))
+
+        val minW = minOf(460.px, usableWidth)
+        val minH = minOf(360.px, usableHeight)
+        minimumSize = Dimension(minW, minH)
+        maximumSize = Dimension(usableWidth, usableHeight)
+
+        size = Dimension(targetWidth, targetHeight)
         setLocationRelativeTo(parent)
     }
 

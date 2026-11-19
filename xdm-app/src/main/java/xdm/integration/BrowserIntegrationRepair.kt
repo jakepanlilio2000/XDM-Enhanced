@@ -4,6 +4,7 @@ import xdm.app.OS
 import xdm.app.update.UpdateChecker
 import xdm.app.utils.AppLauncher
 import xdm.app.utils.Browser
+import xdm.app.utils.FORK_TROUBLESHOOTING_URL
 import xdm.app.utils.detectOS
 import xdm.app.utils.win.WindowsAssociations
 import xdm.core.util.Logger
@@ -23,8 +24,7 @@ import java.nio.charset.StandardCharsets
  */
 object BrowserIntegrationRepair {
 
-    const val TROUBLESHOOTING_URL =
-        "https://github.com/jakepanlilio2000/XDM-Enhanced/blob/master/docs/BROWSER_CONNECTION_TROUBLESHOOTING.md"
+    const val TROUBLESHOOTING_URL = FORK_TROUBLESHOOTING_URL
 
     const val LOOPBACK_HOST = "127.0.0.1"
     const val DEFAULT_PORT = BrowserIntegration.PORT

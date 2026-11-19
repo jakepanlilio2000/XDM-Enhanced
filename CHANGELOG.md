@@ -5,6 +5,22 @@ All notable changes to the XDM Enhanced project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2026-11-19
+
+### Added
+- **Active Chunk Visualization & Connection Detail Table:** Added high-contrast active chunk animation in `SegmentVisualizationBar` and a detailed connection table (`SegmentDetailTable`) displaying real-time stream offsets, download rates, and status.
+- **Dedicated "Copy Source" Action:** Added a quick-copy button in the Add BitTorrent Download dialog for easily copying long magnet URIs to the clipboard.
+
+### Changed
+- **Transfer Rate Telemetry & UI Responsiveness:** Transitioned throughput calculation to a ~10ms moving-average sampling window with 100ms batched UI coalescing, preventing EDT thread congestion under gigabit download speeds.
+- **Help, Documentation & Community Destinations:** Updated all application Help menus, sidebar items, and support links to canonical fork documentation (`https://jakepanlilio2000.github.io/XDM-Enhanced/`), issue trackers, and guides with scheme validation and fallback handlers.
+
+### Fixed
+- **BitTorrent Modal Screen Bounding:** Constrained dialog dimensions to usable monitor workspace and restricted magnet URI input field width, preventing oversized dialog windows when processing long magnet links.
+- **Modern Cards Context Menu Parity:** Restored full right-click context menu capabilities across Modern Cards View, matching Table View and Classic View parity while preventing left-click misfires.
+- **NSIS License RTF Formatting:** Fixed control word escaping (`\widowctrl\hyphauto`) in `gpl-3.0-notice.rtf`, preventing literal RTF tokens from rendering in the installer license screen.
+- **Installer Running-Application Handling:** Implemented directory-verified process detection, authenticated loopback graceful shutdown (`/system/shutdown`), interactive escalation prompts, and silent `/FORCE_CLOSE` support in NSIS installer.
+
 ## [1.0.0] - 2026-11-11
 
 ### General

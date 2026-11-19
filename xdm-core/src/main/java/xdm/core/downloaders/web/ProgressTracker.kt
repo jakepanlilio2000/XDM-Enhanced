@@ -19,20 +19,74 @@ data class SegmentProgress(
     var speed: Float = 0f,
 )
 
+data class ByteSample(val nanoTime: Long, val totalBytes: Long)
+
 class ProgressTracker(val singleFile: Boolean) {
+    companion object {
+        const val SAMPLING_INTERVAL_NS = 10_000_000L      // 10 ms sampling target
+        const val WINDOW_DURATION_NS = 400_000_000L       // 400 ms rolling throughput window
+        const val DEFAULT_DISPATCH_INTERVAL_MS = 33L      // ~30 fps visual cadence (within 16-50 ms safe range)
+        const val STALL_TIMEOUT_NS = 500_000_000L         // 500 ms idle threshold for zero rate
+        private const val STREAM_SLOT = 1000L
+    }
+
     var init = false
     var totalDownloadedBytes: Long = 0
     var lastDownloadedBytes: Long = 0
     val speedHistory = LinkedList<Float>()
     var speedSum = 0.0
     var downloadedBytesSinceStartOrResume: Long = 0
-    val ticksAtDownloadStartOrResume = System.currentTimeMillis()
+    var ticksAtDownloadStartOrResume = System.currentTimeMillis()
     var lastProgressUpdatedAt: Long = 0
     var lastChunkStatsUpdated: Long = 0
     var progress = 0
     var downloadSpeed = 0f
     var eta: Long = 0
     var totalSize: Long? = null
+
+    private val samples = ArrayDeque<ByteSample>()
+    var startNanoTime = System.nanoTime()
+    var lastByteArrivalNano = System.nanoTime()
+    var lastChunkStatsUpdatedNano = 0L
+    var dispatchIntervalMs: Long = DEFAULT_DISPATCH_INTERVAL_MS
+
+    /**
+     * Resets timing references and throughput counters when resuming a paused download
+     * so that idle/paused duration does not artificially collapse average speed and ETA.
+     */
+    @Synchronized
+    fun resetResumeTiming() {
+        val now = System.currentTimeMillis()
+        val nowNano = System.nanoTime()
+        this.ticksAtDownloadStartOrResume = now
+        this.startNanoTime = nowNano
+        this.lastByteArrivalNano = nowNano
+        this.downloadedBytesSinceStartOrResume = 0
+        this.lastProgressUpdatedAt = 0
+        this.lastChunkStatsUpdated = 0
+        this.lastChunkStatsUpdatedNano = 0L
+        this.speedHistory.clear()
+        this.speedSum = 0.0
+        this.samples.clear()
+        this.downloadSpeed = 0f
+        this.eta = 0L
+    }
+
+    @Synchronized
+    fun sampleCount(): Int = samples.size
+
+    @Synchronized
+    fun effectiveWindowSpanMs(): Double =
+        if (samples.size >= 2) (samples.last().nanoTime - samples.first().nanoTime) / 1_000_000.0 else 0.0
+
+    @Synchronized
+    fun checkStallDecay(nowNano: Long = System.nanoTime()): Boolean {
+        if (nowNano - lastByteArrivalNano > STALL_TIMEOUT_NS) {
+            downloadSpeed = 0f
+            return true
+        }
+        return false
+    }
 
     /**
      * Streaming only: the bytes the chunks hold, finished or partial. Unlike [totalDownloadedBytes]
@@ -51,8 +105,9 @@ class ProgressTracker(val singleFile: Boolean) {
         @Synchronized get() = (if (singleFile) sortedSegments else segments).map { it.copy() }
 
     /**
-     * [prg] (percent) and [remainingBytes] are only asked for on the ticks that recompute speed and
-     * ETA, about twice a second, as working them out can mean walking every chunk.
+     * [prg] (percent) and [remainingBytes] are asked for on update ticks.
+     * Throughput is derived from low-cost byte counter samples with monotonic timestamps
+     * over a 400 ms rolling window, avoiding assumed exact tick duration divisions.
      */
     private fun update(
         ticks: Long,
@@ -62,31 +117,80 @@ class ProgressTracker(val singleFile: Boolean) {
         prg: () -> Float?,
         remainingBytes: () -> Long?,
     ) {
+        val nowNano = System.nanoTime()
         this.totalSize = totalSize
         this.totalDownloadedBytes += downloadedBytes
         this.downloadedBytesSinceStartOrResume += downloadedBytes
-        if (ticks - this.lastProgressUpdatedAt >= 300 && ticksElapsed > 0) {
-            val instantSpeed =
-                (((this.totalDownloadedBytes - this.lastDownloadedBytes) * 1000f) / (ticks - this.lastProgressUpdatedAt))
-            if (speedHistory.size > 6) {
+
+        if (downloadedBytes > 0) {
+            this.lastByteArrivalNano = nowNano
+        }
+
+        // Low-cost byte counter sampling (~10 ms granularity)
+        if (samples.isEmpty()) {
+            samples.add(ByteSample(nowNano, this.totalDownloadedBytes))
+        } else if (nowNano - samples.last().nanoTime >= SAMPLING_INTERVAL_NS) {
+            samples.add(ByteSample(nowNano, this.totalDownloadedBytes))
+        }
+
+        // Prune samples older than the rolling window duration (400 ms)
+        while (samples.size > 2 && nowNano - samples.first().nanoTime > WINDOW_DURATION_NS) {
+            samples.removeFirst()
+        }
+
+        // Monotonic time-based rolling throughput estimate (never divide by an assumed exact tick duration)
+        val firstSample = samples.first()
+        val lastSample = samples.last()
+        val deltaNano = lastSample.nanoTime - firstSample.nanoTime
+        val deltaBytes = lastSample.totalBytes - firstSample.totalBytes
+
+        val isStalled = (nowNano - lastByteArrivalNano > STALL_TIMEOUT_NS)
+        val instantThroughput = if (!isStalled && deltaNano >= 20_000_000L && deltaBytes >= 0) {
+            (deltaBytes.toDouble() * 1_000_000_000.0 / deltaNano).toFloat()
+        } else if (isStalled) {
+            0f
+        } else {
+            // Under 20 ms or initial sample: derive from session elapsed monotonic time
+            val totalNano = nowNano - startNanoTime
+            if (totalNano > 0 && downloadedBytesSinceStartOrResume > 0) {
+                (downloadedBytesSinceStartOrResume.toDouble() * 1_000_000_000.0 / totalNano).toFloat()
+            } else {
+                this.downloadSpeed
+            }
+        }
+
+        this.downloadSpeed = instantThroughput
+        this.lastProgressUpdatedAt = ticks
+
+        // Backward-compatibility support for speedHistory
+        if (ticksElapsed > 0) {
+            if (speedHistory.size > 8) {
                 this.speedSum -= speedHistory.removeFirst()
             }
-            speedHistory.add(instantSpeed)
-            speedSum += instantSpeed
-            val instanceSpeedBounded = speedSum / speedHistory.size
-            val avgSpeed = (this.downloadedBytesSinceStartOrResume * 1000.0f) / ticksElapsed
-            this.lastProgressUpdatedAt = ticks
-            this.lastDownloadedBytes = this.totalDownloadedBytes
-            this.downloadSpeed = instanceSpeedBounded.toFloat()
-            val percent = prg() ?: return
-            this.progress = percent.toInt()
-            val remaining = remainingBytes()
-            if (remaining != null) {
-                this.eta = getEtaAsSec(remaining.coerceAtLeast(0).toDouble(), avgSpeed)
-            } else if (percent > 0) {
-                // No byte count to go on: assume the rest goes as fast as what is done so far.
-                this.eta = (ticksElapsed * (100 - percent) / (percent * 1000)).toLong()
+            speedHistory.add(instantThroughput)
+            speedSum += instantThroughput
+        }
+
+        // Progress percentage
+        val percent = prg() ?: return
+        this.progress = percent.toInt()
+
+        // Derive ETA from smoothed speed (weighted 70% rolling window, 30% session average)
+        val remaining = remainingBytes()
+        val totalNano = nowNano - startNanoTime
+        val avgSpeed = if (totalNano > 0) (downloadedBytesSinceStartOrResume.toDouble() * 1_000_000_000.0 / totalNano).toFloat() else 0f
+        val smoothedSpeed = if (instantThroughput > 0) (0.7f * instantThroughput + 0.3f * avgSpeed) else avgSpeed
+
+        if (remaining != null) {
+            if (smoothedSpeed > 0) {
+                this.eta = getEtaAsSec(remaining.coerceAtLeast(0).toDouble(), smoothedSpeed)
+            } else {
+                this.eta = 0L
             }
+        } else if (percent > 0 && ticksElapsed > 0) {
+            this.eta = (ticksElapsed * (100 - percent) / (percent * 1000)).toLong()
+        } else {
+            this.eta = 0L
         }
     }
 
@@ -95,9 +199,14 @@ class ProgressTracker(val singleFile: Boolean) {
         val prg = if (totalSize != null) (totalDownloadedBytes + downloadedBytes) * 100.0f / totalSize else null
         val ticks = System.currentTimeMillis()
         val ticksElapsed = ticks - this.ticksAtDownloadStartOrResume
+        val nowNano = System.nanoTime()
+        val dispatchNs = dispatchIntervalMs * 1_000_000L
+
         update(ticks, ticksElapsed, downloadedBytes, totalSize, { prg }, { totalSize?.minus(totalDownloadedBytes) })
-        if (ticks - this.lastChunkStatsUpdated >= 300 && ticksElapsed > 0) {
+
+        if (nowNano - this.lastChunkStatsUpdatedNano >= dispatchNs && ticksElapsed > 0) {
             updateChunkProgressDataSingleFile(chunks)
+            this.lastChunkStatsUpdatedNano = nowNano
             this.lastChunkStatsUpdated = ticks
             return true
         }
@@ -113,6 +222,8 @@ class ProgressTracker(val singleFile: Boolean) {
     fun update(downloadedBytes: Long, totalSize: Long?, chunks: List<StreamingChunk>, completed: Int): Boolean {
         val ticks = System.currentTimeMillis()
         val ticksElapsed = ticks - this.ticksAtDownloadStartOrResume
+        val nowNano = System.nanoTime()
+        val dispatchNs = dispatchIntervalMs * 1_000_000L
         var size: StreamSize? = null
         fun size() = size ?: streamSize(chunks, totalSize).also {
             size = it
@@ -127,8 +238,9 @@ class ProgressTracker(val singleFile: Boolean) {
             },
             remainingBytes = { size().takeIf { it.bytes > 0 }?.let { it.bytes - streamDownloadedBytes } },
         )
-        if (ticks - this.lastChunkStatsUpdated >= 300 && ticksElapsed > 0) {
+        if (nowNano - this.lastChunkStatsUpdatedNano >= dispatchNs && ticksElapsed > 0) {
             updateChunkProgressData(chunks)
+            this.lastChunkStatsUpdatedNano = nowNano
             this.lastChunkStatsUpdated = ticks
             return true
         }
@@ -136,15 +248,18 @@ class ProgressTracker(val singleFile: Boolean) {
     }
 
     /**
-     * Speed, ETA and [progress] only, for a task that builds its own segment data. Returns true about
-     * once a second, when the caller should report progress.
+     * Speed, ETA and [progress] only, for a task that builds its own segment data. Returns true when
+     * the caller should report progress according to the configured dispatch cadence.
      */
     @Synchronized
     fun update(downloadedBytes: Long, totalSize: Long?, progress: Float): Boolean {
         val ticks = System.currentTimeMillis()
         val ticksElapsed = ticks - this.ticksAtDownloadStartOrResume
+        val nowNano = System.nanoTime()
+        val dispatchNs = dispatchIntervalMs * 1_000_000L
         update(ticks, ticksElapsed, downloadedBytes, totalSize, { progress }, { totalSize?.minus(totalDownloadedBytes) })
-        if (ticks - this.lastChunkStatsUpdated >= 300 && ticksElapsed > 0) {
+        if (nowNano - this.lastChunkStatsUpdatedNano >= dispatchNs && ticksElapsed > 0) {
+            this.lastChunkStatsUpdatedNano = nowNano
             this.lastChunkStatsUpdated = ticks
             return true
         }
@@ -196,6 +311,8 @@ class ProgressTracker(val singleFile: Boolean) {
                 ChunkStatus.Finished -> "Complete"
                 ChunkStatus.Downloading -> "Receiving data..."
                 ChunkStatus.Ready -> "Connecting..."
+                ChunkStatus.Retrying -> "Retrying..."
+                ChunkStatus.Paused -> "Paused"
                 ChunkStatus.Failed -> "Failed"
                 ChunkStatus.Cancelled -> "Cancelled"
                 ChunkStatus.Skipped -> "Skipped"
@@ -240,6 +357,8 @@ class ProgressTracker(val singleFile: Boolean) {
                 ChunkStatus.Finished -> "Complete"
                 ChunkStatus.Downloading -> "Receiving data..."
                 ChunkStatus.Ready -> "Connecting..."
+                ChunkStatus.Retrying -> "Retrying..."
+                ChunkStatus.Paused -> "Paused"
                 ChunkStatus.Failed -> "Failed"
                 ChunkStatus.Cancelled -> "Cancelled"
                 ChunkStatus.Skipped -> "Skipped"
@@ -251,9 +370,5 @@ class ProgressTracker(val singleFile: Boolean) {
             s.downloaded = (fraction * STREAM_SLOT).toLong()
             s.status = statusStr
         }
-    }
-
-    private companion object {
-        const val STREAM_SLOT = 1000L
     }
 }

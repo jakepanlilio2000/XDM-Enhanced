@@ -41,7 +41,7 @@ class DownloadStatusBar : JPanel(BorderLayout()) {
     val diskText: String get() = lblDisk.text
 
     private val separators = mutableListOf<JSeparator>()
-    private val timer = Timer(500) { updateMetrics() }
+    private val timer = Timer(250) { updateMetrics() }
 
     init {
         preferredSize = Dimension(Short.MAX_VALUE.toInt(), 26.px)

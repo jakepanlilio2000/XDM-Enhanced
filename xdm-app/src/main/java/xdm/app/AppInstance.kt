@@ -2,8 +2,10 @@ package xdm.app
 
 import xdm.app.AppContext.db
 import xdm.app.I8N.text
+import xdm.app.ui.components.AppMenuHandler
 import xdm.app.ui.components.ChecksumPanel
 import xdm.app.ui.components.MessageBox
+import kotlin.system.exitProcess
 import xdm.app.ui.screens.AboutDialog
 import xdm.app.ui.screens.AppWindow
 import xdm.app.ui.screens.BatchDownloadDialog
@@ -47,7 +49,10 @@ import xdm.manager.BatchFileCounts
 import xdm.manager.DbRecord
 import xdm.manager.LinkValidationResult
 import java.awt.Desktop
+import java.awt.Frame
 import java.awt.MenuItem
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 import java.awt.PopupMenu
 import java.awt.Taskbar
 import java.awt.desktop.AppReopenedListener
@@ -138,11 +143,30 @@ interface IAppInstance {
 
     /** Handles an incoming URI (magnet, http/https, xdm-app) or local file path (.torrent). */
     fun handleIncomingUriOrFile(raw: String)
+
+    /** Initiates graceful shutdown: pauses active downloads, flushes state/torrents/config, and optionally exits. */
+    fun gracefulShutdown(timeoutMs: Long = 3000, exitVm: Boolean = true)
 }
 
 open class AppInstance : IAppInstance {
     private lateinit var appWindow: AppWindow
     private val prgWndMap = mutableMapOf<Long, ProgressWindow>()
+
+    data class ProgressWindowPayload(
+        val fileName: String?,
+        val downloaded: Long,
+        val size: Long,
+        val speed: Float,
+        val eta: Long,
+        val prg: Int,
+        val segData: Collection<SegmentProgress>,
+        val files: BatchFileCounts?,
+    )
+
+    private val pendingProgressPayloads = ConcurrentHashMap<Long, AtomicReference<ProgressWindowPayload>>()
+    private val isProgressScheduled = ConcurrentHashMap<Long, AtomicBoolean>()
+    private val pendingViewUpdates = ConcurrentHashMap<Long, AtomicBoolean>()
+    private val isViewScheduled = ConcurrentHashMap<Long, AtomicBoolean>()
     /**
      * Browser downloads started straight away that have not yet received a byte. The extension has
      * already cancelled the browser's copy, so if one of these fails there is no fallback - and with
@@ -276,14 +300,25 @@ open class AppInstance : IAppInstance {
 
     // Rows are resolved by id on the EDT: an index taken on the calling thread can point at a
     // different row once a delete runs before the EDT gets to it.
+    // Coalesced per id so high-frequency engine progress ticks do not flood the EDT EventQueue.
     override fun updateDownloadInView(id: Long) {
-        runOnUIThread {
-            db.indexById(id)?.let { appWindow.updateDownloadInView(it) }
-            db.getById(id)?.let { rec -> prgWndMap[id]?.onRecordUpdated(rec) }
+        pendingViewUpdates.computeIfAbsent(id) { AtomicBoolean(false) }.set(true)
+        val scheduled = isViewScheduled.computeIfAbsent(id) { AtomicBoolean(false) }
+        if (scheduled.compareAndSet(false, true)) {
+            runOnUIThread {
+                scheduled.set(false)
+                if (pendingViewUpdates[id]?.getAndSet(false) == true) {
+                    if (::appWindow.isInitialized) {
+                        db.indexById(id)?.let { appWindow.updateDownloadInView(it) }
+                    }
+                    db.getById(id)?.let { rec -> prgWndMap[id]?.onRecordUpdated(rec) }
+                }
+            }
         }
     }
 
     override fun deleteDownloadInView(index: Int) {
+        if (!::appWindow.isInitialized) return
         if (SwingUtilities.isEventDispatchThread()) {
             appWindow.deleteDownloadInView(index)
         } else {
@@ -292,11 +327,19 @@ open class AppInstance : IAppInstance {
     }
 
     override fun downloadsRemovedInView() {
-        runOnUIThread { appWindow.downloadsRemovedInView() }
+        runOnUIThread {
+            if (::appWindow.isInitialized) {
+                appWindow.downloadsRemovedInView()
+            }
+        }
     }
 
     override fun addDownloadInView(id: Long) {
-        runOnUIThread { db.indexById(id)?.let { appWindow.addDownloadInView(it) } }
+        runOnUIThread {
+            if (::appWindow.isInitialized) {
+                db.indexById(id)?.let { appWindow.addDownloadInView(it) }
+            }
+        }
     }
 
     override fun addDownload(downloadInfo: HttpDownloadTaskInfo?) {
@@ -472,7 +515,24 @@ open class AppInstance : IAppInstance {
         files: BatchFileCounts?,
     ) {
         if (downloaded > 0) pendingHandoffs.remove(id)
-        runOnUIThread { prgWndMap[id]?.updateProgress(fileName, downloaded, size, speed, eta, prg, segData, files) }
+        val payload = ProgressWindowPayload(fileName, downloaded, size, speed, eta, prg, segData, files)
+        pendingProgressPayloads.computeIfAbsent(id) { AtomicReference() }.set(payload)
+
+        val scheduled = isProgressScheduled.computeIfAbsent(id) { AtomicBoolean(false) }
+        if (scheduled.compareAndSet(false, true)) {
+            runOnUIThread {
+                scheduled.set(false)
+                val p = pendingProgressPayloads[id]?.getAndSet(null) ?: return@runOnUIThread
+                val wnd = prgWndMap[id] ?: return@runOnUIThread
+                val isMinimized = wnd.isShowing && ((wnd.extendedState and Frame.ICONIFIED) != 0)
+                if (isMinimized) {
+                    // Minimized window: update stats/progress without heavy table repaint
+                    wnd.updateProgress(p.fileName, p.downloaded, p.size, p.speed, p.eta, p.prg, emptyList(), p.files)
+                } else {
+                    wnd.updateProgress(p.fileName, p.downloaded, p.size, p.speed, p.eta, p.prg, p.segData, p.files)
+                }
+            }
+        }
     }
 
     override fun updateTorrentProgressWindow(id: Long, snapshot: xdm.torrent.TorrentProgressSnapshot) {
@@ -499,6 +559,10 @@ open class AppInstance : IAppInstance {
 
     override fun hideProgressWindow(id: Long) {
         pendingHandoffs.remove(id)
+        pendingProgressPayloads.remove(id)
+        isProgressScheduled.remove(id)
+        pendingViewUpdates.remove(id)
+        isViewScheduled.remove(id)
         runOnUIThread {
             val wnd = prgWndMap.remove(id)
             wnd?.isVisible = false
@@ -574,6 +638,10 @@ open class AppInstance : IAppInstance {
 
     override fun handleLaunchArgs(args: List<String>) {
         if (args.isEmpty()) return
+        if (args.any { it.equals("--shutdown", ignoreCase = true) || it.equals("--exit", ignoreCase = true) || it.equals("--quit", ignoreCase = true) }) {
+            gracefulShutdown()
+            return
+        }
         for (arg in args) {
             val trimmed = arg.trim().removeSurrounding("\"")
             if (trimmed.isEmpty()) continue
@@ -753,5 +821,47 @@ open class AppInstance : IAppInstance {
             knownFileSize = null,
         )
         addDownload(task)
+    }
+
+    override fun gracefulShutdown(timeoutMs: Long, exitVm: Boolean) {
+        Logger.info("APP", "Initiating graceful application shutdown...")
+        try {
+            // 1. Pause active downloads so transfer state and chunk progress are flushed to disk
+            if (AppContext.hasDb) {
+                val active = AppContext.db.filter { !it.status.isStopped }
+                Logger.info("APP", "Pausing ${active.size} active downloads for shutdown...")
+                active.forEach { rec ->
+                    runCatching { AppMenuHandler.pauseDownload(rec) }
+                }
+            }
+
+            // 2. Flush and close torrent sessions with resume data
+            runCatching {
+                Logger.info("APP", "Flushing torrent resume data...")
+                AppContext.torrentManager.shutdown(saveResumeData = true, timeoutMs = 2000)
+            }
+
+            // 3. Flush plugins
+            runCatching {
+                Logger.info("APP", "Shutting down plugins...")
+                xdm.app.plugins.PluginManager.shutdown()
+            }
+
+            // 4. Save settings and configuration
+            if (AppContext.hasConfig) {
+                runCatching {
+                    Logger.info("APP", "Saving configuration...")
+                    AppContext.config.save()
+                }
+            }
+
+            Logger.info("APP", "Graceful shutdown complete.")
+        } catch (e: Throwable) {
+            Logger.error("APP", "Error during graceful shutdown", e)
+        } finally {
+            if (exitVm) {
+                exitProcess(0)
+            }
+        }
     }
 }

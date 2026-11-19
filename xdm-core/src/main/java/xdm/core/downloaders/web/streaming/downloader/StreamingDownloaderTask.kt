@@ -143,6 +143,7 @@ abstract class StreamingDownloaderTask(
     }
 
     override fun resume() {
+        progressTracker.resetResumeTiming()
         start()
     }
 

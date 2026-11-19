@@ -37,6 +37,12 @@ enum class ChunkStatus {
 
     /** A batch item the server answered with no content (204/205): nothing to save, and not a failure. */
     Skipped,
+
+    /** Connection failed temporarily and is backing off / retrying */
+    Retrying,
+
+    /** Download or chunk is currently paused */
+    Paused,
 }
 
 sealed interface ConnectResult {

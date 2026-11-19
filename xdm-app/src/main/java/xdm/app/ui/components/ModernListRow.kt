@@ -1,9 +1,12 @@
 package xdm.app.ui.components
 
+import xdm.app.AppContext
 import xdm.app.utils.RemixIcon
 import xdm.app.utils.createIcon
+import xdm.app.utils.isMacPopupTrigger
 import xdm.core.util.Logger
 import xdm.manager.DbRecord
+import xdm.manager.RecordStatus
 import java.awt.*
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
@@ -40,6 +43,12 @@ class ModernListRow(
     var onDeleteClick: ActionCallBack? by row::onDeleteClick
     var onMenuClick: ActionCallBack? by row::onMenuClick
 
+    /** A right click on the row at ([x], [y]) in [invoker]; the row is already part of the selection. */
+    var onContextMenu: ((invoker: Component, x: Int, y: Int) -> Unit)? = null
+
+    private val editRow: Int
+        get() = if (editEntry != null && table.isEditing) table.editingRow else viewRow
+
     init {
         model?.addTableModelListener { e: TableModelEvent ->
             val r = e.firstRow
@@ -64,6 +73,41 @@ class ModernListRow(
                 }
             }
         }
+
+        val shortcut = Toolkit.getDefaultToolkit().menuShortcutKeyMaskEx
+        val cardMouseListener = object : MouseAdapter() {
+            override fun mousePressed(e: MouseEvent) {
+                val vr = editRow
+                if (vr == -1) return
+                table.requestFocusInWindow()
+                if (e.isPopupTrigger || isMacPopupTrigger(e) || SwingUtilities.isRightMouseButton(e)) {
+                    showContextMenu(e, vr)
+                    return
+                }
+                if (!SwingUtilities.isLeftMouseButton(e)) return
+                if (e.component != row.lblTitle && e.component != icon) {
+                    val toggle = (e.modifiersEx and shortcut) != 0
+                    table.changeSelection(vr, 0, toggle, e.isShiftDown)
+                    if (e.clickCount == 2 && !toggle && !e.isShiftDown) {
+                        editEntry?.let {
+                            if (it.status == RecordStatus.FINISHED) {
+                                onOpenFileClick?.invoke(it)
+                            } else {
+                                AppContext.app.showProgressWindow(it.id, it.fileName)
+                            }
+                        }
+                    }
+                }
+            }
+
+            override fun mouseReleased(e: MouseEvent) {
+                val vr = editRow
+                if (vr != -1 && (e.isPopupTrigger || isMacPopupTrigger(e) || SwingUtilities.isRightMouseButton(e))) {
+                    showContextMenu(e, vr)
+                }
+            }
+        }
+        row.attachMouseListener(cardMouseListener)
 
         icon.addMouseListener(
             object : MouseAdapter() {
@@ -98,7 +142,7 @@ class ModernListRow(
                 }
 
                 override fun mouseClicked(e: MouseEvent) {
-                    if (viewRow == -1) {
+                    if (viewRow == -1 || !SwingUtilities.isLeftMouseButton(e)) {
                         return
                     }
                     // Focus the list so the keyboard shortcuts act on this selection.
@@ -118,12 +162,20 @@ class ModernListRow(
         row.lblTitle.cursor = Cursor(Cursor.HAND_CURSOR)
         row.lblTitle.addMouseListener(object : MouseAdapter() {
             override fun mouseClicked(e: MouseEvent?) {
+                if (e != null && !SwingUtilities.isLeftMouseButton(e)) return
                 if (editEntry != null) {
                     Logger.info(editEntry!!)
                     onOpenFileClick?.invoke(editEntry!!)
                 }
             }
         })
+    }
+
+    private fun showContextMenu(e: MouseEvent, vr: Int) {
+        if (!table.isRowSelected(vr)) {
+            table.changeSelection(vr, 0, false, false)
+        }
+        onContextMenu?.invoke(e.component, e.x, e.y)
     }
 
     val height: Int

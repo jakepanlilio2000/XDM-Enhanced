@@ -24,12 +24,7 @@ class DownloadRowMenu(private val withPrimaryActions: Boolean) {
 
     /** The menu for [entries] at ([x], [y]) in [invoker]: the single-row menu for one, the bulk menu for more. */
     fun showAt(entries: List<DbRecord>, invoker: Component, x: Int, y: Int) {
-        val menu = when (entries.size) {
-            0 -> return
-            1 -> singleMenu(entries[0], invoker)
-            else -> bulkMenu(entries, invoker)
-        }
-        menu.show(invoker, x, y)
+        DownloadContextMenu.showAt(entries, invoker, x, y)
     }
 
     private fun singleMenu(ent: DbRecord, invoker: Component): JPopupMenu {

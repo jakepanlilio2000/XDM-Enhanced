@@ -68,6 +68,18 @@ class ProgressWindow(val id: Long) : JFrame() {
 
     private var isError: Boolean = false
     private val textBuf = StringBuilder(100)
+    private var lastProgressTick = System.currentTimeMillis()
+    private val stallWatchdog = Timer(200) { checkStall() }
+
+    fun checkStall() {
+        if (dialogState == DialogState.DOWNLOADING) {
+            val elapsed = System.currentTimeMillis() - lastProgressTick
+            if (elapsed >= 500 && lastProgressTick > 0) {
+                lblStat3.text = "Transfer rate: ---"
+                lblStat4.text = "Time left: ---"
+            }
+        }
+    }
     private val themeListener = ThemeManager.ThemeChangeListener {
         applySkinStyles()
         repaint()
@@ -145,6 +157,7 @@ class ProgressWindow(val id: Long) : JFrame() {
 
     val segmentVisualizationBar = SegmentVisualizationBar().apply { isVisible = false }
     val segmentDetailTable = SegmentDetailTable().apply { isVisible = false }
+    private var lastSegments: Collection<SegmentProgress> = emptyList()
 
     // Keep segPanel referencing the visualization bar for backward compatibility
     val segPanel: SegmentPanel get() = segmentVisualizationBar
@@ -258,6 +271,7 @@ class ProgressWindow(val id: Long) : JFrame() {
 
         initUI()
         loadInitialRecordInfo()
+        stallWatchdog.start()
 
         rootPane.registerKeyboardAction(
             { hideWindow() },
@@ -286,7 +300,11 @@ class ProgressWindow(val id: Long) : JFrame() {
         private set
 
     override fun dispose() {
+        stallWatchdog.stop()
         ThemeManager.removeThemeListener(themeListener)
+        try {
+            ToolTipManager.sharedInstance().unregisterComponent(segmentVisualizationBar)
+        } catch (_: Throwable) {}
         super.dispose()
     }
 
@@ -641,6 +659,7 @@ class ProgressWindow(val id: Long) : JFrame() {
 
     fun showPaused() {
         dialogState = DialogState.PAUSED
+        lastProgressTick = 0L
         lblStat.text = "Status: " + text("STAT_PAUSED")
         lblStat3.text = "Transfer rate: ---"
         lblStat4.text = "Time left: ---"
@@ -664,9 +683,24 @@ class ProgressWindow(val id: Long) : JFrame() {
             }
         }
 
-        segmentVisualizationBar.isVisible = false
-        segmentDetailTable.isVisible = false
-        lblActiveConnections.text = ""
+        if (lastSegments.isNotEmpty()) {
+            val pausedSegments = lastSegments.map { seg ->
+                if (seg.status.equals("Complete", ignoreCase = true) || seg.status.equals("Completed", ignoreCase = true)) {
+                    seg
+                } else {
+                    seg.copy(status = "Paused")
+                }
+            }
+            segmentVisualizationBar.isVisible = true
+            segmentVisualizationBar.setValues(pausedSegments)
+            segmentDetailTable.isVisible = true
+            segmentDetailTable.updateSegments(pausedSegments, rec?.size ?: 0L)
+            lblActiveConnections.text = "Connections: ${pausedSegments.size} (Paused)"
+        } else {
+            segmentVisualizationBar.isVisible = false
+            segmentDetailTable.isVisible = false
+            lblActiveConnections.text = ""
+        }
 
         btnOpenFile.isVisible = false
         btnPauseResume.isVisible = true
@@ -690,6 +724,23 @@ class ProgressWindow(val id: Long) : JFrame() {
         btnPauseResume.isEnabled = false
         lblStat3.text = "Transfer rate: ---"
         lblStat4.text = "Time left: ---"
+
+        if (lastSegments.isNotEmpty()) {
+            val resumingSegments = lastSegments.map { seg ->
+                if (seg.status.equals("Complete", ignoreCase = true) || seg.status.equals("Completed", ignoreCase = true)) {
+                    seg
+                } else {
+                    seg.copy(status = "Connecting...")
+                }
+            }
+            val rec = AppContext.db.getById(id)
+            segmentVisualizationBar.isVisible = true
+            segmentVisualizationBar.setValues(resumingSegments)
+            segmentDetailTable.isVisible = true
+            segmentDetailTable.updateSegments(resumingSegments, rec?.size ?: 0L)
+            lblActiveConnections.text = "Connections: ${resumingSegments.size} (Resuming)"
+        }
+
         btnCancel.isEnabled = true
         btnHide.isEnabled = true
     }
@@ -718,9 +769,20 @@ class ProgressWindow(val id: Long) : JFrame() {
         prg.value = 100
         lblStat3.text = ""
         lblStat4.text = ""
-        segmentVisualizationBar.isVisible = false
-        segmentDetailTable.isVisible = false
-        lblActiveConnections.text = ""
+        if (lastSegments.isNotEmpty()) {
+            val completedSegments = lastSegments.map {
+                it.copy(downloaded = if (it.length > 0) it.length else it.downloaded, status = "Complete")
+            }
+            segmentVisualizationBar.isVisible = true
+            segmentVisualizationBar.setValues(completedSegments)
+            segmentDetailTable.isVisible = true
+            segmentDetailTable.updateSegments(completedSegments, rec?.size ?: 0L)
+            lblActiveConnections.text = "Connections: ${completedSegments.size} (Complete)"
+        } else {
+            segmentVisualizationBar.isVisible = false
+            segmentDetailTable.isVisible = false
+            lblActiveConnections.text = ""
+        }
 
         if (rec != null) {
             val sizeStr = if (rec.size > 0) formatSize(rec.size.toDouble()) else (if (rec.downloaded > 0) formatSize(rec.downloaded.toDouble()) else "---")
@@ -874,6 +936,8 @@ class ProgressWindow(val id: Long) : JFrame() {
             return
         }
 
+        lastProgressTick = System.currentTimeMillis()
+
         if (dialogState == DialogState.RESUMING) {
             showDownloading()
         } else if (!btnPauseResume.isEnabled && dialogState != DialogState.PAUSING) {
@@ -918,6 +982,7 @@ class ProgressWindow(val id: Long) : JFrame() {
         lblStat4.text = if (eta > 0) "Time left: " + toLongEta(eta) else "Time left: ---"
 
         lblTorrentSwarm.isVisible = false
+        this.lastSegments = segData
         if (segData.isNotEmpty()) {
             segmentVisualizationBar.isVisible = true
             segmentVisualizationBar.setValues(segData)
@@ -927,6 +992,7 @@ class ProgressWindow(val id: Long) : JFrame() {
         } else {
             segmentVisualizationBar.isVisible = false
             segmentDetailTable.isVisible = false
+            lblActiveConnections.text = ""
         }
 
         windowProgressTaskbar?.setWindowProgressValue(this, prg)
