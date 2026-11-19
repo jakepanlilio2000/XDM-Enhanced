@@ -6,7 +6,8 @@ Only the current stable release and release candidates receive security patches 
 
 | Version | Supported |
 | :--- | :--- |
-| `v1.0.0` (stable) | :white_check_mark: Supported |
+| `v1.0.1` (stable) | :white_check_mark: Current Stable |
+| `v1.0.0` | :white_check_mark: Supported |
 | `v1.0.0-rc.1` | :white_check_mark: Supported |
 | `< 1.0.0-rc.1` | :x: End of Life / Upgrade required |
 

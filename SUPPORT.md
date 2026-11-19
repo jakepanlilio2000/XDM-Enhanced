@@ -5,7 +5,7 @@ If XDM saves you time, here are a few small things that really help keep it goin
 
 ## ⭐ Star XDM on GitHub
 
-This helps the most. Click **Star** at the top of the [XDM repository](https://github.com/subhra74/xdm).
+This helps the most. Click **Star** at the top of the [XDM Enhanced repository](https://github.com/jakepanlilio2000/XDM-Enhanced) (and the upstream [XDM repository](https://github.com/subhra74/xdm)).
 It takes two seconds, and every star helps more people find XDM.
 
 You'll need a GitHub account to star. It's free, and you only need to sign up once.
@@ -35,4 +35,4 @@ Replying in an existing thread where someone asks for a download manager works j
 
 ---
 
-Found a bug or have an idea? [Open an issue](https://github.com/subhra74/xdm/issues).
+Found a bug or have an idea? [Open an issue on XDM Enhanced](https://github.com/jakepanlilio2000/XDM-Enhanced/issues) (or report upstream issues to [subhra74/xdm](https://github.com/subhra74/xdm/issues)).
