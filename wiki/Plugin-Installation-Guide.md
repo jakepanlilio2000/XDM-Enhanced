@@ -4,7 +4,7 @@ XDM Enhanced features an extensible Java Plugin Platform (SPI v2) that allows de
 
 ---
 
-## 1. Official Sample Plugins (`v1.0.0-beta.6`)
+## 1. Official Sample Plugins (`v1.0.1`)
 
 The following official sample plugins are published alongside desktop releases:
 
@@ -17,7 +17,7 @@ The following official sample plugins are published alongside desktop releases:
 
 ## 2. Installing a Plugin (`.xdmplugin`)
 
-1. Download a verified `.xdmplugin` file (e.g. from [GitHub Releases](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/tag/v1.0.0-beta.6)).
+1. Download a verified `.xdmplugin` file (e.g. from [GitHub Releases](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/tag/v1.0.1)).
 2. Launch XDM Enhanced &rarr; open **Settings** (⚙️) &rarr; select **Plugins**.
 3. Click **Install Plugin** &rarr; browse and select your downloaded `.xdmplugin` file.
 4. XDM Enhanced validates the archive manifest (`plugin.json`), checks API version compatibility, and installs the plugin into `~/.xdm/plugins/`.

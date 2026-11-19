@@ -17,7 +17,7 @@ The **XDM Enhanced Companion Browser Extension** provides automatic one-click li
 
 ### Chromium Browsers (Chrome, Edge, Brave, etc.)
 
-1. Download [`XDM-Enhanced-Extension-Chromium-v1.0.0-beta.6.zip`](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.0.0-beta.6/XDM-Enhanced-Extension-Chromium-v1.0.0-beta.6.zip).
+1. Download [`XDM-Enhanced-Extension-Chromium-v1.0.1.zip`](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.0.1/XDM-Enhanced-Extension-Chromium-v1.0.1.zip).
 2. Extract the archive into a permanent folder (e.g. `C:\Users\<YourUser>\Documents\XDM-Extension`).
 3. Open your browser and navigate to the extensions page:
    - Chrome: `chrome://extensions`
@@ -31,7 +31,7 @@ The **XDM Enhanced Companion Browser Extension** provides automatic one-click li
 
 ### Mozilla Firefox
 
-1. Download [`XDM-Enhanced-Extension-Firefox-v1.0.0-beta.6.xpi`](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.0.0-beta.6/XDM-Enhanced-Extension-Firefox-v1.0.0-beta.6.xpi).
+1. Download [`XDM-Enhanced-Extension-Firefox-v1.0.1.xpi`](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.0.1/XDM-Enhanced-Extension-Firefox-v1.0.1.xpi).
 2. Open Firefox and navigate to `about:addons`.
 3. Click the gear icon (⚙️) above your installed extensions and choose **Install Add-on From File...**.
 4. Select the downloaded `.xpi` file and click **Add** when prompted to confirm permissions.
@@ -43,7 +43,7 @@ The **XDM Enhanced Companion Browser Extension** provides automatic one-click li
 1. Click the XDM Enhanced icon in your browser toolbar to open the extension popup.
 2. Confirm the status header displays a green **"Connected"** indicator:
    - **Protocol:** HTTP Loopback (`127.0.0.1:8597`)
-   - **Desktop Version:** `v1.0.0-beta.6`
+   - **Desktop Version:** `v1.0.1`
 3. Click **Settings** in the extension popup to customize video sniffer button placement and minimum video size thresholds.
 
 ---

@@ -2,6 +2,11 @@
 # Synchronizes the 27 markdown documentation pages from the wiki/ directory
 # to the repository's GitHub Wiki git clone (jakepanlilio2000/XDM-Enhanced.wiki.git).
 
+[CmdletBinding()]
+param(
+    [switch]$DryRun
+)
+
 $ErrorActionPreference = "Stop"
 
 $repoRoot = Resolve-Path "$PSScriptRoot\.."
@@ -10,6 +15,9 @@ $wikiRepoUrl = "https://github.com/jakepanlilio2000/XDM-Enhanced.wiki.git"
 $tempWikiDir = Join-Path $env:TEMP "XDM-Enhanced-wiki-deploy"
 
 Write-Host "==> XDM Enhanced Wiki Sync Tool <==" -ForegroundColor Cyan
+if ($DryRun) {
+    Write-Host "[MODE: DRY-RUN ONLY - No remote commits or pushes will be executed]" -ForegroundColor Yellow
+}
 
 if (-not (Test-Path $wikiSrcDir)) {
     Write-Error "Source wiki directory not found at $wikiSrcDir"
@@ -44,9 +52,16 @@ try {
     git add .
     $status = git status --porcelain
     if ($status) {
-        git commit -m "docs(wiki): synchronize 27 user and developer guide pages"
-        git push origin master
-        Write-Host "Wiki pages successfully synchronized and published!" -ForegroundColor Green
+        Write-Host "Pending changes to sync:" -ForegroundColor Yellow
+        git status --short
+        git diff --stat HEAD
+        if ($DryRun) {
+            Write-Host "[DRY RUN] Dry run complete. No commit or push was executed." -ForegroundColor Yellow
+        } else {
+            git commit -m "docs(wiki): synchronize 27 user and developer guide pages with v1.0.1 stable release"
+            git push origin master
+            Write-Host "Wiki pages successfully synchronized and published!" -ForegroundColor Green
+        }
     } else {
         Write-Host "Wiki is already up-to-date. No changes to commit." -ForegroundColor Cyan
     }

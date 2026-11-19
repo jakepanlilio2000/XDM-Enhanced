@@ -38,8 +38,8 @@ mvn clean package -DskipTests
 ```
 
 ### Generated Build Artifacts:
-- **Executable Desktop Application:** `xdm-app/target/xdm-app-1.0.0-beta.6.jar`
-- **Standalone Plugin Developer API:** `xdm-plugin-api/target/xdm-plugin-api-1.0.0-beta.6.jar`
+- **Executable Desktop Application:** `xdm-app/target/xdm-app-1.0.1.jar`
+- **Standalone Plugin Developer API:** `xdm-plugin-api/target/xdm-plugin-api-1.0.1.jar`
 
 ---
 
@@ -48,12 +48,12 @@ mvn clean package -DskipTests
 Launch the desktop client directly from the compiled target output:
 
 ```bash
-java -jar xdm-app/target/xdm-app-1.0.0-beta.6.jar
+java -jar xdm-app/target/xdm-app-1.0.1.jar
 ```
 
 To enable verbose debug logging to stdout:
 ```bash
-java -Dxdm.debug=true -jar xdm-app/target/xdm-app-1.0.0-beta.6.jar
+java -Dxdm.debug=true -jar xdm-app/target/xdm-app-1.0.1.jar
 ```
 
 ---

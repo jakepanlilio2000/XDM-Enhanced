@@ -8,15 +8,13 @@ Understand the release channel hierarchy, update mechanisms, and cryptographic i
 
 XDM Enhanced distributes builds through two release channels:
 
-### Pre-release Channel (Active Beta)
-- **Current Version:** `v1.0.0-beta.6` (Published: November 10, 2026).
-- **Target Audience:** General users, early adopters, testers, and extension developers.
-- **Characteristics:** Receives active feature additions, UI improvements, and experimental plugin API capabilities. Extensively tested across automated CI suites prior to tagging.
+### Stable Channel (Recommended)
+- **Current Version:** `v1.0.1` (Published: November 19, 2026).
+- **Target Audience:** General users and mission-critical production environments.
+- **Characteristics:** Verified against full 15-phase and maintenance audit suites. Includes high-performance multi-connection segmentation, native BitTorrent 2.0, dynamic FlatLaf themes, custom skins, and companion extensions.
 
-### Stable Channel
-- **Current Version:** Pending formal `v1.0.0` release.
-- **Target Audience:** Mission-critical enterprise environments requiring long-term API stability.
-- **Notice:** There are currently **no older stable releases** of XDM Enhanced. All releases prior to `v1.0.0` are tagged as pre-releases on GitHub.
+### Pre-release Channel (Beta / RC)
+- **Status:** Previous beta releases (`v1.0.0-beta.1` through `v1.0.0-beta.6`) and release candidate (`v1.0.0-rc.1`) remain permanently archived on GitHub Releases.
 
 ---
 
@@ -24,26 +22,27 @@ XDM Enhanced distributes builds through two release channels:
 
 Every official release includes a signed `SHA256SUMS.txt` manifest. Verifying checksums ensures that your download was not tampered with, intercepted, or corrupted during transit.
 
-### Verified Hashes for `v1.0.0-beta.6`
+### Verified Hashes for `v1.0.1`
 
 | Package | SHA-256 Hash |
 |:---|:---|
-| `XDM-Enhanced-Setup-v1.0.0-beta.6-win-x64.exe` | `da95a6b3beda92a29357544dc448211f01d6c3ef48ca68182a0cd130a47d3636` |
-| `XDM-Enhanced-v1.0.0-beta.6-windows-x64.zip` | `5bbb8edfd6d4d6a32540b309271c6b1cceefa0569f74f66c7bd2ef542876201d` |
-| `xdm-app-1.0.0-beta.6.jar` | `5f14df837cab6ada72b3f8fad437ee73183f64d21238e2f1bf03b8ed80c26c9c` |
-| `XDM-Enhanced-Extension-Chromium-v1.0.0-beta.6.zip` | `0ee9bb3edf49e11d126eca200ad67b2938e2d33b306a493bc31821ad0977e981` |
-| `XDM-Enhanced-Extension-Firefox-v1.0.0-beta.6.xpi` | `14dfc9637085267dc098c56d49b882e69bdb5cca22eaa9cf75b6d4471951feaa` |
+| `XDM-Enhanced-Setup-v1.0.1-win-x64.exe` | `68be3296248f3f7704dba8cf1945ecc0dda125ed9ba898e468c9bc207b8de76c` |
+| `XDM-Enhanced-v1.0.1-windows-x64.zip` | `2fc4b10348f2eb198cdc01159d6d8fc7bd14eeabd3d3d991645902487a6537f1` |
+| `xdm-app-1.0.1.jar` | `31870f5068bfb6f49ad260fff4a010c2bb2efa3a6df1573bb2bb84399d830011` |
+| `XDM-Enhanced-Extension-Chromium-v1.0.1.zip` | `6db9d41834af3decb57d4c36a13d16e0eb72c8441556d667e82b6fbd3d72b1cd` |
+| `XDM-Enhanced-Extension-Firefox-v1.0.1.xpi` | `8c3f2f1b90a113dbccd1ce771223779cb7dbcaa164bb024250a4e7b7ef9eeaac` |
+| `xdm-plugin-api-1.0.1.jar` | `5636b47925d6957554fb5a4313af0e478fa1ac764d2c5cf30f5c30cba4de4cc7` |
 
 ### How to Verify Checksums Locally
 
 #### On Windows (PowerShell):
 ```powershell
-Get-FileHash -Algorithm SHA256 .\XDM-Enhanced-Setup-v1.0.0-beta.6-win-x64.exe
+Get-FileHash -Algorithm SHA256 .\XDM-Enhanced-Setup-v1.0.1-win-x64.exe
 ```
 
 #### On Linux or macOS (Terminal):
 ```bash
-sha256sum XDM-Enhanced-Setup-v1.0.0-beta.6-win-x64.exe
+sha256sum XDM-Enhanced-Setup-v1.0.1-win-x64.exe
 ```
 
 ---

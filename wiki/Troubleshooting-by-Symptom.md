@@ -78,7 +78,7 @@ Use this symptom-based diagnostic decision tree to locate quick resolutions for 
 ### Symptom 6: Plugin Fails to Load on Startup
 - **Symptoms:** An installed plugin does not appear in the active list, or Settings > Plugins shows a red error status.
 - **Probable Causes:**
-  1. The plugin requires an API version incompatible with host version `v1.0.0-beta.6`.
+  1. The plugin requires an API version incompatible with host version `v1.0.1`.
   2. The plugin threw an unhandled exception during `onInitialize()`.
 - **Resolution:**
   1. Select the plugin in **Settings > Plugins** &rarr; click **View Details** to inspect the stack trace.
@@ -95,7 +95,7 @@ Use this symptom-based diagnostic decision tree to locate quick resolutions for 
 - **Resolution:**
   1. Ensure `yt-dlp.exe` is installed and runnable from command prompt (`yt-dlp --version`).
   2. In XDM Enhanced &rarr; **Settings > Plugins** &rarr; select **yt-dlp Downloader** &rarr; click **Configure** &rarr; set the absolute path to your `yt-dlp` executable.
-  3. Ensure the plugin version is updated to `v1.0.0-beta.6` (which introduces the public `PluginDownloadBridge` integration).
+  3. Ensure the plugin version is updated to `v1.0.1` (which introduces the public `PluginDownloadBridge` integration).
 
 ---
 
