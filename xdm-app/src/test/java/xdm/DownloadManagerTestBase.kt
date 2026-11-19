@@ -7,6 +7,7 @@ import xdm.app.AppContext
 import xdm.app.AppDB
 import xdm.capture.CapturedVideoTracker
 import xdm.app.IAppInstance
+import xdm.app.IPlatformInvoke
 import xdm.core.downloaders.DownloadHost
 import xdm.core.downloaders.DownloaderTask
 import xdm.core.downloaders.HlsDownloadTaskInfo
@@ -75,6 +76,11 @@ abstract class DownloadManagerTestBase {
         AppContext.app = Proxy.newProxyInstance(
             IAppInstance::class.java.classLoader, arrayOf(IAppInstance::class.java)
         ) { _, _, _ -> null } as IAppInstance
+        AppContext.platform = Proxy.newProxyInstance(
+            IPlatformInvoke::class.java.classLoader, arrayOf(IPlatformInvoke::class.java)
+        ) { _, method, _ ->
+            if (method.returnType == java.lang.Boolean.TYPE) true else null
+        } as IPlatformInvoke
     }
 
     @AfterEach
