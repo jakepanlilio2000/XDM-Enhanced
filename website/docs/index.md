@@ -40,7 +40,7 @@ Welcome to the **XDM Enhanced** user and developer documentation. Use the guides
 
   <div class="card-box">
     <h3><a href="/releases">Release Notes & Checksums</a></h3>
-    <p>Full version changelog from beta.1 to beta.6, security fixes, and SHA-256 verification hashes.</p>
+    <p>Full version changelog from initial beta releases to current v1.0.1 stable, security fixes, and SHA-256 verification hashes.</p>
   </div>
 </div>
 
@@ -91,8 +91,8 @@ Welcome to the **XDM Enhanced** user and developer documentation. Use the guides
   </div>
 
   <div class="card-box">
-    <h3><a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases/tag/v1.0.0-beta.6" target="_blank" rel="noopener noreferrer">GitHub Releases ↗</a></h3>
-    <p>Download official pre-release installers, portable zips, browser extensions, and cryptographic SHA-256 sums.</p>
+    <h3><a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases/tag/v1.0.1" target="_blank" rel="noopener noreferrer">GitHub Releases ↗</a></h3>
+    <p>Download official stable installers, portable zips, browser extensions, and cryptographic SHA-256 sums.</p>
   </div>
 </div>
 

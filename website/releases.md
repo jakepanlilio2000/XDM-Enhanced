@@ -4,7 +4,97 @@ Detailed changelog and binary checksum records for all published releases of **X
 
 ---
 
-## [1.0.0-beta.6] — 2026-11-10 (Latest Pre-release)
+## [1.0.1] — 2026-11-19 (Latest Stable Release)
+
+### Highlights & Key Improvements
+
+- **Active Chunk Visualization & Live Connection Details:**
+  - Added real-time chunk pulse animation in `SegmentVisualizationBar` to visually distinguish active receiving stream segments from idle or completed buffers.
+  - Integrated detailed connection table (`SegmentDetailTable`) displaying real-time stream bounds, byte offsets, transfer rates, status flags, and IP addresses.
+- **High-Frequency Telemetry & UI Responsiveness:**
+  - Transitioned transfer rate calculation to a ~10ms moving-average sampling window with 100ms batched UI coalescing, preventing EDT thread congestion under gigabit download speeds while providing fluid transfer telemetry.
+- **BitTorrent Modal Workspace Bounding:**
+  - Strictly constrained the Add Torrent dialog within visible monitor workspace and restricted magnet link input field dimensions, preventing oversized modals when processing long magnet links.
+  - Added a dedicated "Copy Source" action button for easy magnet URI copying.
+- **Context Menu Action Parity:**
+  - Unified `DownloadContextMenu` across Table View, Modern Cards View, and Classic View with left-click misfire guards.
+- **NSIS License RTF Formatting:**
+  - Fixed control word escaping (`\widowctrl\hyphauto`) in `gpl-3.0-notice.rtf`, preventing literal RTF tokens from rendering in the installer license screen.
+- **Installer Process Management:**
+  - Implemented directory-verified process detection, authenticated loopback graceful shutdown (`/system/shutdown`), interactive escalation prompts, and silent `/FORCE_CLOSE` support in NSIS installer.
+- **Canonical Documentation & Help Destinations:**
+  - Updated all application Help menus, sidebar items, and support links to canonical fork documentation (`https://jakepanlilio2000.github.io/XDM-Enhanced/`), issue trackers, and guides with URI scheme validation and fallback handlers.
+
+### Published Assets & Checksums (`v1.0.1`)
+
+<table class="checksum-table">
+  <thead>
+    <tr>
+      <th style="width: 35%;">Asset Filename</th>
+      <th style="width: 15%;">File Size</th>
+      <th>SHA-256 Checksum</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>XDM-Enhanced-Setup-v1.0.1-win-x64.exe</strong></td>
+      <td>64.0 MB</td>
+      <td><code>68be3296248f3f7704dba8cf1945ecc0dda125ed9ba898e468c9bc207b8de76c</code></td>
+    </tr>
+    <tr>
+      <td><strong>XDM-Enhanced-v1.0.1-windows-x64.zip</strong></td>
+      <td>74.3 MB</td>
+      <td><code>2fc4b10348f2eb198cdc01159d6d8fc7bd14eeabd3d3d991645902487a6537f1</code></td>
+    </tr>
+    <tr>
+      <td><strong>xdm-app-1.0.1.jar</strong></td>
+      <td>95.1 MB</td>
+      <td><code>31870f5068bfb6f49ad260fff4a010c2bb2efa3a6df1573bb2bb84399d830011</code></td>
+    </tr>
+    <tr>
+      <td><strong>XDM-Enhanced-Extension-Chromium-v1.0.1.zip</strong></td>
+      <td>106.5 KB</td>
+      <td><code>6db9d41834af3decb57d4c36a13d16e0eb72c8441556d667e82b6fbd3d72b1cd</code></td>
+    </tr>
+    <tr>
+      <td><strong>XDM-Enhanced-Extension-Firefox-v1.0.1.xpi</strong></td>
+      <td>103.6 KB</td>
+      <td><code>8c3f2f1b90a113dbccd1ce771223779cb7dbcaa164bb024250a4e7b7ef9eeaac</code></td>
+    </tr>
+    <tr>
+      <td><strong>xdm-plugin-api-1.0.1.jar</strong></td>
+      <td>22.0 KB</td>
+      <td><code>5636b47925d6957554fb5a4313af0e478fa1ac764d2c5cf30f5c30cba4de4cc7</code></td>
+    </tr>
+    <tr>
+      <td><strong>checksum-verifier.xdmplugin</strong></td>
+      <td>6.2 KB</td>
+      <td><code>c8f915c32a984515db8991537089f9324be18ab5c67421d419c5d30a83582806</code></td>
+    </tr>
+    <tr>
+      <td><strong>ytdlp-downloader.xdmplugin</strong></td>
+      <td>28.6 KB</td>
+      <td><code>8a484eff37e95d961e028c80b353ff84580d275a51e166860f5cfec29a5bf189</code></td>
+    </tr>
+    <tr>
+      <td><strong>cyber-neon.xdmskin</strong></td>
+      <td>34.4 KB</td>
+      <td><code>5e8293da37215dbafff6a41a88495bdefcc0faa3f942c878ada69664ec05ef0f</code></td>
+    </tr>
+  </tbody>
+</table>
+
+---
+
+## [1.0.0] — 2026-11-11 (Stable Release)
+
+Official Stable Release of **XDM Enhanced** — high-speed multi-connection segmented HTTP/HTTPS downloading and streaming media capture with native BitTorrent and magnet support, modern FlatLaf dynamic theming, custom skin packages, a public plugin framework, automated post-download rules, and companion browser extensions.
+
+- Includes all features, performance improvements, bug fixes, and security hardening developed through the v1.0.0 release cycle and verified against the 15-phase audit suites.
+
+---
+
+## [1.0.0-beta.6] — 2026-11-10 (Pre-release)
 
 ### Highlights & Key Improvements
 

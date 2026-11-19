@@ -2,7 +2,7 @@
 
 Explore actual desktop captures of XDM Enhanced running in various themes, dialogs, and workflows.
 
-Every screenshot below is categorized as either a **Verified Runtime Capture** (taken from an active application session) or a **Preview Template** (awaiting final high-resolution capture).
+Every screenshot below is a **Verified Runtime Capture** taken directly from active application sessions.
 
 ---
 
@@ -122,47 +122,58 @@ Every screenshot below is categorized as either a **Verified Runtime Capture** (
 
 ---
 
-## 3. Preview Templates (Awaiting Final Capture)
-
-The items below represent planned high-resolution documentation captures currently staged using the standardized [W-1 Media Manifest](/assets/site/media-manifest.json).
+## 3. Configuration & System Dialogs
 
 <div class="gallery-grid">
   <div class="gallery-card">
-    <img src="/assets/site/screenshots/torrent-manager.png" alt="BitTorrent Manager Preview Template" loading="lazy" />
+    <img src="/assets/site/screenshots/real/browser-integration-settings.png" alt="XDM Enhanced Browser Integration Settings" loading="lazy" />
     <div class="gallery-card-content">
-      <span class="badge-pill badge-template">Preview Template — Replace with Actual Screenshot</span>
-      <h4>BitTorrent Swarm & File Tree</h4>
-      <p>Placeholder template specifying capture of libtorrent4j peer diagnostics, swarm stats, and file tree toggles.</p>
+      <span class="badge-pill badge-verified">Verified Runtime Capture</span>
+      <h4>Browser Integration & Diagnostics</h4>
+      <p>Desktop settings for loopback port monitoring, native messaging host registration, and one-click integration repair.</p>
     </div>
     <div class="gallery-card-footer">
-      <span>Target: 1600 × 900</span>
-      <span>Template</span>
+      <span>1200 × 800</span>
+      <span>Browser Settings</span>
     </div>
   </div>
 
   <div class="gallery-card">
-    <img src="/assets/site/screenshots/browser-extension.png" alt="Browser Extension Popup Preview Template" loading="lazy" />
+    <img src="/assets/site/screenshots/real/custom-skin-preview.png" alt="XDM Enhanced Custom Skin Preview" loading="lazy" />
     <div class="gallery-card-content">
-      <span class="badge-pill badge-template">Preview Template — Replace with Actual Screenshot</span>
-      <h4>Browser Extension Popup</h4>
-      <p>Placeholder template specifying capture of companion extension popup with loopback connection status.</p>
+      <span class="badge-pill badge-verified">Verified Runtime Capture</span>
+      <h4>Custom Skin Engine Preview</h4>
+      <p>Live skin preview demonstrating wallpaper background tiling, opacity control, and contrast scrim protection.</p>
     </div>
     <div class="gallery-card-footer">
-      <span>Target: 600 × 800</span>
-      <span>Template</span>
+      <span>1200 × 800</span>
+      <span>Skin Engine</span>
     </div>
   </div>
 
   <div class="gallery-card">
-    <img src="/assets/site/screenshots/nsis-installer.png" alt="Windows NSIS Installer Preview Template" loading="lazy" />
+    <img src="/assets/site/screenshots/real/post-download-rules.png" alt="XDM Enhanced Post-Download Rules" loading="lazy" />
     <div class="gallery-card-content">
-      <span class="badge-pill badge-template">Preview Template — Replace with Actual Screenshot</span>
-      <h4>Windows NSIS Setup Wizard</h4>
-      <p>Placeholder template specifying capture of modern NSIS installer component selection dialog.</p>
+      <span class="badge-pill badge-verified">Verified Runtime Capture</span>
+      <h4>Post-Download Automation Rules</h4>
+      <p>Automated action manager for executing antivirus scans, custom scripts, and automatic file sorting upon transfer completion.</p>
     </div>
     <div class="gallery-card-footer">
-      <span>Target: 900 × 650</span>
-      <span>Template</span>
+      <span>1200 × 800</span>
+      <span>Automation Rules</span>
+    </div>
+  </div>
+
+  <div class="gallery-card">
+    <img src="/assets/site/screenshots/real/about-dialog.png" alt="XDM Enhanced About Dialog" loading="lazy" />
+    <div class="gallery-card-content">
+      <span class="badge-pill badge-verified">Verified Runtime Capture</span>
+      <h4>About & Attribution Dialog</h4>
+      <p>Application details dialog detailing Apache-2.0 / GPL-3.0 licensing terms, build versions, and upstream project credits.</p>
+    </div>
+    <div class="gallery-card-footer">
+      <span>800 × 600</span>
+      <span>About Window</span>
     </div>
   </div>
 </div>

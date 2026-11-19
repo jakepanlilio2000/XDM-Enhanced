@@ -12,13 +12,13 @@ To create a plugin, add `xdm-plugin-api` to your Maven `pom.xml`:
 <dependency>
     <groupId>xdm</groupId>
     <artifactId>xdm-plugin-api</artifactId>
-    <version>1.0.0-beta.6</version>
+    <version>1.0.1</version>
     <scope>provided</scope>
 </dependency>
 ```
 
 > [!TIP]
-> The `xdm-plugin-api.jar` is available in the [v1.0.0-beta.6 GitHub Release](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.0.0-beta.6/xdm-plugin-api-1.0.0-beta.6.jar). Mark the dependency scope as `provided` because the host application supplies the API runtime.
+> The `xdm-plugin-api.jar` is available in the [v1.0.1 GitHub Release](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.0.1/xdm-plugin-api-1.0.1.jar). Mark the dependency scope as `provided` because the host application supplies the API runtime.
 
 ---
 
@@ -42,7 +42,7 @@ Every plugin archive must contain a `plugin.json` file in its root:
 ### Semantic Version Range Matching
 The `apiVersion` field uses standard Maven range syntax:
 - `[1.0.0, 2.0.0)` matches any host version from `1.0.0` up to (but not including) `2.0.0`.
-- This ensures application updates from `1.0.0-beta.6` to `1.1.0` or `1.5.0` will never break your plugin.
+- This ensures application updates from `1.0.1` to `1.1.0` or `1.5.0` will never break your plugin.
 
 ---
 
@@ -145,5 +145,5 @@ When invoking external binaries (such as `yt-dlp` or `ffmpeg`):
 - **Authoritative Specification:** [`docs/PLUGIN_DEVELOPMENT.md` ↗](https://github.com/jakepanlilio2000/XDM-Enhanced/blob/master/docs/PLUGIN_DEVELOPMENT.md)
 - **Reference Plugins in Repo:** [`sample-plugins/` ↗](https://github.com/jakepanlilio2000/XDM-Enhanced/tree/master/sample-plugins)
 - **Community Wiki Tutorial:** [Plugin SDK Quick Start ↗](https://github.com/jakepanlilio2000/XDM-Enhanced/wiki/Plugin-SDK-Quick-Start)
-- **Plugin API JAR Download:** [GitHub Releases v1.0.0-beta.6 ↗](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/tag/v1.0.0-beta.6)
+- **Plugin API JAR Download:** [GitHub Releases v1.0.1 ↗](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/tag/v1.0.1)
 

@@ -79,11 +79,11 @@ XDM Enhanced is engineered from the ground up for maximum download throughput, d
 
 ---
 
-## Current Beta Limitations & Known Boundaries
+## Current Operating Parameters & Boundaries
 
-As XDM Enhanced is currently in active development on the **Pre-release Channel (v1.0.0-beta.6)**, users should be aware of the following known operating parameters:
+In the **Current Stable Release (v1.0.1)**, users should take note of the following operating parameters:
 
 1. **yt-dlp Binary Path:** The `ytdlp-downloader.xdmplugin` requires a pre-installed `yt-dlp` executable on the host system. The executable path must be configured in Settings > Plugins.
-2. **Relocated Executable Repair:** If you move the portable XDM folder to a new drive letter, run **Settings > Browser > Repair Integration** to update Windows protocol handler and native messaging paths.
+2. **Relocated Executable Repair:** If you move the portable XDM folder to a new directory or drive letter, run **Settings > Browser > Repair Integration** to update Windows protocol handler and native messaging paths.
 3. **Firewall Rule on Port 8597:** The browser extension communicates strictly over local loopback (`127.0.0.1:8597`). Overly aggressive third-party firewalls blocking localhost loopback traffic may trigger a false "Disconnected" badge.
 

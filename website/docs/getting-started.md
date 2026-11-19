@@ -7,21 +7,21 @@ This guide walks you through installing XDM Enhanced on your computer, configuri
 ## 1. Installation Options
 
 ### Option A: Windows Installer (Recommended)
-1. Download [`XDM-Enhanced-Setup-v1.0.0-beta.6-win-x64.exe`](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.0.0-beta.6/XDM-Enhanced-Setup-v1.0.0-beta.6-win-x64.exe).
+1. Download [`XDM-Enhanced-Setup-v1.0.1-win-x64.exe`](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.0.1/XDM-Enhanced-Setup-v1.0.1-win-x64.exe).
 2. Run the setup wizard. The installer automatically includes an isolated Liberica JDK 25 runtime image.
 3. Complete the installation. XDM Enhanced will automatically create start menu shortcuts and register the `xdm-app://` protocol handler.
 
 ### Option B: Windows Portable ZIP
-1. Download [`XDM-Enhanced-v1.0.0-beta.6-windows-x64.zip`](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.0.0-beta.6/XDM-Enhanced-v1.0.0-beta.6-windows-x64.zip).
+1. Download [`XDM-Enhanced-v1.0.1-windows-x64.zip`](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.0.1/XDM-Enhanced-v1.0.1-windows-x64.zip).
 2. Extract the archive to any folder (e.g. `C:\Tools\XDM-Enhanced` or a USB drive).
 3. Double-click `xdm-app.exe` to launch. All configurations and temporary download chunks remain contained inside the portable folder.
 
 ### Option C: Universal Executable JAR (Linux / macOS)
 1. Ensure 64-bit Java 25 is installed (`java -version`).
-2. Download [`xdm-app-1.0.0-beta.6.jar`](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.0.0-beta.6/xdm-app-1.0.0-beta.6.jar).
+2. Download [`xdm-app-1.0.1.jar`](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.0.1/xdm-app-1.0.1.jar).
 3. Launch via terminal:
    ```bash
-   java -jar xdm-app-1.0.0-beta.6.jar
+   java -jar xdm-app-1.0.1.jar
    ```
 
 > [!NOTE]
