@@ -62,25 +62,27 @@ class DownloadScheduler(private val appDB: AppDB, private val configDir: String)
         thread?.interrupt()
     }
 
-    @Synchronized
-    fun contains(id: Long): Boolean {
-        return entries.any { it.downloadId == id }
+    fun contains(id: Long): Boolean = synchronized(entries) {
+        entries.any { it.downloadId == id }
     }
 
-    @Synchronized
     fun addEntry(entry: ScheduleEntry) {
-        entries.add(entry)
-        saveEntries()
+        synchronized(entries) {
+            entries.add(entry)
+            saveEntries()
+        }
     }
 
-    @Synchronized
     fun removeEntry(downloadId: Long) {
-        entries.removeIf { it.downloadId == downloadId }
-        saveEntries()
+        synchronized(entries) {
+            entries.removeIf { it.downloadId == downloadId }
+            saveEntries()
+        }
     }
 
-    fun getEntryFor(downloadId: Long): ScheduleEntry? =
+    fun getEntryFor(downloadId: Long): ScheduleEntry? = synchronized(entries) {
         entries.find { it.downloadId == downloadId }
+    }
 
     internal fun tick() {
         val cal = Calendar.getInstance()

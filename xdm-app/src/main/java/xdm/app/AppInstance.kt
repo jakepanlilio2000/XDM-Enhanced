@@ -826,6 +826,14 @@ open class AppInstance : IAppInstance {
     override fun gracefulShutdown(timeoutMs: Long, exitVm: Boolean) {
         Logger.info("APP", "Initiating graceful application shutdown...")
         try {
+            // 0. Stop the download scheduler so background triggers do not fire during shutdown
+            if (AppContext.hasScheduler) {
+                runCatching {
+                    Logger.info("APP", "Stopping download scheduler...")
+                    AppContext.scheduler.stop()
+                }
+            }
+
             // 1. Pause active downloads so transfer state and chunk progress are flushed to disk
             if (AppContext.hasDb) {
                 val active = AppContext.db.filter { !it.status.isStopped }
