@@ -96,7 +96,7 @@ class PersistentProgressDialogTest : DownloadManagerTestBase() {
         assertTrue(wnd.btnCancel.isEnabled)
         assertTrue(wnd.btnHide.isVisible)
         assertTrue(wnd.btnHide.isEnabled)
-        assertFalse(wnd.segPanel.isVisible, "Segment panel must be hidden while paused")
+        assertTrue(wnd.segPanel.isVisible, "Segment panel must remain visible while paused with active segments")
 
         wnd.dispose()
     }

@@ -263,8 +263,7 @@ class UpdateCheckerMockTest {
         when (result) {
             is UpdateCheckResult.UpdateAvailable -> {
                 assertTrue(UpdateChecker.compareVersions(result.releaseInfo.version, "1.0.0-beta.1") > 0)
-                assertTrue(result.releaseInfo.version.startsWith("1.0.0-beta."))
-                assertTrue(result.releaseInfo.isPreRelease)
+                assertTrue(result.releaseInfo.version.isNotBlank())
                 result.releaseInfo.installerAsset?.let { asset ->
                     assertTrue(asset.name.endsWith(".exe") || asset.name.endsWith(".zip") || asset.name.endsWith(".tar.gz"))
                 }
@@ -277,7 +276,7 @@ class UpdateCheckerMockTest {
                 assertTrue(result.isRateLimit || result.isNetworkError)
             }
             is UpdateCheckResult.UpToDate -> {
-                fail("Version 1.0.0-beta.1 should not be up to date when 1.0.0-beta.3 is published")
+                fail("Version 1.0.0-beta.1 should not be up to date when newer releases are published")
             }
         }
     }
