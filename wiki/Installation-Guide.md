@@ -18,7 +18,7 @@ This guide covers installing and running **XDM Enhanced** across supported deskt
 
 ### Option A: Modern NSIS Installer (Recommended)
 
-1. Download [`XDM-Enhanced-Setup-v1.0.1-win-x64.exe`](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.0.1/XDM-Enhanced-Setup-v1.0.1-win-x64.exe) from GitHub Releases.
+1. Download [`XDM-Enhanced-Setup-v1.0.2-win-x64.exe`](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.0.2/XDM-Enhanced-Setup-v1.0.2-win-x64.exe) from GitHub Releases.
 2. Launch the installer executable.
    *Note: If Windows SmartScreen displays an "Unknown Publisher" prompt, click **More info** and select **Run anyway** (pre-release binaries are community builds).*
 3. Follow the setup wizard to choose your installation directory (default: `C:\Program Files\XDM-Enhanced`).
@@ -35,7 +35,7 @@ The XDM Enhanced main window opens, and the project squircle icon appears in the
 
 ### Option B: Windows Portable Bundle (Zero-Install)
 
-1. Download [`XDM-Enhanced-v1.0.1-windows-x64.zip`](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.0.1/XDM-Enhanced-v1.0.1-windows-x64.zip).
+1. Download [`XDM-Enhanced-v1.0.2-windows-x64.zip`](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.0.2/XDM-Enhanced-v1.0.2-windows-x64.zip).
 2. Right-click the `.zip` file and select **Extract All...** to a permanent location (e.g. `C:\Tools\XDM-Enhanced` or an external USB flash drive).
 3. Open the extracted directory and double-click `xdm-app.exe`.
 
@@ -50,10 +50,10 @@ XDM Enhanced runs in standalone portable mode. Application configuration files a
    ```bash
    java -version
    ```
-2. Download [`xdm-app-1.0.1.jar`](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.0.1/xdm-app-1.0.1.jar).
+2. Download [`xdm-app-1.0.2.jar`](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.0.2/xdm-app-1.0.2.jar).
 3. Open a terminal and run:
    ```bash
-   java -jar xdm-app-1.0.1.jar
+   java -jar xdm-app-1.0.2.jar
    ```
 
 **Display Server & Toolkit Limitations on Linux:**

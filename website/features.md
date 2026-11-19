@@ -81,7 +81,7 @@ XDM Enhanced is engineered from the ground up for maximum download throughput, d
 
 ## Current Operating Parameters & Boundaries
 
-In the **Current Stable Release (v1.0.1)**, users should take note of the following operating parameters:
+In the **Current Stable Release (v1.0.2)**, users should take note of the following operating parameters:
 
 1. **yt-dlp Binary Path:** The `ytdlp-downloader.xdmplugin` requires a pre-installed `yt-dlp` executable on the host system. The executable path must be configured in Settings > Plugins.
 2. **Relocated Executable Repair:** If you move the portable XDM folder to a new directory or drive letter, run **Settings > Browser > Repair Integration** to update Windows protocol handler and native messaging paths.

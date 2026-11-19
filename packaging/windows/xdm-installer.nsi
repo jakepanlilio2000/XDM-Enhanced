@@ -1,7 +1,7 @@
 ; ==============================================================================
 ; XDM Enhanced — NSIS Windows Installer Script
 ; Modern UI 2 installer for Windows x64 (perMachineOrUser)
-; Package: XDM-Enhanced-Setup-v1.0.1-win-x64.exe
+; Package: XDM-Enhanced-Setup-v1.0.2-win-x64.exe
 ; ==============================================================================
 
 Unicode True
@@ -12,9 +12,9 @@ RequestExecutionLevel user
 ; --- Product Definitions ---
 !define PRODUCT_NAME "XDM Enhanced"
 !ifndef PRODUCT_VERSION
-  !define PRODUCT_VERSION "1.0.1"
+  !define PRODUCT_VERSION "1.0.2"
 !endif
-!define PRODUCT_VERSION_NUM "1.0.1.0"
+!define PRODUCT_VERSION_NUM "1.0.2.0"
 !define PRODUCT_PUBLISHER "XDM Enhanced Contributors"
 !define PRODUCT_WEB_SITE "https://github.com/jakepanlilio2000/XDM-Enhanced"
 !define PRODUCT_SUPPORT_URL "https://github.com/jakepanlilio2000/XDM-Enhanced/issues"
@@ -27,7 +27,7 @@ RequestExecutionLevel user
 !endif
 
 !ifndef OUT_FILE
-  !define OUT_FILE "..\..\build\dist\windows-x64\XDM-Enhanced-Setup-v1.0.1-win-x64.exe"
+  !define OUT_FILE "..\..\build\dist\windows-x64\XDM-Enhanced-Setup-v1.0.2-win-x64.exe"
 !endif
 
 !ifndef ICON_FILE
@@ -102,7 +102,7 @@ VIAddVersionKey "CompanyName" "${PRODUCT_PUBLISHER}"
 VIAddVersionKey "FileDescription" "${PRODUCT_NAME} Setup"
 VIAddVersionKey "FileVersion" "${PRODUCT_VERSION_NUM}"
 VIAddVersionKey "LegalCopyright" "Copyright (C) 2026 XDM Enhanced Contributors"
-VIAddVersionKey "OriginalFilename" "XDM-Enhanced-Setup-v1.0.1-win-x64.exe"
+VIAddVersionKey "OriginalFilename" "XDM-Enhanced-Setup-v1.0.2-win-x64.exe"
 
 ; ==============================================================================
 ; Helper Function: Check & Prompt If App Is Running

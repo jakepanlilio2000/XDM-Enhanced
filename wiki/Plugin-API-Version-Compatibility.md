@@ -42,12 +42,12 @@ In your plugin's `plugin.json` manifest, declare the supported host API range us
 
 | Manifest Syntax | Range Meaning | Compatible Host Versions |
 |:---|:---|:---|
-| `[1.0.0, 2.0.0)` | $\ge 1.0.0$ and $< 2.0.0$ | `v1.0.1`, `v1.1.0`, `v1.9.9` (Rejects `v2.0.0`) |
+| `[1.0.0, 2.0.0)` | $\ge 1.0.0$ and $< 2.0.0$ | `v1.0.2`, `v1.1.0`, `v1.9.9` (Rejects `v2.0.0`) |
 | `[1.0.0, 1.5.0]` | $\ge 1.0.0$ and $\le 1.5.0$ | Up to `1.5.0` inclusive |
 | `1.0.0` | Exactly `1.0.0` | Only `1.0.0` (Not recommended) |
 
 ### Why `[1.0.0, 2.0.0)` Is the Recommended Standard:
-Semantic Versioning guarantees backwards compatibility across minor and patch releases (`1.x.x`). Using `[1.0.0, 2.0.0)` ensures that when XDM Enhanced updates from `v1.0.1` to future `1.x` releases, your plugin continues to load and execute without requiring re-compilation.
+Semantic Versioning guarantees backwards compatibility across minor and patch releases (`1.x.x`). Using `[1.0.0, 2.0.0)` ensures that when XDM Enhanced updates from `v1.0.2` to future `1.x` releases, your plugin continues to load and execute without requiring re-compilation.
 
 ---
 

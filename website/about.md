@@ -51,7 +51,7 @@ You are free to use, modify, study, and distribute this software in accordance w
 ## 5. Project Navigation & External Resources
 
 - **GitHub Source Repository:** [https://github.com/jakepanlilio2000/XDM-Enhanced](https://github.com/jakepanlilio2000/XDM-Enhanced)
-- **Latest Release:** [GitHub Releases (v1.0.1)](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/tag/v1.0.1)
+- **Latest Release:** [GitHub Releases (v1.0.2)](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/tag/v1.0.2)
 - **Community Wiki:** [GitHub Wiki (Staged in `wiki/`)](https://github.com/jakepanlilio2000/XDM-Enhanced/wiki)
 - **Issue & Regression Tracker:** [GitHub Issues](https://github.com/jakepanlilio2000/XDM-Enhanced/issues)
 - **Original Upstream Repository:** [https://github.com/subhra74/xdm](https://github.com/subhra74/xdm)

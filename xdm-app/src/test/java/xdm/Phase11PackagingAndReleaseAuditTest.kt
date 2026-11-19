@@ -129,6 +129,7 @@ class Phase11PackagingAndReleaseAuditTest {
         assertTrue(UpdateChecker.compareVersions("1.0.0-rc.1", "1.0.0-beta.6") > 0, "rc.1 should be newer than beta.6")
         assertTrue(UpdateChecker.compareVersions("1.0.0", "1.0.0-rc.1") > 0, "1.0.0 stable should be newer than rc.1")
         assertTrue(UpdateChecker.compareVersions("1.0.1", "1.0.0") > 0, "1.0.1 should be newer than 1.0.0")
+        assertTrue(UpdateChecker.compareVersions("1.0.2", "1.0.1") > 0, "1.0.2 should be newer than 1.0.1")
         assertEquals(0, UpdateChecker.compareVersions("v1.0.0", "1.0.0"), "Leading v should be normalized")
 
         // 3. Prerelease selection by channel

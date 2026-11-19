@@ -40,7 +40,7 @@ You can set custom wallpaper artwork behind the main window and transfer lists:
 
 Community designers can package full themes into `.xdmskin` archives containing custom icons, fonts, and wallpapers:
 
-1. Download a `.xdmskin` package (e.g. [`cyber-neon.xdmskin`](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.0.1/cyber-neon.xdmskin)).
+1. Download a `.xdmskin` package (e.g. [`cyber-neon.xdmskin`](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.0.2/cyber-neon.xdmskin)).
 2. In XDM Enhanced &rarr; **Settings > Appearance** &rarr; click **Install Skin**.
 3. Select the `.xdmskin` file.
 4. The skin is validated, installed into your local settings directory (`~/.xdm/skins/`), and applied instantly.

@@ -11,7 +11,7 @@ The **XDM Enhanced Companion Extension** enables automatic link capture, video s
     <h3>Google Chrome & Chromium</h3>
     <p>Supports Google Chrome, Brave, Microsoft Edge, Opera, Vivaldi, and Arc. Implemented using <strong>Manifest V3</strong> with service-worker event routing.</p>
     <div style="margin-top: 1rem;">
-      <a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.0.1/XDM-Enhanced-Extension-Chromium-v1.0.1.zip" class="btn-primary" style="font-size: 0.85rem;">Download Chromium Extension</a>
+      <a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.0.2/XDM-Enhanced-Extension-Chromium-v1.0.2.zip" class="btn-primary" style="font-size: 0.85rem;">Download Chromium Extension</a>
     </div>
   </div>
 
@@ -19,7 +19,7 @@ The **XDM Enhanced Companion Extension** enables automatic link capture, video s
     <h3>Mozilla Firefox</h3>
     <p>Supports Mozilla Firefox (109+), LibreWolf, Waterfox, and Firefox ESR. Implemented using signed <strong>Manifest V2</strong> for maximum media streaming compatibility.</p>
     <div style="margin-top: 1rem;">
-      <a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.0.1/XDM-Enhanced-Extension-Firefox-v1.0.1.xpi" class="btn-primary" style="font-size: 0.85rem;">Download Firefox Add-on (.XPI)</a>
+      <a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.0.2/XDM-Enhanced-Extension-Firefox-v1.0.2.xpi" class="btn-primary" style="font-size: 0.85rem;">Download Firefox Add-on (.XPI)</a>
     </div>
   </div>
 </div>
@@ -30,7 +30,7 @@ The **XDM Enhanced Companion Extension** enables automatic link capture, video s
 
 ### Chromium Browsers (Chrome, Edge, Brave, etc.)
 
-1. Download [`XDM-Enhanced-Extension-Chromium-v1.0.1.zip`](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.0.1/XDM-Enhanced-Extension-Chromium-v1.0.1.zip).
+1. Download [`XDM-Enhanced-Extension-Chromium-v1.0.2.zip`](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.0.2/XDM-Enhanced-Extension-Chromium-v1.0.2.zip).
 2. Unzip the archive into a permanent folder (e.g., `Documents\XDM-Extension`).
 3. Open your browser and navigate to `chrome://extensions` (or `edge://extensions`).
 4. Enable **Developer mode** using the toggle in the top-right corner.
@@ -39,7 +39,7 @@ The **XDM Enhanced Companion Extension** enables automatic link capture, video s
 
 ### Mozilla Firefox
 
-1. Download [`XDM-Enhanced-Extension-Firefox-v1.0.1.xpi`](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.0.1/XDM-Enhanced-Extension-Firefox-v1.0.1.xpi).
+1. Download [`XDM-Enhanced-Extension-Firefox-v1.0.2.xpi`](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.0.2/XDM-Enhanced-Extension-Firefox-v1.0.2.xpi).
 2. Open Firefox and navigate to `about:addons`.
 3. Click the gear icon (⚙️) in the top-right and choose **Install Add-on From File...**.
 4. Select the downloaded `.xpi` file and confirm the permission prompt.

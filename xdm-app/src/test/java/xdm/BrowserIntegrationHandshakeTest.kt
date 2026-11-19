@@ -368,6 +368,7 @@ class BrowserIntegrationHandshakeTest {
         assertFalse(isOutdatedDesktopVersion("1.0.0"), "1.0.0 must be compatible")
         assertFalse(isOutdatedDesktopVersion("1.0.0-beta.6"), "1.0.0-beta.6 must be compatible")
         assertFalse(isOutdatedDesktopVersion("1.0.1"), "1.0.1 must be compatible")
+        assertFalse(isOutdatedDesktopVersion("1.0.2"), "1.0.2 must be compatible")
         assertFalse(isOutdatedDesktopVersion("2.0.0"), "2.0.0 must be compatible")
     }
 }

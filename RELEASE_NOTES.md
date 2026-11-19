@@ -1,4 +1,4 @@
-# XDM Enhanced v1.0.1 (Maintenance Release)
+# XDM Enhanced v1.0.2 (Maintenance Release)
 
 Maintenance Release of **XDM Enhanced** — an independent, open-source download manager forked from Xtreme Download Manager (XDM). It pairs high-speed multi-connection segmented HTTP/HTTPS downloading and streaming media capture with native BitTorrent and magnet support, modern FlatLaf dynamic theming, custom skin packages, a public plugin framework, automated post-download rules, and companion browser extensions.
 
@@ -6,32 +6,26 @@ Maintenance Release of **XDM Enhanced** — an independent, open-source download
 
 ## Release Highlights
 
-- **Active Chunk Visualization & Live Connection Details:** High-contrast visual pulse animation in `SegmentVisualizationBar` and a detailed connection table (`SegmentDetailTable`) displaying real-time stream bounds, byte offsets, transfer rates, status flags, and IP addresses.
-- **High-Frequency Telemetry & UI Responsiveness:** Transitioned speed calculation to a ~10ms moving-average sampling window with 100ms batched UI coalescing, preventing EDT thread congestion under gigabit download speeds while providing fluid transfer telemetry.
-- **BitTorrent Modal Workspace Bounding:** Strictly bounded dialog dimensions to usable monitor workspace geometry and constrained magnet URI input field width, preventing modal dialog expansion off-screen with 2,000+ character magnet links. Added a dedicated "Copy Source" clipboard button.
-- **Modern Cards Context Menu Parity:** Restored full right-click context menu parity across Modern Cards View, matching Table View and Classic View capabilities while preventing left-click selection misfires.
-- **Robust Running-Application Handling in Installer:** Isolated target detection verifying executable path and directory containment (`process-manager.ps1`), authenticated loopback HTTP graceful shutdown (`/system/shutdown`) with persistent state preservation, interactive user escalation, and silent `/FORCE_CLOSE` support.
-- **Canonical Help, Documentation & Wiki Links:** Restored all Help actions and sidebar navigation to point to authoritative fork documentation (`https://jakepanlilio2000.github.io/XDM-Enhanced/`), repository guides, and community support destinations with scheme validation and fallback handlers.
-- **NSIS License RTF Formatting:** Fixed control word escaping (`\widowctrl\hyphauto`) in `gpl-3.0-notice.rtf`, eliminating raw markup tokens from rendering as literal text in the installer license screen.
+- **Scheduler Concurrency & Shutdown Safety:** Synchronized all operations on `DownloadScheduler.entries` (`synchronized(entries)`), eliminating race conditions and `ConcurrentModificationException` during concurrent download schedule updates. Added explicit `DownloadScheduler.stop()` invocation during `AppContext.shutdown()` to ensure background timer tasks terminate cleanly without thread leaks or JVM hanging.
+- **Atomic Schedule Persistence:** Serialized scheduled download job states strictly within the entries monitor, guaranteeing atomic persistence writes and preventing partial writes or corrupted schedule state during concurrent triggers.
+- **BitTorrent Corrupt Piece Recovery (`HashFailedAlert`):** Added explicit handling and dispatch of `HashFailedAlert` in the BitTorrent session lifecycle, ensuring corrupted pieces are immediately detected, dropped, re-requested, and logged without silent data corruption.
+- **Browser Integration Diagnostic Details:** Included loopback listener health status in diagnostic copy output when custom protocol handler registration is absent or restricted, eliminating diagnostic false negatives during troubleshooting.
+- **Sustained Operation & 5,000-Record Scale Verification:** Validated long-duration memory stability, zero thread leaks, responsive UI rendering under 5,000 active/completed download records, smooth skin/theme switching, and resilient recovery under simulated disk-full and network-severed faults.
+- **Release Protection & CI Governance:** Enforced CI release tag protection guards, preventing accidental branch-push overwrites and safeguarding immutable release tags.
 
 ---
 
 ## Changes & Fixes
 
 ### Added
-- **Segment Visualization Bar (`xdm-app`):** High-contrast active chunk animation providing visual clarity on active stream boundaries.
-- **Segment Detail Table (`xdm-app`):** Tabular connection inspection displaying chunk index, byte start/end ranges, current offset, active transfer rate, state, and remote IP address.
-- **Copy Source Action (`xdm-app`):** Convenient button in the Add BitTorrent Download dialog to copy the entire raw magnet URI or source string to the clipboard.
-
-### Changed
-- **Transfer Rate Telemetry (`xdm-core`, `xdm-app`):** Real-time sub-second byte counting (~10ms) with moving-average rate smoothing and 100ms EDT coalescing.
-- **Help & Support Navigation (`xdm-app`):** Synchronized all Help menus, About dialog links, and sidebar navigation to canonical fork documentation and support channels. Hardened `UrlHelper` with URI scheme validation (`isHttpOrHttpsUrl`), ASCII encoding fallback, and native Windows shell execution.
+- **Sustained Scale & Soak Audit Test Suite (`xdm-app`):** Added `Phase21SustainedOperationAndScaleAuditTest` validating system behavior under 5,000 active/completed items, rapid table/card view switching, high-frequency progress events, and memory bounds.
+- **Release Protection Workflow Guards (`.github`):** Hardened CI workflows against branch-push release overwrites and verified release tag immutability.
 
 ### Fixed
-- **BitTorrent Modal Layout (`xdm-app`):** Constrained dialog size and input components to fit within the visible display bounds across single- and multi-monitor setups.
-- **Context Menu Action Parity (`xdm-app`):** Unified `DownloadContextMenu` across Table View, Modern Cards View, and Classic View with left-click misfire guards.
-- **NSIS License Formatting (`packaging/windows`):** Corrected single-backslash RTF syntax in `gpl-3.0-notice.rtf` preventing `\widowctrl` from appearing as raw text in the installer.
-- **Installer Process Management (`packaging/windows`):** Verified directory containment before process termination, authenticated loopback graceful shutdown with state flush, interactive prompts, and silent automated flag handling.
+- **DownloadScheduler Concurrency (`xdm-app`):** Synchronized `entries` access across add, remove, reschedule, and iterate operations; ensured timer tasks are stopped during graceful shutdown.
+- **DownloadScheduler Persistence (`xdm-app`):** Atomic snapshot serialization within the monitor lock preventing partial state writes to disk.
+- **Torrent Corrupt Hash Alert Dispatch (`xdm-torrent`):** Added dispatching and listener handling for `HashFailedAlert`, re-downloading corrupt blocks immediately upon verification failure.
+- **Browser Extension Diagnostic Reporting (`xdm-app`):** Confirmed loopback listener status even when Windows custom URI scheme registration is missing or restricted.
 
 ---
 
@@ -39,15 +33,15 @@ Maintenance Release of **XDM Enhanced** — an independent, open-source download
 
 | Asset | Size | SHA-256 Checksum |
 |---|---|---|
-| `XDM-Enhanced-Extension-Chromium-v1.0.1.zip` | 106,503 bytes | `6db9d41834af3decb57d4c36a13d16e0eb72c8441556d667e82b6fbd3d72b1cd` |
-| `XDM-Enhanced-Extension-Firefox-v1.0.1.xpi` | 103,600 bytes | `8c3f2f1b90a113dbccd1ce771223779cb7dbcaa164bb024250a4e7b7ef9eeaac` |
-| `XDM-Enhanced-Extension-Firefox-v1.0.1.zip` | 103,600 bytes | `8c3f2f1b90a113dbccd1ce771223779cb7dbcaa164bb024250a4e7b7ef9eeaac` |
-| `XDM-Enhanced-Setup-v1.0.1-win-x64.exe` | 63,960,863 bytes | `68be3296248f3f7704dba8cf1945ecc0dda125ed9ba898e468c9bc207b8de76c` |
-| `XDM-Enhanced-v1.0.1-windows-x64.zip` | 74,296,378 bytes | `2fc4b10348f2eb198cdc01159d6d8fc7bd14eeabd3d3d991645902487a6537f1` |
+| `XDM-Enhanced-Extension-Chromium-v1.0.2.zip` | 106,503 bytes | `ad21a2275fcea5214ccc943168d8ce496c81416b2f8adca4edf65f770c90f790` |
+| `XDM-Enhanced-Extension-Firefox-v1.0.2.xpi` | 103,600 bytes | `8c3f2f1b90a113dbccd1ce771223779cb7dbcaa164bb024250a4e7b7ef9eeaac` |
+| `XDM-Enhanced-Extension-Firefox-v1.0.2.zip` | 103,600 bytes | `8c3f2f1b90a113dbccd1ce771223779cb7dbcaa164bb024250a4e7b7ef9eeaac` |
+| `XDM-Enhanced-Setup-v1.0.2-win-x64.exe` | 63,963,784 bytes | `1c2b03d1425bfc9415294a57ca29b9820b8eb42451e2da8b557a913159d3c6f5` |
+| `XDM-Enhanced-v1.0.2-windows-x64.zip` | 74,786,944 bytes | `46710f6b251b28ae0f94ceff98aedbcd0310c26a4ac1322819148d824184acf0` |
 | `checksum-verifier.xdmplugin` | 6,211 bytes | `c8f915c32a984515db8991537089f9324be18ab5c67421d419c5d30a83582806` |
 | `cyber-neon.xdmskin` | 34,446 bytes | `5e8293da37215dbafff6a41a88495bdefcc0faa3f942c878ada69664ec05ef0f` |
-| `xdm-app-1.0.1.jar` | 95,109,075 bytes | `31870f5068bfb6f49ad260fff4a010c2bb2efa3a6df1573bb2bb84399d830011` |
-| `xdm-plugin-api-1.0.1.jar` | 21,965 bytes | `5636b47925d6957554fb5a4313af0e478fa1ac764d2c5cf30f5c30cba4de4cc7` |
+| `xdm-app-1.0.2.jar` | 95,113,126 bytes | `c6b3191fd20b8bf4ef13611487a38738d20340a4995d97913cf48c5e6a17aebc` |
+| `xdm-plugin-api-1.0.2.jar` | 21,966 bytes | `f62619835012abe755763c7e4bd09e77c16c0259af145566321e263aba8520b3` |
 | `ytdlp-downloader.xdmplugin` | 28,561 bytes | `8a484eff37e95d961e028c80b353ff84580d275a51e166860f5cfec29a5bf189` |
 | `SHA256SUMS.txt` | 988 bytes | Included in release |
 

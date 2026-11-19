@@ -4,7 +4,86 @@ Detailed changelog and binary checksum records for all published releases of **X
 
 ---
 
-## [1.0.1] — 2026-11-19 (Latest Stable Release)
+## [1.0.2] — 2026-11-20 (Latest Stable Release)
+
+### Highlights & Key Improvements
+
+- **Scheduler Concurrency & Shutdown Safety:**
+  - Synchronized all operations on `DownloadScheduler.entries` (`synchronized(entries)`), eliminating race conditions and `ConcurrentModificationException` during concurrent download schedule updates.
+  - Added explicit `DownloadScheduler.stop()` invocation during `AppContext.shutdown()` to ensure background timer tasks terminate cleanly without thread leaks or JVM hanging.
+- **Atomic Schedule Persistence:**
+  - Serialized scheduled download job states strictly within the entries monitor, guaranteeing atomic persistence writes and preventing partial writes or corrupted schedule state during concurrent triggers.
+- **BitTorrent Corrupt Piece Recovery (`HashFailedAlert`):**
+  - Added explicit handling and dispatch of `HashFailedAlert` in the BitTorrent session lifecycle, ensuring corrupted pieces are immediately detected, dropped, re-requested, and logged without silent data corruption.
+- **Browser Integration Diagnostic Details:**
+  - Included loopback listener health status in diagnostic copy output when custom protocol handler registration is absent or restricted, eliminating diagnostic false negatives during troubleshooting.
+- **Sustained Operation & 5,000-Record Scale Verification:**
+  - Validated long-duration memory stability, zero thread leaks, responsive UI rendering under 5,000 active/completed download records, smooth skin/theme switching, and resilient recovery under simulated disk-full and network-severed faults.
+- **Release Protection & CI Governance:**
+  - Enforced CI release tag protection guards, preventing accidental branch-push overwrites and safeguarding immutable release tags.
+
+### Published Assets & Checksums (`v1.0.2`)
+
+<table class="checksum-table">
+  <thead>
+    <tr>
+      <th style="width: 35%;">Asset Filename</th>
+      <th style="width: 15%;">File Size</th>
+      <th>SHA-256 Checksum</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>XDM-Enhanced-Setup-v1.0.2-win-x64.exe</strong></td>
+      <td>64.0 MB</td>
+      <td><code>1c2b03d1425bfc9415294a57ca29b9820b8eb42451e2da8b557a913159d3c6f5</code></td>
+    </tr>
+    <tr>
+      <td><strong>XDM-Enhanced-v1.0.2-windows-x64.zip</strong></td>
+      <td>74.8 MB</td>
+      <td><code>46710f6b251b28ae0f94ceff98aedbcd0310c26a4ac1322819148d824184acf0</code></td>
+    </tr>
+    <tr>
+      <td><strong>xdm-app-1.0.2.jar</strong></td>
+      <td>95.1 MB</td>
+      <td><code>c6b3191fd20b8bf4ef13611487a38738d20340a4995d97913cf48c5e6a17aebc</code></td>
+    </tr>
+    <tr>
+      <td><strong>XDM-Enhanced-Extension-Chromium-v1.0.2.zip</strong></td>
+      <td>104.0 KB</td>
+      <td><code>ad21a2275fcea5214ccc943168d8ce496c81416b2f8adca4edf65f770c90f790</code></td>
+    </tr>
+    <tr>
+      <td><strong>XDM-Enhanced-Extension-Firefox-v1.0.2.xpi</strong></td>
+      <td>101.2 KB</td>
+      <td><code>8c3f2f1b90a113dbccd1ce771223779cb7dbcaa164bb024250a4e7b7ef9eeaac</code></td>
+    </tr>
+    <tr>
+      <td><strong>xdm-plugin-api-1.0.2.jar</strong></td>
+      <td>22.0 KB</td>
+      <td><code>f62619835012abe755763c7e4bd09e77c16c0259af145566321e263aba8520b3</code></td>
+    </tr>
+    <tr>
+      <td><strong>checksum-verifier.xdmplugin</strong></td>
+      <td>6.2 KB</td>
+      <td><code>c8f915c32a984515db8991537089f9324be18ab5c67421d419c5d30a83582806</code></td>
+    </tr>
+    <tr>
+      <td><strong>ytdlp-downloader.xdmplugin</strong></td>
+      <td>28.6 KB</td>
+      <td><code>8a484eff37e95d961e028c80b353ff84580d275a51e166860f5cfec29a5bf189</code></td>
+    </tr>
+    <tr>
+      <td><strong>cyber-neon.xdmskin</strong></td>
+      <td>34.4 KB</td>
+      <td><code>5e8293da37215dbafff6a41a88495bdefcc0faa3f942c878ada69664ec05ef0f</code></td>
+    </tr>
+  </tbody>
+</table>
+
+---
+
+## [1.0.1] — 2026-11-19
 
 ### Highlights & Key Improvements
 

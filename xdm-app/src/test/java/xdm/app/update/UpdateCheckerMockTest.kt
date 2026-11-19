@@ -119,6 +119,7 @@ class UpdateCheckerMockTest {
         assertTrue(UpdateChecker.compareVersions("1.0.0-beta.3", "1.0.0-beta.4") < 0)
         assertTrue(UpdateChecker.compareVersions("1.0.0", "1.0.0-beta.5") > 0)
         assertTrue(UpdateChecker.compareVersions("1.0.1", "1.0.0") > 0)
+        assertTrue(UpdateChecker.compareVersions("1.0.2", "1.0.1") > 0)
     }
 
     @Test

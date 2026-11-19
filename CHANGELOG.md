@@ -5,6 +5,19 @@ All notable changes to the XDM Enhanced project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.2] - 2026-11-20
+
+### Fixed
+- **Scheduler Concurrency & Graceful Shutdown:** Synchronized all operations on `DownloadScheduler.entries` (`synchronized(entries)`), eliminating `ConcurrentModificationException` during concurrent schedule updates. Added explicit `DownloadScheduler.stop()` invocation during `AppContext.shutdown()` to ensure background timer tasks terminate cleanly without thread leaks or JVM hanging.
+- **Atomic Schedule Persistence:** Serialized scheduled download job states within the entries monitor, guaranteeing atomic persistence writes and preventing partial writes or corrupted schedule state during concurrent triggers.
+- **BitTorrent Corrupt Piece Recovery (`HashFailedAlert`):** Added handling and dispatch of `HashFailedAlert` in the BitTorrent session lifecycle, ensuring corrupted pieces are immediately detected, dropped, re-requested, and logged without silent data corruption.
+- **Browser Integration Diagnostic Details:** Included loopback listener health status in diagnostic copy output when custom protocol handler registration is absent or restricted, eliminating diagnostic false negatives during troubleshooting.
+- **Test Infrastructure & Windows Executable Resolution:** Fixed Windows runner executable resolution and verified core download resume, retry logic, connection drops, and hash verification resilience under simulated network faults.
+
+### Added
+- **Sustained Operation & 5,000-Record Scale Verification:** Validated memory stability, zero thread leaks, responsive UI rendering under 5,000 active/completed download records, smooth skin/theme switching, and robust degraded network/disk failure recovery.
+- **Release Protection & CI Governance:** Enforced CI release tag protection guards, preventing accidental branch-push overwrites and safeguarding immutable release tags.
+
 ## [1.0.1] - 2026-11-19
 
 ### Added
