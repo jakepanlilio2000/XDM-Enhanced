@@ -132,10 +132,10 @@ class DownloadScheduler(private val appDB: AppDB, private val configDir: String)
                     if ((startMatches || stopMatches) && !stopPending) toRemove.add(entry)
                 }
             }
-            entries.removeAll(toRemove)
+            if (entries.removeAll(toRemove)) {
+                saveEntries()
+            }
         }
-
-        if (toRemove.isNotEmpty()) saveEntries()
     }
 
     /**
@@ -174,23 +174,21 @@ class DownloadScheduler(private val appDB: AppDB, private val configDir: String)
         }
     }
 
-    private fun saveEntries() {
+    private fun saveEntries() = synchronized(entries) {
         AtomicIO.writeTransacted(scheduleFileName, configDir) { out ->
-            synchronized(entries) {
-                out.writeInt(entries.size)
-                for (e in entries) {
-                    out.writeLong(e.downloadId)
-                    out.writeUTF(e.scheduleType.name)
-                    out.writeInt(e.hour)
-                    out.writeInt(e.minute)
-                    out.writeInt(e.daysOfWeek.size)
-                    for (day in e.daysOfWeek) out.writeInt(day)
-                    out.writeLong(e.epochMillis)
-                    out.writeBoolean(e.hasStopTime)
-                    out.writeInt(e.stopHour)
-                    out.writeInt(e.stopMinute)
-                    out.writeLong(e.stopEpochMillis)
-                }
+            out.writeInt(entries.size)
+            for (e in entries) {
+                out.writeLong(e.downloadId)
+                out.writeUTF(e.scheduleType.name)
+                out.writeInt(e.hour)
+                out.writeInt(e.minute)
+                out.writeInt(e.daysOfWeek.size)
+                for (day in e.daysOfWeek) out.writeInt(day)
+                out.writeLong(e.epochMillis)
+                out.writeBoolean(e.hasStopTime)
+                out.writeInt(e.stopHour)
+                out.writeInt(e.stopMinute)
+                out.writeLong(e.stopEpochMillis)
             }
         }
     }
