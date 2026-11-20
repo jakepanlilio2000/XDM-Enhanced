@@ -126,7 +126,12 @@ public class YtDlpPlugin implements XdmPlugin {
                     JOptionPane.QUESTION_MESSAGE
             );
             if (url != null && !url.trim().isEmpty()) {
-                startDownload(url.trim(), null);
+                PluginDownloadRequest req = new PluginDownloadRequest(
+                        url.trim(),
+                        config.getOutputDirectory(),
+                        null
+                );
+                context.createDownloadWithConfirmation(req);
             }
         });
     }
@@ -137,13 +142,14 @@ public class YtDlpPlugin implements XdmPlugin {
                 config.getOutputDirectory(),
                 fileName
         );
+        String safeUrl = YtDlpDownloadTask.sanitizeUrl(url);
         try {
             YtDlpDownloadTask task = (YtDlpDownloadTask) downloadProvider.createDownloadTask(req);
             activeTasks.add(task);
             task.addProgressListener(event -> {
                 if (event.getState() == PluginDownloadTask.TaskState.FINISHED) {
                     activeTasks.remove(task);
-                    context.showNotification("yt-dlp Complete", "Media download finished: " + url, NotificationLevel.INFO);
+                    context.showNotification("yt-dlp Complete", "Media download finished: " + safeUrl, NotificationLevel.INFO);
                 } else if (event.getState() == PluginDownloadTask.TaskState.FAILED) {
                     activeTasks.remove(task);
                     context.showNotification("yt-dlp Failed", "Download error: " + event.getMessage(), NotificationLevel.ERROR);
@@ -153,10 +159,13 @@ public class YtDlpPlugin implements XdmPlugin {
             });
             long taskId = context.submitPluginTask(req, task);
             if (taskId < 0) {
-                // Fallback for older hosts lacking task adapter support
-                task.start();
+                activeTasks.remove(task);
+                String msg = "Failed to register yt-dlp task with host download manager.";
+                context.logError(msg, null);
+                context.showNotification("yt-dlp Error", msg, NotificationLevel.ERROR);
+                return null;
             }
-            context.logInfo("Registered yt-dlp task (id=" + taskId + ") for: " + url);
+            context.logInfo("Registered yt-dlp task (id=" + taskId + ") for: " + safeUrl);
             return task;
         } catch (Exception e) {
             context.logError("Failed to initiate yt-dlp download: " + e.getMessage(), e);

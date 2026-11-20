@@ -29,6 +29,8 @@ class YtDlpPluginIntegrationTest : DownloadManagerTestBase() {
     @AfterEach
     fun cleanupYtDlpTest() {
         PluginManager.shutdown()
+        PluginEventBus.clearAll()
+        PluginDownloadBridge.cancelAll()
         testPluginsDir.deleteRecursively()
     }
 

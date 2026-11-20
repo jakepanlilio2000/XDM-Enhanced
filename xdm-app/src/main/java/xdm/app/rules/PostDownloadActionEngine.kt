@@ -228,6 +228,10 @@ object PostDownloadActionEngine {
                 targetFile.parentFile?.let { if (it.exists()) pb.directory(it) }
 
                 val process = pb.start()
+                xdm.app.plugins.PluginEventBus.publish(
+                    xdm.plugin.api.events.EventTopics.AUTOMATION_TRIGGERED,
+                    targetFile.absolutePath
+                )
                 // Drain streams in background to prevent buffer deadlock
                 actionExecutor.submit {
                     runCatching { process.inputStream.transferTo(java.io.OutputStream.nullOutputStream()) }

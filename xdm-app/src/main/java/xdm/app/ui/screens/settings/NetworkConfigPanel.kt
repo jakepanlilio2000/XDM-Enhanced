@@ -10,6 +10,7 @@ import xdm.app.utils.scaledInsets
 import xdm.app.utils.scaledSize
 import xdm.core.CoreConfig
 import java.awt.Dimension
+import java.awt.Font
 import java.awt.Insets
 import javax.swing.Box
 import javax.swing.BoxLayout
@@ -55,6 +56,14 @@ class NetworkConfigPanel : SettingsPanel() {
         maximumSize = preferredSize
     }
     private val tglIgnoreCertErrors = SettingsToggle()
+    private val pluginProfilesBox = Box.createVerticalBox().apply {
+        alignmentX = LEFT_ALIGNMENT
+    }
+    private val tglVpnPrerequisite = SettingsToggle()
+    private val tglVpnAutoResume = SettingsToggle()
+    private val vpnStatusBox = Box.createVerticalBox().apply {
+        alignmentX = LEFT_ALIGNMENT
+    }
 
     init {
         layout = BoxLayout(this, BoxLayout.Y_AXIS)
@@ -115,6 +124,40 @@ class NetworkConfigPanel : SettingsPanel() {
                     I8N.text("MSG_IGNORE_CERT_ERRORS_HINT"),
                     tglIgnoreCertErrors
                 ),
+            )
+        )
+        add(settingsGap())
+
+        add(
+            settingsSection(
+                "Plugin Proxy Profiles & Routing",
+                settingsFullRow(
+                    "Dynamic Proxy Routing",
+                    "Plugin network routing is strictly scoped to supported application downloads (HTTP, Media, BitTorrent, Plugin tasks). XDM does not alter OS-wide network or proxy settings.",
+                    pluginProfilesBox
+                )
+            )
+        )
+        add(settingsGap())
+
+        add(
+            settingsSection(
+                "VPN Client Status & Download Policy",
+                settingsRow(
+                    "Require VPN for Downloads",
+                    "Automatically pause downloads if the external VPN client disconnects.",
+                    tglVpnPrerequisite
+                ),
+                settingsRow(
+                    "Auto-Resume on Reconnect",
+                    "Resume paused downloads when the VPN reconnects. When disabled, downloads require manual resumption.",
+                    tglVpnAutoResume
+                ),
+                settingsFullRow(
+                    "External VPN Status & Profiles",
+                    "VPN prerequisite monitoring pauses downloads when external VPN connectivity is lost. XDM monitors status reported by external clients and does not route traffic or manage OS network interfaces.",
+                    vpnStatusBox
+                )
             )
         )
 
@@ -178,6 +221,95 @@ class NetworkConfigPanel : SettingsPanel() {
         txtProxyPass.text = config.proxyPass
         spReadTimeout.value = config.readTimeoutSeconds
         tglIgnoreCertErrors.isSelected = config.ignoreCertErrors
+        refreshPluginProfiles()
+        tglVpnPrerequisite.isSelected = config.vpnPrerequisiteEnabled
+        tglVpnAutoResume.isSelected = config.vpnAutoResumeOnReconnect
+        refreshVpnStatus()
+    }
+
+    private fun refreshPluginProfiles() {
+        pluginProfilesBox.removeAll()
+        val providers = xdm.app.plugins.PluginManager.getActiveProxyProviders()
+        if (providers.isEmpty()) {
+            val emptyLabel = JLabel("No plugin proxy profiles are currently active.").apply {
+                foreground = settingsMutedColor()
+                alignmentX = LEFT_ALIGNMENT
+            }
+            pluginProfilesBox.add(emptyLabel)
+        } else {
+            for ((plugin, provider) in providers) {
+                val rowBox = Box.createHorizontalBox().apply {
+                    alignmentX = LEFT_ALIGNMENT
+                    maximumSize = Dimension(Int.MAX_VALUE, 40.px)
+                }
+                val infoBox = Box.createVerticalBox().apply {
+                    alignmentX = LEFT_ALIGNMENT
+                }
+                val title = JLabel("${provider.displayName} [${plugin.manifest.name}]").apply {
+                    font = font.deriveFont(Font.BOLD)
+                }
+                val enginesStr = provider.applicableEngines.joinToString(", ") { it.displayName }
+                val desc = JLabel("Engines: $enginesStr | Priority: ${provider.priority}").apply {
+                    foreground = settingsMutedColor()
+                }
+                infoBox.add(title)
+                infoBox.add(desc)
+
+                val toggle = SettingsToggle().apply {
+                    isSelected = xdm.app.plugins.PluginManager.isProxyProviderApproved(plugin.manifest.id, provider.providerId)
+                    addActionListener {
+                        xdm.app.plugins.PluginManager.setProxyProviderApproved(plugin.manifest.id, provider.providerId, isSelected)
+                    }
+                }
+
+                rowBox.add(infoBox)
+                rowBox.add(Box.createHorizontalGlue())
+                rowBox.add(toggle)
+
+                pluginProfilesBox.add(rowBox)
+                pluginProfilesBox.add(Box.createRigidArea(scaledSize(0, 8)))
+            }
+        }
+        pluginProfilesBox.revalidate()
+        pluginProfilesBox.repaint()
+    }
+
+    private fun refreshVpnStatus() {
+        vpnStatusBox.removeAll()
+        val providerPair = xdm.app.plugins.VpnPolicyManager.getActiveProvider()
+        if (providerPair == null) {
+            vpnStatusBox.add(JLabel("No external VPN status provider is currently active.").apply {
+                foreground = settingsMutedColor()
+                alignmentX = LEFT_ALIGNMENT
+            })
+        } else {
+            val (plugin, provider) = providerPair
+            val status = provider.currentStatus
+            val title = JLabel("${provider.displayName} [${plugin.manifest.name}]").apply {
+                font = font.deriveFont(Font.BOLD)
+                alignmentX = LEFT_ALIGNMENT
+            }
+            val stateText = "Status: ${status.state} | Interface: ${status.interfaceName ?: "none"} | Location: ${status.serverLocation ?: "unknown"}"
+            val subtitle = JLabel(stateText).apply {
+                foreground = settingsMutedColor()
+                alignmentX = LEFT_ALIGNMENT
+            }
+            vpnStatusBox.add(title)
+            vpnStatusBox.add(Box.createRigidArea(scaledSize(0, 4)))
+            vpnStatusBox.add(subtitle)
+
+            val profiles = provider.availableProfiles
+            if (profiles.isNotEmpty()) {
+                vpnStatusBox.add(Box.createRigidArea(scaledSize(0, 6)))
+                val profilesLabel = JLabel("Profiles: " + profiles.joinToString(", ") { it.displayName }).apply {
+                    foreground = settingsMutedColor()
+                    alignmentX = LEFT_ALIGNMENT
+                }
+                vpnStatusBox.add(profilesLabel)
+            }
+        }
+        vpnStatusBox.revalidate()
+        vpnStatusBox.repaint()
     }
 
     fun save() {
@@ -191,6 +323,9 @@ class NetworkConfigPanel : SettingsPanel() {
         config.proxyPass = String(txtProxyPass.password)
         config.readTimeoutSeconds = spReadTimeout.value as Int
         config.ignoreCertErrors = tglIgnoreCertErrors.isSelected
+        config.vpnPrerequisiteEnabled = tglVpnPrerequisite.isSelected
+        config.vpnAutoResumeOnReconnect = tglVpnAutoResume.isSelected
+        xdm.app.plugins.VpnPolicyManager.onVpnStateChanged(xdm.app.plugins.VpnPolicyManager.getCurrentStatus())
     }
 
     override fun getInsets(): Insets = scaledInsets(18, 24, 24, 24)

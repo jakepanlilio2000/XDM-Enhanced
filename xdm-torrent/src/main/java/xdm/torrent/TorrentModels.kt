@@ -145,6 +145,15 @@ data class SeedingRule(
     val seedingTimeMinutes: Int get() = (maxTimeSeconds / 60L).toInt()
 }
 
+enum class TorrentProxyType(val id: Int) {
+    NONE(0),
+    SOCKS4(1),
+    SOCKS5(2),
+    SOCKS5_PW(3),
+    HTTP(4),
+    HTTP_PW(5);
+}
+
 /**
  * Global BitTorrent engine configuration.
  */
@@ -163,7 +172,17 @@ data class TorrentSessionConfig(
     val enableNatPmp: Boolean = false,      // Explicit user control: default off
     val seedingMode: SeedingMode = SeedingMode.RATIO_OR_TIME,
     val seedingRatioLimit: Float = 1.0f,
-    val seedingTimeLimitSeconds: Long = 3600L
+    val seedingTimeLimitSeconds: Long = 3600L,
+    val proxyType: TorrentProxyType = TorrentProxyType.NONE,
+    val proxyHost: String = "",
+    val proxyPort: Int = 0,
+    val proxyUser: String = "",
+    val proxyPass: String = "",
+    val proxyPeerConnections: Boolean = true,
+    val proxyTrackerConnections: Boolean = true,
+    val proxyHostnames: Boolean = true,
+    val forceProxy: Boolean = false,
+    val anonymousMode: Boolean = false
 ) {
     val seedingRule: SeedingRule
         get() = SeedingRule(seedingMode, seedingRatioLimit, seedingTimeLimitSeconds)

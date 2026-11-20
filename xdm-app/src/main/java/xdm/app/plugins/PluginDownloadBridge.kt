@@ -28,6 +28,8 @@ object PluginDownloadBridge {
     private val activeTasks = ConcurrentHashMap<Long, PluginDownloadTask>()
     private val activeAdapters = ConcurrentHashMap<Long, PluginTaskAdapter>()
     private val taskMetadata = ConcurrentHashMap<Long, PluginDownloadTaskInfo>()
+    private val completedTasks = ConcurrentHashMap.newKeySet<Long>()
+    private val failedTasks = ConcurrentHashMap.newKeySet<Long>()
 
     class PluginTaskAdapter(
         val id: Long,
@@ -122,6 +124,8 @@ object PluginDownloadBridge {
         }
 
         val adapter = PluginTaskAdapter(id, task, finalFolder, reqFile)
+        completedTasks.remove(id)
+        failedTasks.remove(id)
         activeTasks[id] = task
         activeAdapters[id] = adapter
 
@@ -131,7 +135,14 @@ object PluginDownloadBridge {
             }
         })
 
-        if (startNow) {
+        val vpnOk = VpnPolicyManager.isVpnPrerequisiteMet()
+        if (startNow && !vpnOk) {
+            record.status = RecordStatus.PAUSED
+            AppContext.db.update(record)
+            EngineContext.ui.downloadUpdated(id)
+            EngineContext.ui.downloadPaused(id)
+            Logger.info("PluginDownloadTask $id paused on creation: VPN prerequisite unmet.")
+        } else if (startNow) {
             try {
                 task.start()
             } catch (t: Throwable) {
@@ -152,79 +163,102 @@ object PluginDownloadBridge {
         event: DownloadProgressEvent,
         folder: String
     ) {
-        val downloaded = event.downloadedBytes.coerceAtLeast(0)
-        val size = event.totalBytes.coerceAtLeast(0)
-        val speed = event.speedBytesPerSec.coerceAtLeast(0f)
-        val progress = if (event.progressPercent >= 0) {
-            event.progressPercent.coerceIn(0, 100)
-        } else if (size > 0) {
-            ((downloaded * 100) / size).toInt().coerceIn(0, 100)
-        } else 0
-        val eta = if (event.etaSeconds > 0) event.etaSeconds else if (speed > 0 && size > downloaded) ((size - downloaded) / speed).toLong() else 0L
-
-        record.downloaded = downloaded
-        record.size = size
-        record.speed = speed
-        record.progress = progress
-        record.eta = eta
-
-        when (event.state) {
-            TaskState.DOWNLOADING -> {
-                record.status = RecordStatus.DOWNLOADING
-                AppContext.db.update(record)
-                EngineContext.ui.downloadUpdated(id)
-                EngineContext.ui.progress(id, record.fileName, downloaded, size, speed, eta, progress, emptyList())
+        synchronized(record) {
+            if (completedTasks.contains(id)) {
+                // Task is already terminal FINISHED; ignore late progress, failure or duplicate finished events
+                return
             }
-            TaskState.PAUSED -> {
-                record.status = RecordStatus.PAUSED
-                AppContext.db.update(record)
-                EngineContext.ui.downloadUpdated(id)
-                EngineContext.ui.downloadPaused(id)
-            }
-            TaskState.FINISHED -> {
-                record.status = RecordStatus.FINISHED
-                record.progress = 100
-                record.downloaded = if (size > 0) size else downloaded
-                val task = activeTasks.remove(id)
-                activeAdapters.remove(id)
 
-                val resolvedFile = task?.outputFile ?: File(folder, record.fileName)
-                val finalFileName = resolvedFile.name
-                if (finalFileName.isNotBlank() && finalFileName != record.fileName) {
-                    record.fileName = finalFileName
-                    if (record.categoryId == null) {
-                        record.categoryId = DesktopCaptureHost.destination(finalFileName, null, null).first
+            val downloaded = event.downloadedBytes.coerceAtLeast(0)
+            val size = event.totalBytes.coerceAtLeast(0)
+            val speed = event.speedBytesPerSec.coerceAtLeast(0f)
+            val progress = if (event.progressPercent >= 0) {
+                event.progressPercent.coerceIn(0, 100)
+            } else if (size > 0) {
+                ((downloaded * 100) / size).toInt().coerceIn(0, 100)
+            } else 0
+            val eta = if (event.etaSeconds > 0) event.etaSeconds else if (speed > 0 && size > downloaded) ((size - downloaded) / speed).toLong() else 0L
+
+            record.downloaded = downloaded
+            record.size = size
+            record.speed = speed
+            record.progress = progress
+            record.eta = eta
+
+            when (event.state) {
+                TaskState.DOWNLOADING -> {
+                    if (record.status != RecordStatus.DOWNLOADING) {
+                        record.status = RecordStatus.DOWNLOADING
                     }
-                    val meta = taskMetadata[id] ?: AppContext.taskInfoDB.getPluginTask(id)
-                    if (meta != null) {
-                        val updated = meta.copy(fileName = finalFileName, categoryId = record.categoryId)
-                        taskMetadata[id] = updated
-                        AppContext.taskInfoDB.savePluginTask(updated)
-                    }
+                    AppContext.db.update(record)
+                    EngineContext.ui.downloadUpdated(id)
+                    EngineContext.ui.progress(id, record.fileName, downloaded, size, speed, eta, progress, emptyList())
                 }
-                AppContext.db.update(record)
-                EngineContext.ui.downloadUpdated(id)
+                TaskState.PAUSED -> {
+                    record.status = RecordStatus.PAUSED
+                    AppContext.db.update(record)
+                    EngineContext.ui.downloadUpdated(id)
+                    EngineContext.ui.downloadPaused(id)
+                }
+                TaskState.FINISHED -> {
+                    if (!completedTasks.add(id)) {
+                        return
+                    }
+                    failedTasks.remove(id)
+                    record.status = RecordStatus.FINISHED
+                    record.progress = 100
+                    record.downloaded = if (size > 0) size else downloaded
+                    val task = activeTasks.remove(id)
+                    activeAdapters.remove(id)
 
-                EngineContext.ui.downloadCompleteDialog(id, resolvedFile.parent ?: folder, finalFileName, record.size)
-                PluginManager.notifyDownloadCompleted(resolvedFile.absolutePath, id)
+                    val resolvedFile = task?.outputFile ?: File(folder, record.fileName)
+                    val finalFileName = resolvedFile.name
+                    if (finalFileName.isNotBlank() && finalFileName != record.fileName) {
+                        record.fileName = finalFileName
+                        if (record.categoryId == null) {
+                            record.categoryId = DesktopCaptureHost.destination(finalFileName, null, null).first
+                        }
+                        val meta = taskMetadata[id] ?: AppContext.taskInfoDB.getPluginTask(id)
+                        if (meta != null) {
+                            val updated = meta.copy(fileName = finalFileName, categoryId = record.categoryId)
+                            taskMetadata[id] = updated
+                            AppContext.taskInfoDB.savePluginTask(updated)
+                        }
+                    }
+                    AppContext.db.update(record)
+                    EngineContext.ui.downloadUpdated(id)
+                    EngineContext.ui.hideProgress(id)
+
+                    when (AppContext.config.downloadCompleteNotification) {
+                        xdm.manager.DownloadCompleteNotification.DIALOG ->
+                            EngineContext.ui.downloadCompleteDialog(id, resolvedFile.parent ?: folder, finalFileName, record.size)
+                        xdm.manager.DownloadCompleteNotification.NOTIFICATION ->
+                            EngineContext.ui.downloadCompleteNotification(resolvedFile.parent ?: folder, finalFileName)
+                        xdm.manager.DownloadCompleteNotification.NONE -> {}
+                    }
+                    EngineContext.hooks.downloadFinished(resolvedFile.absolutePath, id)
+                }
+                TaskState.FAILED -> {
+                    if (!failedTasks.add(id)) {
+                        return
+                    }
+                    record.status = RecordStatus.ERROR
+                    AppContext.db.update(record)
+                    activeTasks.remove(id)
+                    activeAdapters.remove(id)
+                    EngineContext.ui.downloadUpdated(id)
+                    EngineContext.ui.downloadFailed(id, DownloadError.InternalError)
+                }
+                TaskState.CANCELED -> {
+                    record.status = RecordStatus.PAUSED
+                    AppContext.db.update(record)
+                    activeTasks.remove(id)
+                    activeAdapters.remove(id)
+                    EngineContext.ui.downloadUpdated(id)
+                    EngineContext.ui.downloadPaused(id)
+                }
+                else -> {}
             }
-            TaskState.FAILED -> {
-                record.status = RecordStatus.ERROR
-                AppContext.db.update(record)
-                activeTasks.remove(id)
-                activeAdapters.remove(id)
-                EngineContext.ui.downloadUpdated(id)
-                EngineContext.ui.downloadFailed(id, DownloadError.InternalError)
-            }
-            TaskState.CANCELED -> {
-                record.status = RecordStatus.PAUSED
-                AppContext.db.update(record)
-                activeTasks.remove(id)
-                activeAdapters.remove(id)
-                EngineContext.ui.downloadUpdated(id)
-                EngineContext.ui.downloadPaused(id)
-            }
-            else -> {}
         }
     }
 
@@ -246,6 +280,12 @@ object PluginDownloadBridge {
     }
 
     fun resumeTask(id: Long) {
+        if (!VpnPolicyManager.isVpnPrerequisiteMet()) {
+            Logger.info("Cannot resume PluginDownloadTask $id: VPN prerequisite unmet.")
+            return
+        }
+        completedTasks.remove(id)
+        failedTasks.remove(id)
         val task = activeTasks[id]
         if (task != null) {
             task.resume()
@@ -291,7 +331,27 @@ object PluginDownloadBridge {
         }
     }
 
+    fun restartTask(id: Long) {
+        val oldTask = activeTasks.remove(id)
+        activeAdapters.remove(id)
+        oldTask?.let { runCatching { it.cancel() } }
+        completedTasks.remove(id)
+        failedTasks.remove(id)
+        AppContext.db.getById(id)?.let { rec ->
+            rec.downloaded = 0L
+            rec.progress = 0
+            rec.speed = 0f
+            rec.eta = 0L
+            rec.status = RecordStatus.DOWNLOADING
+            AppContext.db.update(rec)
+            EngineContext.ui.downloadUpdated(id)
+        }
+        resumeTask(id)
+    }
+
     fun deleteTask(id: Long, fromDisk: Boolean) {
+        completedTasks.remove(id)
+        failedTasks.remove(id)
         val task = activeTasks.remove(id)
         activeAdapters.remove(id)
         task?.cancel()
@@ -318,6 +378,8 @@ object PluginDownloadBridge {
     fun cancelTasksForPlugin(pluginId: String) {
         val matchingIds = taskMetadata.filterValues { it.pluginId == pluginId }.keys
         for (id in matchingIds) {
+            completedTasks.remove(id)
+            failedTasks.remove(id)
             val task = activeTasks.remove(id)
             activeAdapters.remove(id)
             task?.let { runCatching { it.cancel() } }
@@ -334,5 +396,8 @@ object PluginDownloadBridge {
         activeTasks.values.forEach { runCatching { it.cancel() } }
         activeTasks.clear()
         activeAdapters.clear()
+        completedTasks.clear()
+        failedTasks.clear()
+        taskMetadata.clear()
     }
 }

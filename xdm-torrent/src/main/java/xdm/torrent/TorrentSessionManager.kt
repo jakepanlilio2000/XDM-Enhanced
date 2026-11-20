@@ -128,6 +128,31 @@ class LibtorrentEngine private constructor() : TorrentEngine {
             val port = config.listenPort
             sp.listenInterfaces("0.0.0.0:$port,[::]:$port")
 
+            // Libtorrent proxy integration
+            val pType = when (config.proxyType) {
+                TorrentProxyType.NONE -> org.libtorrent4j.swig.settings_pack.proxy_type_t.none
+                TorrentProxyType.SOCKS4 -> org.libtorrent4j.swig.settings_pack.proxy_type_t.socks4
+                TorrentProxyType.SOCKS5 -> if (config.proxyUser.isNotEmpty()) org.libtorrent4j.swig.settings_pack.proxy_type_t.socks5_pw else org.libtorrent4j.swig.settings_pack.proxy_type_t.socks5
+                TorrentProxyType.SOCKS5_PW -> org.libtorrent4j.swig.settings_pack.proxy_type_t.socks5_pw
+                TorrentProxyType.HTTP -> if (config.proxyUser.isNotEmpty()) org.libtorrent4j.swig.settings_pack.proxy_type_t.http_pw else org.libtorrent4j.swig.settings_pack.proxy_type_t.http
+                TorrentProxyType.HTTP_PW -> org.libtorrent4j.swig.settings_pack.proxy_type_t.http_pw
+            }
+            sp.setInteger(org.libtorrent4j.swig.settings_pack.int_types.proxy_type.swigValue(), pType.swigValue())
+            if (config.proxyHost.isNotEmpty() && config.proxyPort > 0) {
+                sp.setString(org.libtorrent4j.swig.settings_pack.string_types.proxy_hostname.swigValue(), config.proxyHost)
+                sp.setInteger(org.libtorrent4j.swig.settings_pack.int_types.proxy_port.swigValue(), config.proxyPort)
+                if (config.proxyUser.isNotEmpty()) {
+                    sp.setString(org.libtorrent4j.swig.settings_pack.string_types.proxy_username.swigValue(), config.proxyUser)
+                    sp.setString(org.libtorrent4j.swig.settings_pack.string_types.proxy_password.swigValue(), config.proxyPass)
+                }
+                sp.setBoolean(org.libtorrent4j.swig.settings_pack.bool_types.proxy_peer_connections.swigValue(), config.proxyPeerConnections)
+                sp.setBoolean(org.libtorrent4j.swig.settings_pack.bool_types.proxy_tracker_connections.swigValue(), config.proxyTrackerConnections)
+                sp.setBoolean(org.libtorrent4j.swig.settings_pack.bool_types.proxy_hostnames.swigValue(), config.proxyHostnames)
+                if (config.anonymousMode) {
+                    sp.setBoolean(org.libtorrent4j.swig.settings_pack.bool_types.anonymous_mode.swigValue(), true)
+                }
+            }
+
             sm.applySettings(sp)
 
             if (config.enableDht && !sm.isDhtRunning) {

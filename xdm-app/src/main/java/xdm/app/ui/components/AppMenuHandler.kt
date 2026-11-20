@@ -117,6 +117,28 @@ object AppMenuHandler {
                 AppContext.videoTracker.addVideoDownload(vid)
             }
 
+            DownloadType.Plugin -> db.getPluginTask(ent.id)?.let { t ->
+                val (categoryId, folder) = captureDestination(t.fileName, t.url, null)
+                val targetDir = folder ?: t.targetFolder
+                val pair = xdm.app.plugins.PluginManager.installedPlugins
+                    .find { it.manifest.id == t.pluginId && it.status == xdm.app.plugins.PluginStatus.ACTIVE }
+                    ?.let { plugin ->
+                        val provider = plugin.context?.downloadProviders?.find { it.canHandle(t.url) }
+                            ?: plugin.context?.downloadProviders?.firstOrNull()
+                        if (provider != null) plugin to provider else null
+                    }
+                if (pair != null) {
+                    val (plugin, provider) = pair
+                    try {
+                        val req = xdm.plugin.api.models.PluginDownloadRequest(t.url, targetDir, t.fileName)
+                        val newTask = provider.createDownloadTask(req)
+                        xdm.app.plugins.PluginDownloadBridge.registerPluginTask(plugin, req, newTask, startNow = true)
+                    } catch (e: Exception) {
+                        Logger.error("Failed to restart plugin task", e)
+                    }
+                }
+            }
+
             else -> {}
         }
     }

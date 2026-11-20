@@ -186,6 +186,7 @@ class PluginApiV2AndTaskAdapterTest : DownloadManagerTestBase() {
         // Publish event
         assertDoesNotThrow {
             PluginEventBus.publish("media.found", "https://example.com/video.mp4")
+            PluginEventBus.awaitIdle()
         }
 
         assertEquals(1, callCount.get())
@@ -197,6 +198,7 @@ class PluginApiV2AndTaskAdapterTest : DownloadManagerTestBase() {
         receivedEvents.clear()
 
         PluginEventBus.publish("media.found", "https://example.com/second.mp4")
+        PluginEventBus.awaitIdle()
         assertFalse(receivedEvents.any { it.startsWith("media.found:") })
         assertTrue(receivedEvents.contains("another:media.found:https://example.com/second.mp4"))
     }

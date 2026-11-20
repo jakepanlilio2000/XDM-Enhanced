@@ -9,6 +9,7 @@ import xdm.plugin.api.models.PluginDownloadRequest;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -82,7 +83,37 @@ public class YtDlpDownloadTask implements PluginDownloadTask {
             }
         }
 
-        List<String> command = buildCommand(targetDir);
+        if (!context.isVpnPrerequisiteMet()) {
+            state = TaskState.FAILED;
+            errorMessage = "Download blocked: VPN prerequisite unmet (Required VPN is disconnected).";
+            notifyProgress(errorMessage);
+            context.logError(errorMessage, null);
+            return;
+        }
+
+        URI targetUri = null;
+        try {
+            targetUri = URI.create(request.getUrl());
+        } catch (Exception ignored) {}
+
+        xdm.plugin.api.network.ProxyResolution proxyRes = targetUri != null
+                ? context.resolveProxy(targetUri, xdm.plugin.api.network.ProxyResolution.NetworkEngine.PLUGIN_TASK)
+                : null;
+
+        if (proxyRes != null && proxyRes.isBlocked()) {
+            state = TaskState.FAILED;
+            errorMessage = "Download blocked by proxy policy (FAIL_CLOSED): " + proxyRes.getBlockedReason();
+            notifyProgress(errorMessage);
+            context.logError(errorMessage, null);
+            return;
+        }
+
+        if (proxyRes != null && proxyRes.getType() != xdm.plugin.api.network.ProxyResolution.Type.DIRECT
+                && proxyRes.getType() != xdm.plugin.api.network.ProxyResolution.Type.SYSTEM_DEFAULT) {
+            context.logInfo("Routing yt-dlp download through proxy: " + proxyRes.toRedactedString());
+        }
+
+        List<String> command = buildCommand(targetDir, proxyRes);
         context.logInfo("Executing yt-dlp structured command for: " + sanitizeUrl(request.getUrl()));
 
         ProcessBuilder pb = new ProcessBuilder(command);
@@ -140,25 +171,64 @@ public class YtDlpDownloadTask implements PluginDownloadTask {
         }
     }
 
+    private static final java.util.regex.Pattern SAFE_FORMAT_PATTERN =
+            java.util.regex.Pattern.compile("^[a-zA-Z0-9_\\[\\]<=,>+/ \\-\\.:]+$");
+    private static final java.util.regex.Pattern SAFE_AUDIO_PATTERN =
+            java.util.regex.Pattern.compile("^[a-zA-Z0-9_\\-]+$");
+
     private List<String> buildCommand(File targetDir) {
+        return buildCommand(targetDir, null);
+    }
+
+    private List<String> buildCommand(File targetDir, xdm.plugin.api.network.ProxyResolution proxyRes) {
         List<String> cmd = new ArrayList<>();
         cmd.add(config.getExecutablePath());
         cmd.add("--newline");
         cmd.add("--no-colors");
         cmd.add("--no-playlist");
 
-        // Format selection
-        String format = config.getFormatPreference();
-        if (format != null && !format.isEmpty()) {
-            cmd.add("-f");
-            cmd.add(format);
+        // Proxy routing support
+        if (proxyRes != null && proxyRes.getHost() != null && proxyRes.getPort() > 0) {
+            String scheme = "http";
+            if (proxyRes.getType() == xdm.plugin.api.network.ProxyResolution.Type.SOCKS5) {
+                scheme = "socks5";
+            } else if (proxyRes.getType() == xdm.plugin.api.network.ProxyResolution.Type.SOCKS4) {
+                scheme = "socks4";
+            }
+            StringBuilder proxyUrl = new StringBuilder();
+            proxyUrl.append(scheme).append("://");
+            if (proxyRes.getUsername() != null && !proxyRes.getUsername().isEmpty()) {
+                proxyUrl.append(proxyRes.getUsername());
+                if (proxyRes.getPassword() != null && !proxyRes.getPassword().isEmpty()) {
+                    proxyUrl.append(":").append(proxyRes.getPassword());
+                }
+                proxyUrl.append("@");
+            }
+            proxyUrl.append(proxyRes.getHost()).append(":").append(proxyRes.getPort());
+            cmd.add("--proxy");
+            cmd.add(proxyUrl.toString());
         }
 
-        // Audio extraction if requested
+        // Format selection with whitelist validation against argument injection
+        String format = config.getFormatPreference();
+        if (format != null && !format.trim().isEmpty()) {
+            String trimmed = format.trim();
+            if (SAFE_FORMAT_PATTERN.matcher(trimmed).matches()) {
+                cmd.add("-f");
+                cmd.add(trimmed);
+            }
+        }
+
+        // Audio extraction if requested with whitelist validation
         if (config.isExtractAudio()) {
             cmd.add("-x");
             cmd.add("--audio-format");
-            cmd.add(config.getAudioFormat());
+            String audioFmt = config.getAudioFormat();
+            if (audioFmt != null && SAFE_AUDIO_PATTERN.matcher(audioFmt.trim()).matches()) {
+                cmd.add(audioFmt.trim());
+            } else {
+                cmd.add("mp3");
+            }
         }
 
         // Target directory and naming template
@@ -400,7 +470,14 @@ public class YtDlpDownloadTask implements PluginDownloadTask {
             }
         } catch (Exception ignored) {}
         int q = sanitized.indexOf('?');
-        return q > 0 ? sanitized.substring(0, q) : sanitized;
+        if (q > 0) {
+            sanitized = sanitized.substring(0, q);
+        }
+        int h = sanitized.indexOf('#');
+        if (h > 0) {
+            sanitized = sanitized.substring(0, h);
+        }
+        return sanitized;
     }
 
     public static long parseBytes(String str) {

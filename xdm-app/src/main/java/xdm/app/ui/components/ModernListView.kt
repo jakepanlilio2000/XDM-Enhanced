@@ -32,6 +32,11 @@ class ModernListView(
                     table.repaint()
                 }
                 bulkSelectionCallback?.invoke(selecting)
+                val infos = selectedItems.map { xdm.app.plugins.PluginManager.toDownloadInfo(it) }
+                xdm.app.plugins.PluginEventBus.publish(
+                    xdm.plugin.api.events.EventTopics.SELECTION_CHANGED,
+                    xdm.plugin.api.events.SelectionChangeEvent(infos)
+                )
             }
         }
 

@@ -1,0 +1,14 @@
+{
+  "id": "sample-proxy-provider",
+  "name": "Sample Proxy Profile Provider",
+  "version": "1.0.0",
+  "author": "XDM Enhanced Team",
+  "description": "Demonstrates SDK v2 scoped SOCKS5 and HTTP proxy routing for target download domains with strict credential redaction and fail-closed policies.",
+  "license": "Apache-2.0",
+  "minApiVersion": "1.1.0",
+  "entryPoint": "xdm.sample.proxy.SampleProxyPlugin",
+  "capabilities": [
+    "NETWORK_PROXY",
+    "SETTINGS_PANEL"
+  ]
+}

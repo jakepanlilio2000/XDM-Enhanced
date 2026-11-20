@@ -195,6 +195,11 @@ interface IAppConfig : EngineConfig {
     var trustedPlugins: List<String>
     var safeMode: Boolean
     var monitorClipboard: Boolean
+    var disabledProxyProviders: List<String>
+    var vpnPrerequisiteEnabled: Boolean
+    var vpnRequiredProviderId: String
+    var vpnRequiredProfileId: String
+    var vpnAutoResumeOnReconnect: Boolean
 
     fun applyAuthConfig()
 
@@ -302,6 +307,11 @@ private const val F_ENABLED_PLUGINS = 88
 private const val F_TRUSTED_PLUGINS = 89
 private const val F_SAFE_MODE = 90
 private const val F_MONITOR_CLIPBOARD = 91
+private const val F_DISABLED_PROXY_PROVIDERS = 92
+private const val F_VPN_PREREQUISITE_ENABLED = 93
+private const val F_VPN_REQUIRED_PROVIDER_ID = 94
+private const val F_VPN_REQUIRED_PROFILE_ID = 95
+private const val F_VPN_AUTO_RESUME_ON_RECONNECT = 96
 
 // Inside F_POST_DOWNLOAD_RULES: one F_RULE record per rule, in order.
 private const val F_RULE = 1
@@ -513,6 +523,11 @@ class AppConfig(private val configDir: String) : IAppConfig {
     override var trustedPlugins: List<String> = emptyList()
     override var safeMode: Boolean = false
     override var monitorClipboard: Boolean = false
+    override var disabledProxyProviders: List<String> = emptyList()
+    override var vpnPrerequisiteEnabled: Boolean = false
+    override var vpnRequiredProviderId: String = ""
+    override var vpnRequiredProfileId: String = ""
+    override var vpnAutoResumeOnReconnect: Boolean = false
 
     override fun applyAuthConfig() {
         Authenticator.setDefault(DefaultAuthenticator())
@@ -644,6 +659,11 @@ class AppConfig(private val configDir: String) : IAppConfig {
         w.strings(F_TRUSTED_PLUGINS, trustedPlugins)
         w.bool(F_SAFE_MODE, safeMode)
         w.bool(F_MONITOR_CLIPBOARD, monitorClipboard)
+        w.strings(F_DISABLED_PROXY_PROVIDERS, disabledProxyProviders)
+        w.bool(F_VPN_PREREQUISITE_ENABLED, vpnPrerequisiteEnabled)
+        w.string(F_VPN_REQUIRED_PROVIDER_ID, vpnRequiredProviderId)
+        w.string(F_VPN_REQUIRED_PROFILE_ID, vpnRequiredProfileId)
+        w.bool(F_VPN_AUTO_RESUME_ON_RECONNECT, vpnAutoResumeOnReconnect)
         w.raw(unknownFields)
     }
 
@@ -755,6 +775,11 @@ class AppConfig(private val configDir: String) : IAppConfig {
                 F_TRUSTED_PLUGINS -> trustedPlugins = r.strings()
                 F_SAFE_MODE -> safeMode = r.bool()
                 F_MONITOR_CLIPBOARD -> monitorClipboard = r.bool()
+                F_DISABLED_PROXY_PROVIDERS -> disabledProxyProviders = r.strings()
+                F_VPN_PREREQUISITE_ENABLED -> vpnPrerequisiteEnabled = r.bool()
+                F_VPN_REQUIRED_PROVIDER_ID -> vpnRequiredProviderId = r.string()
+                F_VPN_REQUIRED_PROFILE_ID -> vpnRequiredProfileId = r.string()
+                F_VPN_AUTO_RESUME_ON_RECONNECT -> vpnAutoResumeOnReconnect = r.bool()
                 else -> unknown.raw(r.rawField())
             }
         }

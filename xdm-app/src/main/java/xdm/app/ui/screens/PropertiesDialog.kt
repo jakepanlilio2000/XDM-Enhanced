@@ -48,6 +48,7 @@ import java.util.Date
 import java.util.Locale
 import javax.swing.Box
 import javax.swing.BoxLayout
+import javax.swing.SwingConstants
 import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.JDialog
@@ -157,11 +158,34 @@ class PropertiesDialog(private val owner: Window?, ent: DbRecord) : JDialog(owne
         val failedFiles = batch?.state?.failedCount ?: 0
         if (failedFiles > 0) addRow(panel, row++, text("PROP_FAILED_FILES"), "%,d".format(failedFiles))
 
-        if (batch != null) {
-            // Files first: for a batch they matter more than the headers.
+        val downloadInfo = xdm.app.plugins.PluginManager.toDownloadInfo(ent)
+        val pluginSections = xdm.app.plugins.PluginManager.getDetailsSections(downloadInfo)
+
+        if (batch != null || pluginSections.isNotEmpty()) {
+            // Files/Headers or plugin-contributed tabs
             val tabs = JTabbedPane().apply {
-                addTab(text("PROP_TAB_FILES"), BatchFilesView(batch.task, batch.state, ent.status))
+                if (batch != null) {
+                    addTab(text("PROP_TAB_FILES"), BatchFilesView(batch.task, batch.state, ent.status))
+                }
                 addTab(text("PROP_HEADERS"), headersView())
+                for ((plugin, contributor) in pluginSections) {
+                    try {
+                        val comp = contributor.createSection(downloadInfo, plugin.context)
+                        val wrapped = JScrollPane(comp).apply {
+                            border = ScaledEmptyBorder(4, 4, 4, 4)
+                        }
+                        addTab(contributor.title, wrapped)
+                    } catch (t: Throwable) {
+                        Logger.error("Failed to render details section '${contributor.sectionId}' for plugin ${plugin.manifest.id}", t)
+                        val fallback = JPanel(BorderLayout()).apply {
+                            add(JLabel("Error loading section '${contributor.title}': ${t.message}").apply {
+                                foreground = java.awt.Color.RED
+                                horizontalAlignment = SwingConstants.CENTER
+                            }, BorderLayout.CENTER)
+                        }
+                        addTab(contributor.title, fallback)
+                    }
+                }
             }
             panel.add(tabs, GridBagConstraints().apply {
                 gridx = 0; gridy = row

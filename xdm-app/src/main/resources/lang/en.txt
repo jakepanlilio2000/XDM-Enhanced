@@ -660,6 +660,18 @@ PLUGINS_CONFIGURE=Configure
 PLUGINS_UNINSTALL=Uninstall
 PLUGINS_ENABLE=Enable
 PLUGINS_DISABLE=Disable
+PLUGINS_VIEW_LOGS=View Logs
+PLUGINS_EXPORT_DIAGNOSTICS=Export Diagnostics...
+PLUGINS_CAPABILITIES_GUIDE=Capabilities Guide
+PLUGINS_RESTART_APP=Restart App
+PLUGINS_RESTART_CONFIRM=An application restart is required for changes to '%s' to take full effect.\n\nRestart XDM Enhanced now?
+PLUGINS_EXTERNAL_TOOL_MISSING=External Tool Warning: '%s' executable was not found on system PATH. Install it or configure its path in Settings.
+PLUGINS_SOURCE_BUILTIN=Built-in (Host Application)
+PLUGINS_SOURCE_ARCHIVE=Local Archive (%s)
+PLUGINS_SOURCE_DIRECTORY=Directory (%s)
+PLUGINS_LICENSE_LABEL=License: %s
+PLUGINS_API_COMPATIBLE=API: Requires >=%s (Host: %s — Compatible)
+PLUGINS_API_INCOMPATIBLE=API Mismatch: Requires >=%s (Host: %s)
 SETTINGS_SEC_CLIPBOARD=Clipboard Monitoring
 LBL_MONITOR_CLIPBOARD=Monitor copied download links
 LBL_MONITOR_CLIPBOARD_SUB=Automatically detect copied download URLs and prepare the download modal. Unrelated clipboard text is never stored or transmitted.

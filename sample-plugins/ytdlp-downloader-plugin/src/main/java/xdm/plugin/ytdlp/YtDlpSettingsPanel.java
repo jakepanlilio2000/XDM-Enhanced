@@ -37,6 +37,16 @@ public class YtDlpSettingsPanel implements SettingsPanelContributor {
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         panel.setBorder(new EmptyBorder(12, 16, 12, 16));
 
+        // UX and Compliance Disclosure
+        JLabel lblNotice = new JLabel("<html><b>Notice:</b> Requires a locally installed, user-provided yt-dlp executable. " +
+                "XDM Enhanced does not bundle or automatically download external binaries. " +
+                "Use exclusively for content you are authorized to download. Progress metrics rely on CLI output streams.</html>");
+        lblNotice.setFont(lblNotice.getFont().deriveFont(Font.PLAIN, 11f));
+        lblNotice.setForeground(new Color(0x55, 0x55, 0x55));
+        lblNotice.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panel.add(lblNotice);
+        panel.add(Box.createRigidArea(new Dimension(0, 12)));
+
         // 1. Executable Path
         JLabel lblExec = new JLabel("yt-dlp Executable Path:");
         lblExec.setFont(lblExec.getFont().deriveFont(Font.BOLD));

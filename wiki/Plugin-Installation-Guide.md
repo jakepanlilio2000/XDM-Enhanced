@@ -4,63 +4,48 @@ XDM Enhanced features an extensible Java Plugin Platform (SPI v2) that allows de
 
 ---
 
-## 1. Official Sample Plugins (`v1.0.2`)
+## 1. Official Sample Plugins
 
-The following official sample plugins are published alongside desktop releases:
+The following official sample plugins are provided in the source repository and release assets:
 
 | Plugin Name | Package Filename | Capabilities | Description |
 |:---|:---|:---:|:---|
-| **Checksum Verifier** | `checksum-verifier.xdmplugin` | `INTEGRITY_VERIFIER`, `SETTINGS_PANEL` | Automatically calculates MD5, SHA-1, and SHA-256 hashes upon download completion. |
-| **yt-dlp Downloader** | `ytdlp-downloader.xdmplugin` | `DOWNLOAD_PROVIDER`, `SETTINGS_PANEL` | Integrates `yt-dlp` media extraction with the central XDM download scheduler. |
+| **yt-dlp Downloader** | `ytdlp-downloader.xdmplugin` | `DOWNLOAD_PROVIDER`, `URL_RECOGNITION`, `SETTINGS_PANEL` | Integrates authorized `yt-dlp` media extraction with visible progress and pause/resume. |
+| **Proxy Profile Provider** | `proxy-provider.xdmplugin` | `NETWORK_PROXY`, `SETTINGS_PANEL` | Demonstrates scoped SOCKS5/HTTP proxy routing with fail-closed security. |
+| **VPN Telemetry Client** | `vpn-status.xdmplugin` | `VPN_STATUS`, `SETTINGS_PANEL` | Demonstrates non-privileged VPN status discovery, profiles, and download pause policies. |
+| **UI & Alerts Enhancement** | `ui-notification.xdmplugin` | `CONTEXT_MENU`, `TOOLBAR`, `STATUS_INDICATOR`, `DETAILS_SECTION`, `SETTINGS_PANEL` | Modular UI actions, status pills, details tabs, theme observation, and desktop alerts. |
+| **Checksum Verifier** | `checksum-verifier.xdmplugin` | `POST_DOWNLOAD_PROCESSOR`, `SETTINGS_PANEL` | Automatically calculates MD5, SHA-1, and SHA-256 hashes upon download completion. |
 
 ---
 
 ## 2. Installing a Plugin (`.xdmplugin`)
 
-1. Download a verified `.xdmplugin` file (e.g. from [GitHub Releases](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/tag/v1.0.2)).
-2. Launch XDM Enhanced &rarr; open **Settings** (⚙️) &rarr; select **Plugins**.
-3. Click **Install Plugin** &rarr; browse and select your downloaded `.xdmplugin` file.
-4. XDM Enhanced validates the archive manifest (`plugin.json`), checks API version compatibility, and installs the plugin into `~/.xdm/plugins/`.
-5. The plugin appears immediately in the active plugins table with its capability badges.
+1. Open XDM Enhanced &rarr; **Settings** (⚙️) &rarr; select **Plugins**.
+2. Click **Install from File...** (`Alt+I`) &rarr; select your downloaded `.xdmplugin` or `.jar` archive.
+3. Review the **Security & Trust Disclosure** dialog:
+   - Name, version, author, declared license, source path, and calculated SHA-256 hash.
+   - Declared capabilities and external tool touchpoints.
+   - In-process execution privilege notice.
+4. Click **Trust & Enable** to activate the plugin.
 
 ---
 
-## 3. Configuring the yt-dlp Downloader Plugin
+## 3. Configuring and Managing Plugins
 
-The `ytdlp-downloader.xdmplugin` delegates media parsing to a local `yt-dlp` binary on your system:
-
-### Prerequisites:
-- Ensure `yt-dlp` is installed on your computer (`yt-dlp --version` in terminal).
-
-### Configuration Steps:
-1. Open XDM Enhanced &rarr; **Settings > Plugins**.
-2. Select **yt-dlp Video Downloader** &rarr; click **Configure**.
-3. In the configuration dialog, click **Browse** and select your `yt-dlp` executable (e.g. `C:\Tools\yt-dlp.exe` or `/usr/local/bin/yt-dlp`).
-4. Click **Test Executable**. A green checkmark confirms that the binary is runnable.
-5. Click **Save**.
-
-### Central Download Scheduler Integration:
-When yt-dlp downloads are triggered, the plugin routes the task through the public `PluginDownloadBridge`. Tasks appear directly in the main XDM transfer table with:
-- Live progress percentages
-- Transfer speed graphs and ETA
-- `CAT_VIDEOS` automatic categorization
-- Persistent download history
+- **Configure:** Click **Configure** on any active plugin card to modify its settings.
+- **View Logs:** Click **View Logs** to inspect registered extension points, classloader status, and sanitized diagnostic records.
+- **Export Diagnostics:** Click **Export Diagnostics...** (`Alt+E`) in the header to preview and save a secret-free troubleshooting report.
+- **Capabilities Guide:** Click **Capabilities Guide** (`Alt+H`) in the header to view tool, OS, consent, and restart requirements.
+- **Enable / Disable / Retry:** Toggle plugin states asynchronously without freezing the user interface.
+- **Remove:** Uninstalls third-party plugins with optional data preservation.
 
 ---
 
-## 4. Enabling, Disabling & Uninstalling Plugins
+## 4. Security & Troubleshooting Protections
 
-In **Settings > Plugins**:
-- **Enable / Disable:** Uncheck the checkbox next to any plugin to temporarily disable its event listeners and providers without deleting its files.
-- **Uninstall:** Select a plugin and click **Uninstall** to completely delete the package from your local storage.
-
----
-
-## 5. Security & Isolation Protections
-
-- **API Version Compatibility:** Plugins declare their supported version range (e.g. `[1.0.0, 2.0.0)`). Incompatible plugins are blocked from loading to prevent host application instability.
-- **ClassLoader Isolation:** Each plugin loads within an independent child classloader, preventing dependency conflicts between different add-ons.
-- **Subprocess Safety:** External binaries are executed via `ProcessBuilder` with explicit array arguments, completely eliminating shell injection vectors.
+- **In-Process Boundary:** Manifest permissions alone do not provide JVM sandboxing. Plugins execute with user account privileges.
+- **Archive Hardening:** Defends against Zip Slip traversal, symbolic links, native binaries, and zip bombs.
+- **Safe Mode Recovery:** Launch `xdman --safe-mode` or `xdman --no-plugins` to quarantine all plugins if a rogue add-on prevents startup.
 
 ---
 

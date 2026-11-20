@@ -64,8 +64,7 @@ object DownloadContextMenu {
         }
 
         if (selected.size == 1 && (first.status.isStopped || first.status == RecordStatus.FINISHED) &&
-            first.downloadType != DownloadType.Torrent && first.downloadType != DownloadType.Batch &&
-            first.downloadType != DownloadType.Plugin
+            first.downloadType != DownloadType.Torrent && first.downloadType != DownloadType.Batch
         ) {
             menu.add(JMenuItem("Restart", FontIcon(RemixIcon.ARROW_UP_DOWN_FILL, 16.px)).apply {
                 addActionListener { AppMenuHandler.restartDownload(first) }

@@ -726,6 +726,39 @@ class NewDownloadWindow : JDialog(null as Window?) {
                     }
                 }
 
+                // Query metadata enrichers (user's manual decisions strictly dominate)
+                val (suggestedName, suggestedCat) = runCatching {
+                    xdm.app.plugins.PluginManager.suggestMetadata(currentText, txtFileName.text, result.contentType ?: "")
+                }.getOrDefault(Pair(null, null))
+
+                if (!userModifiedFileName && !suggestedName.isNullOrBlank()) {
+                    updatingProgrammatically = true
+                    try {
+                        txtFileName.text = suggestedName
+                        originalFileName = suggestedName
+                        fileNameChanged()
+                    } finally {
+                        updatingProgrammatically = false
+                    }
+                }
+
+                if (!picker.userPicked && !suggestedCat.isNullOrBlank()) {
+                    picker.selectCategoryById(suggestedCat)
+                }
+
+                // Publish METADATA_RESOLVED event
+                val headersFlat = headers?.mapValues { it.value.joinToString(", ") } ?: emptyMap()
+                val metaEvent = xdm.plugin.api.events.MetadataResolvedEvent(
+                    currentText,
+                    result.fileName,
+                    suggestedName ?: txtFileName.text,
+                    suggestedCat ?: picker.selectedCategory?.id ?: "None",
+                    result.contentType ?: "",
+                    result.fileSize ?: -1L,
+                    headersFlat
+                )
+                xdm.app.plugins.PluginEventBus.publish(xdm.plugin.api.events.EventTopics.METADATA_RESOLVED, metaEvent)
+
                 val currentTask = taskInfo
                 taskInfo = currentTask?.copy(
                     knownFileSize = result.fileSize,

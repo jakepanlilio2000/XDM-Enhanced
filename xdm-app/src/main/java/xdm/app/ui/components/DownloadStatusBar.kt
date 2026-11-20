@@ -41,6 +41,7 @@ class DownloadStatusBar : JPanel(BorderLayout()) {
     val diskText: String get() = lblDisk.text
 
     private val separators = mutableListOf<JSeparator>()
+    private val pluginIndicatorsBox = Box.createHorizontalBox()
     private val timer = Timer(250) { updateMetrics() }
 
     init {
@@ -62,14 +63,47 @@ class DownloadStatusBar : JPanel(BorderLayout()) {
         }
 
         val rightBox = Box.createHorizontalBox().apply {
+            add(pluginIndicatorsBox)
             add(lblDisk)
         }
 
         add(leftBox, BorderLayout.WEST)
         add(rightBox, BorderLayout.EAST)
 
+        refreshPluginIndicators()
+        xdm.app.plugins.PluginManager.addStateListener {
+            SwingUtilities.invokeLater { refreshPluginIndicators() }
+        }
+
         updateMetrics()
         timer.start()
+    }
+
+    fun refreshPluginIndicators() {
+        pluginIndicatorsBox.removeAll()
+        val indicators = xdm.app.plugins.PluginManager.getStatusIndicators()
+        for ((plugin, contributor) in indicators) {
+            try {
+                val comp = contributor.createIndicator(plugin.context)
+                if (comp != null) {
+                    if (contributor.tooltip.isNotBlank()) {
+                        (comp as? JComponent)?.toolTipText = contributor.tooltip
+                    }
+                    pluginIndicatorsBox.add(comp)
+                    pluginIndicatorsBox.add(createSeparator())
+                }
+            } catch (t: Throwable) {
+                xdm.core.util.Logger.error("Failed to render status indicator for plugin ${plugin.manifest.id}", t)
+                val fallback = JLabel("!").apply {
+                    foreground = java.awt.Color.ORANGE
+                    toolTipText = "Indicator error (${plugin.manifest.name})"
+                }
+                pluginIndicatorsBox.add(fallback)
+                pluginIndicatorsBox.add(createSeparator())
+            }
+        }
+        pluginIndicatorsBox.revalidate()
+        pluginIndicatorsBox.repaint()
     }
 
     private fun createSeparator(): JComponent {
@@ -137,6 +171,12 @@ class DownloadStatusBar : JPanel(BorderLayout()) {
             lblDisk.text = "Disk Free: $freeStr"
         } catch (_: Throwable) {
             lblDisk.text = "Disk Free: --"
+        }
+
+        // Plugin indicators update
+        val indicators = xdm.app.plugins.PluginManager.getStatusIndicators()
+        for ((_, contributor) in indicators) {
+            runCatching { contributor.updateIndicator() }
         }
     }
 

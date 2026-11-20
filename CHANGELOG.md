@@ -5,6 +5,48 @@ All notable changes to the XDM Enhanced project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0-beta.1] - 2026-11-20
+
+### Added
+- **General-Purpose Plugin SDK v2 Architecture & Public Interfaces:** Implemented decoupled, general-purpose extensibility in `xdm-plugin-api` expanding beyond download providers to support dynamic network proxy resolution (`ProxyProvider`), VPN telemetry / kill-switch monitoring (`VpnStatusProvider`), chained post-download file processors (`PostDownloadProcessor`), UI status widgets (`DashboardWidgetContributor`), disposable handles (`Registration`, `EventSubscription`), structured error codes (`PluginException`), and standardized event topics (`EventTopics`).
+- **Modernized Plugin Manager UI & Zero Dead Buttons:** Revamped Settings > Plugins with responsive card layouts, rich status badges (`Active`, `Disabled`, `Untrusted`, `Faulted`, `Incompatible`, `Restart Required`), inline capability pills, secret-free diagnostic export (`Alt+E`), interactive capabilities guide (`Alt+H`), and dedicated Configure buttons for plugins contributing settings.
+- **Legacy v1 Plugin Transparent Coexistence:** Built backward-compatibility handling guaranteeing 100% coexistence for existing v1 plugins (`checksum-verifier`, `ytdlp-downloader`) with manifest version defaulting to `1` and automatic capability alias normalization (`URL_RECOGNIZER` $\rightarrow$ `URL_RECOGNITION`, `TOOLBAR_ACTION` $\rightarrow$ `TOOLBAR`, `COMMAND` $\rightarrow$ `COMMANDS`) without requiring recompilation.
+- **Dedicated Concurrency Isolation (`PluginThreadPoolExecutor`):** Isolated asynchronous plugin tasks into a bounded daemon worker pool (core=4, max=16, queue=256), preventing JVM thread starvation hazards and Swing EDT blocking (`GAP-03`).
+- **Four Independent, Compilable Sample Projects:** Built, tested, and packaged 4 standalone reference plugins outside the main application module using only public `xdm-plugin-api:1.0.2` dependencies:
+  - `sample-plugins/ytdlp-downloader-plugin/` (`ytdlp-downloader.xdmplugin`): External download provider with visible progress tasks, pause/resume, and URL recognizer.
+  - `sample-plugins/proxy-provider-sample/` (`proxy-provider.xdmplugin`): Scoped SOCKS5/HTTP routing with `FAIL_CLOSED` fallback and custom settings panel.
+  - `sample-plugins/vpn-status-sample/` (`vpn-status.xdmplugin`): Non-privileged VPN client status provider (`wg0`), server profiles, and reconnect commands.
+  - `sample-plugins/ui-notification-sample/` (`ui-notification.xdmplugin`): Rich UI contributor registering context menus, toolbar buttons, details sections, status pills, and typed event subscriptions.
+- **Automated Circuit Breaker & Safe Mode Recovery:** Added startup crash loop protection that automatically engages Safe Mode quarantine after 3 consecutive startup failures, accompanied by explicit `--safe-mode` and `--no-plugins` CLI launch recovery flags.
+- **Comprehensive Documentation Suite:** Authored 5 detailed guides reflecting actual v2 contracts:
+  - `docs/PLUGIN_DEVELOPMENT.md`: 10-section developer manual covering quick start, Maven setup, manifest schema, 19 capabilities, security, and packaging.
+  - `docs/PLUGIN_API_REFERENCE.md`: Formal specification of all 16 public SPIs with exact method signatures and minimal working samples.
+  - `docs/PLUGIN_MANAGER_USER_GUIDE.md`: End-user guide for plugin management, trust reviews, and secret-free diagnostic exports.
+  - `docs/PLUGIN_V1_TO_V2_MIGRATION_GUIDE.md`: Step-by-step roadmap from v1 `PluginService` to v2 `XdmPlugin` and disposable `Registration` handles.
+  - `docs/PLUGIN_SECURITY_AND_TRUST_MODEL.md`: Architectural details on in-process trust boundaries, archive defenses, and subprocess safety.
+- **Full-Matrix Release Gate Verification Suite:** Validated all SDK v2 changes across 387 automated tests spanning plugin lifecycle, core transfers (HTTP/HTTPS, BitTorrent/magnet), UI theme switching, browser native messaging, headless CLI, and persistent storage crash recovery with 0 failures.
+
+### Changed
+- **Classloader Isolation Boundary:** Replaced parent-delegation `URLClassLoader` with `PluginFilteringClassLoader` (`GAP-01`), strictly blocking plugin access to internal engine packages (`xdm.app.*`, `xdm.core.*`, `xdm.manager.*`), throwing `ClassNotFoundException`.
+- **Capability Schema Normalization:** Normalized manifest capability strings (`GAP-02`), resolving spurious validation warnings for valid plugins.
+- **Application Metadata Alignment:** Aligned application-facing versioning to `v1.1.0-beta.1` while maintaining separately documented SDK/API specifications (`2.0.0-beta.1`).
+
+### Breaking Compatibility Decisions
+- **Internal Host Package Access Blocked:** In-process plugins can no longer reflectively load or link against internal classes (`xdm.app.*`, `xdm.core.*`, `xdm.manager.*`). Any third-party plugin attempting to manipulate internal singletons directly will receive a `ClassNotFoundException` and must use public `PluginContext` SPIs instead.
+
+### Security
+- **Honest In-Process Trust Disclosure:** Formalized honest security disclosures in documentation and UI modals affirming that in-process JVM plugins execute with OS user privileges, backed by default `UNTRUSTED` quarantine.
+- **Archive Hardening:** Strict Zip-Slip directory traversal prevention, symbolic link rejection, decompression bomb size limits (250MB single entry / 500MB total), and executable native binary rejection (`.exe`, `.dll`, `.so`, `.sh`).
+- **External Process Hardening:** Enforced `--` command-line argument delimiters, array-based `ProcessBuilder` execution, and credential stripping (`sanitizeUrl`) for subprocess wrappers.
+- **Zero Secrets Guarantee:** Passwords, API tokens, and Authorization headers are automatically scrubbed to `***` in telemetry, error logs, and diagnostic exports (`Alt+E`).
+
+### Known Limitations
+- **No Kernel Network Driver Hooks:** VPN plugins must interact with external user-space tools; raw TUN/TAP kernel driver installation is out of scope.
+- **No Global UI Theme Injection:** Plugins cannot replace core window frames or FlatLaf application themes.
+
+### Contributor Credits
+- **Implementation, Verification & Architecture:** Independent architecture audit, QA test suite implementation, and SDK v2 foundation design by Senior Release Engineer & Java Architect.
+
 ## [1.0.2] - 2026-11-20
 
 ### Fixed

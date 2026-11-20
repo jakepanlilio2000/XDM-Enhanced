@@ -1542,11 +1542,26 @@ class DownloadManager(
      */
     private fun newHttpClient(id: Long): HttpClientImpl {
         refused.remove(id)
+        val taskUrl = taskInfoDB.getHttpTask(id)?.url
+            ?: taskInfoDB.getHlsTask(id)?.url
+            ?: taskInfoDB.getDashTask(id)?.url
+            ?: taskInfoDB.getPluginTask(id)?.url
+        val prereqMet = hooks.checkPrerequisites(id, taskUrl)
+        val resolved = hooks.resolveProxy(id, taskUrl)
+        val proxy = if (resolved != null && !resolved.isBlocked) resolved.proxy else if (resolved?.isBlocked == true) null else config.toProxy()
+        val pUser = if (resolved != null && !resolved.isBlocked) resolved.user else config.proxyUser
+        val pPass = if (resolved != null && !resolved.isBlocked) resolved.pass else config.proxyPass
+        val blocked = if (!prereqMet) {
+            "Download blocked by prerequisite policy (Required VPN is disconnected or unavailable)"
+        } else if (resolved?.isBlocked == true) {
+            (resolved.blockedReason ?: "Routing blocked by policy")
+        } else null
         return HttpClientImpl(
-            CoreConfig.MAX_SEGMENTS, config.toProxy(), hooks.insecureTrust(),
+            CoreConfig.MAX_SEGMENTS, proxy, hooks.insecureTrust(),
             config.readTimeoutSeconds,
-            config.proxyUser, config.proxyPass,
+            pUser, pPass,
             auth = hooks.httpAuth, serverAuth = true,
+            blockedReason = blocked,
             onRefused = { host, fingerprint ->
                 refused.computeIfAbsent(id) { ConcurrentHashMap.newKeySet() }.add("$host|$fingerprint")
             },

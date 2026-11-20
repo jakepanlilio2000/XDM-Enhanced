@@ -158,6 +158,19 @@ class DestinationPicker(
         onChanged()
     }
 
+    /**
+     * Programmatically selects a category by ID if user has not manually overridden the choice.
+     */
+    fun selectCategoryById(categoryId: String) {
+        val cat = categoryById(categoryId) ?: AppContext.config.categories.firstOrNull { it.id.equals(categoryId, ignoreCase = true) }
+        val index = (0 until categoryModel.size).firstOrNull {
+            categoryModel.getElementAt(it).category?.id.equals(cat?.id ?: categoryId, ignoreCase = true)
+        }
+        if (index != null) {
+            categoryCombo.selectedIndex = index
+        }
+    }
+
     fun dispose() {
         AppContext.config.removeChangeListener(configListener)
         addDialog?.dispose()

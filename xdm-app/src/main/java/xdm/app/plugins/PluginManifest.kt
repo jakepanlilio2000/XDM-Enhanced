@@ -7,6 +7,7 @@ import kotlinx.serialization.Serializable
  */
 @Serializable
 data class PluginManifest(
+    val manifestVersion: Int = 1,
     val id: String = "",
     val name: String = "",
     val version: String = "",
@@ -19,6 +20,7 @@ data class PluginManifest(
     val entryPoint: String = "",
     val capabilities: List<String> = emptyList(),
     val dependencies: List<String> = emptyList(),
+    val targetPlatforms: List<String> = emptyList(),
     val license: String = "GPL-3.0-or-later",
     val homepage: String? = null,
     val checksumSha256: String? = null

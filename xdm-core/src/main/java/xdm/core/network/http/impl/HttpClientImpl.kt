@@ -43,6 +43,8 @@ class HttpClientImpl @JvmOverloads constructor(
     dns: Dns = Dns.SYSTEM,
     /** A certificate was refused: the host and its leaf certificate's fingerprint ([CertExceptions]). */
     private val onRefused: ((host: String, fingerprint: String) -> Unit)? = null,
+    /** When non-null, aborts all requests immediately with IOException to enforce FAIL_CLOSED proxy policy. */
+    private val blockedReason: String? = null,
 ) : PoolingHttpClient {
     /** Set when the user cancels a credentials prompt: this client stops asking. */
     private val authCancelled = AtomicBoolean(false)
@@ -77,6 +79,13 @@ class HttpClientImpl @JvmOverloads constructor(
             .fastFallback(true)
             .protocols(listOf(Protocol.HTTP_1_1))
             .connectTimeout(30, TimeUnit.SECONDS).readTimeout(readTimeoutSeconds.toLong(), TimeUnit.SECONDS).retryOnConnectionFailure(false)
+            .apply {
+                if (blockedReason != null) {
+                    addInterceptor {
+                        throw java.io.IOException("Connection blocked by network proxy policy (FAIL_CLOSED): $blockedReason")
+                    }
+                }
+            }
             .apply { if (certTrust != null) ownTrust(this, certTrust) else sharedTls(this) }
             .apply { if (proxy != null) proxyAuthentication(this, proxy, proxyUser, proxyPassword) }
             .apply { if (serverAuth && auth != null) serverAuthentication(this, auth) }

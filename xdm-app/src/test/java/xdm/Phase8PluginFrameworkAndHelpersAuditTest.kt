@@ -148,6 +148,7 @@ class Phase8PluginFrameworkAndHelpersAuditTest : DownloadManagerTestBase() {
         PluginManager.discoverPlugins()
         val crashInitPlugin = PluginManager.installedPlugins.firstOrNull { it.manifest.id == "crash-init-plugin" }
         assertNotNull(crashInitPlugin)
+        AppContext.config.trustedPlugins = listOf("crash-init-plugin")
         val activateOk = PluginManager.activatePlugin(crashInitPlugin!!)
         assertFalse(activateOk, "Activating plugin that crashes in init() must return false")
         assertEquals(PluginStatus.FAULTED, crashInitPlugin.status)
@@ -167,6 +168,7 @@ class Phase8PluginFrameworkAndHelpersAuditTest : DownloadManagerTestBase() {
         PluginManager.discoverPlugins()
         val crashStopPlugin = PluginManager.installedPlugins.firstOrNull { it.manifest.id == "crash-stop-plugin" }
         assertNotNull(crashStopPlugin)
+        AppContext.config.trustedPlugins = listOf("crash-stop-plugin")
         assertTrue(PluginManager.activatePlugin(crashStopPlugin!!))
         assertEquals(PluginStatus.ACTIVE, crashStopPlugin.status)
 

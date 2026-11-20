@@ -8,7 +8,7 @@ Learn how to build, compile, and package a decoupled third-party plugin for **XD
 
 - Liberica JDK 25 or OpenJDK 25 (or JDK 8+ for plugin compilation).
 - Apache Maven 3.9+.
-- Download [`xdm-plugin-api-1.0.2.jar`](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.0.2/xdm-plugin-api-1.0.2.jar) (or install it to your local Maven repository).
+- Public plugin API dependency: `xdm-plugin-api-1.0.2.jar` (available in local Maven repository or repository builds).
 
 ---
 
@@ -28,8 +28,8 @@ Create a new Maven project with `pom.xml`:
     <packaging>jar</packaging>
 
     <properties>
-        <maven.compiler.source>17</maven.compiler.source>
-        <maven.compiler.target>17</maven.compiler.target>
+        <maven.compiler.source>8</maven.compiler.source>
+        <maven.compiler.target>8</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
@@ -55,49 +55,72 @@ Create `src/main/resources/plugin.json`:
   "id": "com.example.sample-plugin",
   "name": "Sample Verifier Plugin",
   "version": "1.0.0",
-  "apiVersion": "[1.0.0, 2.0.0)",
+  "minApiVersion": "1.1.0",
   "author": "Community Developer",
-  "description": "Demonstrates basic event listening in XDM Enhanced.",
-  "entryClass": "com.example.plugin.SamplePlugin",
-  "capabilities": ["SETTINGS_PANEL"]
+  "description": "Demonstrates SDK v2 extension points and typed event bus.",
+  "license": "Apache-2.0",
+  "entryPoint": "com.example.plugin.SamplePlugin",
+  "capabilities": [
+    "SETTINGS_PANEL",
+    "EVENT_BUS"
+  ]
 }
 ```
 
 ---
 
-## 4. Implementing `PluginService`
+## 4. Implementing `XdmPlugin` (SDK v2)
 
-Create the Java entry class:
+Create the Java entry class implementing `xdm.plugin.api.XdmPlugin`:
 
 ```java
 package com.example.plugin;
 
-import xdm.plugin.api.PluginContext;
-import xdm.plugin.api.PluginService;
-import xdm.plugin.api.events.PluginEventListener;
-import xdm.plugin.api.events.PluginProgressEvent;
+import xdm.plugin.api.*;
+import xdm.plugin.api.events.EventSubscription;
+import xdm.plugin.api.events.EventTopics;
+import java.util.ArrayList;
+import java.util.List;
 
-public class SamplePlugin implements PluginService {
+public class SamplePlugin implements XdmPlugin {
 
+    private final List<Registration> registrations = new ArrayList<>();
+    private EventSubscription eventSub;
     private PluginContext context;
 
     @Override
-    public void onInitialize(PluginContext context) {
-        this.context = context;
-        context.getLogger().info("SamplePlugin initialized successfully.");
-
-        // Subscribe to decoupled progress events
-        context.getEventBus().register(PluginProgressEvent.class, new PluginEventListener<PluginProgressEvent>() {
-            @Override
-            public void onEvent(PluginProgressEvent event) {
-                context.getLogger().debug("Task " + event.getTaskId() + " progress: " + event.getProgressPercent() + "%");
-            }
-        });
+    public String getId() {
+        return "com.example.sample-plugin";
     }
 
     @Override
-    public void onShutdown() {
-        context.getLogger().info("SamplePlugin shutting down.");
+    public void init(PluginContext context) throws Exception {
+        this.context = context;
+        context.logInfo("SamplePlugin initialized successfully.");
+
+        // Subscribe to decoupled progress/completion events via typed EventTopics
+        eventSub = context.subscribeTopic(EventTopics.DOWNLOAD_COMPLETED, (topic, event) -> {
+            context.logInfo("Received completion event on topic: " + topic);
+            context.showNotification("Download Finished", "Task completed notification from sample plugin", NotificationLevel.INFO);
+        });
+
+        // Register custom settings panel or other UI components
+        // registrations.add(context.registerSettings(new SampleSettingsPanel()));
+    }
+
+    @Override
+    public void shutdown() {
+        if (eventSub != null) {
+            eventSub.close();
+        }
+        for (Registration reg : registrations) {
+            reg.unregister();
+        }
+        registrations.clear();
+
+        if (context != null) {
+            context.logInfo("SamplePlugin shutting down.");
+        }
     }
 }
 ```
@@ -106,11 +129,11 @@ public class SamplePlugin implements PluginService {
 
 ## 5. Building and Packaging (`.xdmplugin`)
 
-1. Compile the plugin using Maven:
+1. Compile and package the plugin using Maven:
    ```bash
    mvn clean package
    ```
-2. Rename the resulting JAR in `target/`:
+2. Rename the resulting JAR in `target/` to `.xdmplugin`:
    ```bash
    # Rename .jar to .xdmplugin
    mv target/sample-plugin-1.0.0.jar target/sample-plugin.xdmplugin
@@ -119,9 +142,12 @@ public class SamplePlugin implements PluginService {
 
 ---
 
-## Related Developer Articles
+## Related Developer Articles & Official Guides
 
+* Detailed Guide: `docs/PLUGIN_DEVELOPMENT.md`
+* Complete API Reference: `docs/PLUGIN_API_REFERENCE.md`
+* V1 to V2 Migration Guide: `docs/PLUGIN_V1_TO_V2_MIGRATION_GUIDE.md`
+* User Guide: `docs/PLUGIN_MANAGER_USER_GUIDE.md`
 * [[Plugin API Version Compatibility|Plugin-API-Version-Compatibility]]: Managing version ranges.
 * [[Provider Task Integration|Provider-Task-Integration]]: Submitting tasks to the central download list.
-* Reference sample plugins in repository: [`xdm-app/src/test/resources/`](https://github.com/jakepanlilio2000/XDM-Enhanced).
-
+* Sample plugins in repository: `sample-plugins/` (`ytdlp-downloader-plugin`, `proxy-provider-sample`, `vpn-status-sample`, `ui-notification-sample`).

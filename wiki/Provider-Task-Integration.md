@@ -1,22 +1,22 @@
 # Provider Task Integration & Subprocess Safety
 
-Learn how to route external download tasks into the central **XDM Enhanced** transfer scheduler and invoke subprocesses safely.
+Learn how to implement custom download providers via the **SDK v2 `DownloadProvider` SPI** and safely bridge external media engines or subprocesses to XDM Enhanced.
 
 ---
 
-## 1. The Central Download Task Bridge
+## 1. The Central Download Provider Architecture
 
-The `PluginDownloadBridge` acts as an adapter connecting third-party download providers (such as `yt-dlp` or custom cloud clients) directly into the main desktop interface:
+In SDK v2, download providers register directly through `PluginContext.registerDownloadProvider`:
 
 ```
-[ External Provider / yt-dlp Subprocess ]
+[ External Engine / yt-dlp Subprocess ]
                    │
                    ▼ (Progress & Status Events)
 ┌──────────────────────────────────────────────┐
-│ PluginDownloadBridge                         │
-│   ├── Maps PluginDownloadTask to native Task │
-│   ├── Assigns stable task UUID               │
-│   └── Sets category to CAT_VIDEOS            │
+│ DownloadProvider & PluginDownloadTask        │
+│   ├── canHandle(url) -> boolean              │
+│   ├── createTask(url, destDir, options)      │
+│   └── start(), pause(), resume(), cancel()   │
 └──────────────────────────────────────────────┘
                    │
                    ▼
@@ -25,59 +25,89 @@ The `PluginDownloadBridge` acts as an adapter connecting third-party download pr
 
 ---
 
-## 2. Registering and Submitting a Task
+## 2. Implementing `DownloadProvider` and `PluginDownloadTask`
 
-To add a task to the central download list:
+### 2.1 Implementing `DownloadProvider`
 
 ```java
-import xdm.plugin.api.models.PluginDownloadTask;
+package com.example.plugin;
 
-public void initiateTransfer(String mediaUrl, String targetDirectory) {
-    String taskId = "ytdlp-" + System.currentTimeMillis();
-    String estimatedFileName = "Video Stream.mp4";
-    long initialSize = 0L; // 0 if unknown prior to extraction
+import xdm.plugin.api.download.*;
+import java.io.File;
+import java.util.Map;
 
-    PluginDownloadTask task = new PluginDownloadTask(
-        taskId,
-        estimatedFileName,
-        mediaUrl,
-        targetDirectory,
-        initialSize
-    );
+public class MyDownloadProvider implements DownloadProvider {
+    @Override
+    public String getId() {
+        return "my-downloader";
+    }
 
-    // Submits the task to the host scheduler
-    context.getTaskBridge().submitTask(task);
+    @Override
+    public String getName() {
+        return "My Custom Media Downloader";
+    }
+
+    @Override
+    public boolean canHandle(String url) {
+        return url != null && (url.contains("example.com/video/") || url.contains("myservice.org/media/"));
+    }
+
+    @Override
+    public PluginDownloadTask createTask(String url, File destinationDir, Map<String, Object> options) {
+        return new MyDownloadTask(url, destinationDir, options);
+    }
+}
+```
+
+### 2.2 Implementing `PluginDownloadTask`
+
+```java
+package com.example.plugin;
+
+import xdm.plugin.api.download.*;
+import java.io.File;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.List;
+
+public class MyDownloadTask implements PluginDownloadTask {
+    private final String id = UUID.randomUUID().toString();
+    private final String url;
+    private final File destinationDir;
+    private final List<TaskProgressListener> listeners = new CopyOnWriteArrayList<>();
+    private volatile DownloadStatus status = DownloadStatus.QUEUED;
+
+    public MyDownloadTask(String url, File destinationDir, Map<String, Object> options) {
+        this.url = url;
+        this.destinationDir = destinationDir;
+    }
+
+    @Override public String getId() { return id; }
+    @Override public String getUrl() { return url; }
+    @Override public File getDestinationFile() { return new File(destinationDir, "download.mp4"); }
+    @Override public DownloadStatus getStatus() { return status; }
+
+    @Override
+    public void addListener(TaskProgressListener listener) {
+        listeners.add(listener);
+    }
+
+    @Override
+    public void start() {
+        this.status = DownloadStatus.DOWNLOADING;
+        // Launch asynchronous transfer and notify listeners
+    }
+
+    @Override public void pause() { this.status = DownloadStatus.PAUSED; }
+    @Override public void resume() { this.status = DownloadStatus.DOWNLOADING; }
+    @Override public void cancel() { this.status = DownloadStatus.CANCELLED; }
 }
 ```
 
 ---
 
-## 3. Synchronizing Progress & Status Events
-
-As your background worker receives byte updates from the network or a subprocess:
-
-```java
-import xdm.plugin.api.events.PluginProgressEvent;
-
-public void onChunkReceived(String taskId, long downloadedBytes, long totalBytes, double speedBytesPerSec) {
-    int percent = (int) ((downloadedBytes * 100) / totalBytes);
-
-    PluginProgressEvent event = new PluginProgressEvent(
-        taskId,
-        percent,
-        downloadedBytes,
-        totalBytes,
-        speedBytesPerSec
-    );
-
-    // Publishes event to the decoupled event bus
-    context.getEventBus().publish(event);
-}
-```
-
----
-
-## 4. Subprocess Execution Safety Guidelines
+## 3. Subprocess Execution Safety Guidelines
 
 When invoking external helper binaries (e.g. `yt-dlp`, `ffmpeg`, `aria2c`):
 
@@ -111,10 +141,10 @@ Thread readerThread = new Thread(() -> {
     try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
         String line;
         while ((line = reader.readLine()) != null) {
-            parseProgressFromOutput(taskId, line);
+            parseProgressFromOutput(line);
         }
     } catch (IOException e) {
-        context.getLogger().error("Failed reading process output", e);
+        context.logError("Failed reading process output", e);
     }
 });
 readerThread.setDaemon(true);
@@ -123,9 +153,10 @@ readerThread.start();
 
 ---
 
-## Related Developer Articles
+## Related Developer Articles & Official Guides
 
+* Detailed Guide: `docs/PLUGIN_DEVELOPMENT.md`
+* Complete API Reference: `docs/PLUGIN_API_REFERENCE.md`
 * [[Plugin SDK Quick Start|Plugin-SDK-Quick-Start]]: Building your plugin.
 * [[Plugin API Version Compatibility|Plugin-API-Version-Compatibility]]: Ensuring version range safety.
-* Reference implementation: `xdm-app/src/main/java/xdm/app/plugins/PluginDownloadBridge.kt`.
-
+* Sample implementation: `sample-plugins/ytdlp-downloader-plugin/`.

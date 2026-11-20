@@ -18,7 +18,8 @@
 > [🌐 Official Website](https://jakepanlilio2000.github.io/XDM-Enhanced/) • 
 > [📖 Documentation & Guides](https://jakepanlilio2000.github.io/XDM-Enhanced/docs/) • 
 > [📚 Community Wiki](https://github.com/jakepanlilio2000/XDM-Enhanced/wiki) • 
-> [📦 Latest Release (v1.0.2)](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/tag/v1.0.2) • 
+> [📦 Latest Stable (v1.0.2)](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/tag/v1.0.2) • 
+> [🧪 Preview (v1.1.0-beta.1)](https://github.com/jakepanlilio2000/XDM-Enhanced/releases) • 
 > [💬 Issue Tracker](https://github.com/jakepanlilio2000/XDM-Enhanced/issues)
 
 ---
@@ -64,10 +65,21 @@ The original upstream documentation is preserved in [README.UPSTREAM.md](README.
 - **Localization:** 32 complete language translations with live UI switching without restarting.
 
 ### 5. Plugin Architecture & Developer SDK
-- **Decoupled Plugin SPI:** Extensible Java architecture (`xdm-plugin-api`) enabling third-party developers to integrate new download providers and capabilities without modifying core source code.
-- **Isolated Lifecycle Management & Quarantine:** Automatic plugin discovery, archive validation, quarantine by default, user-confirmed trust activation, and safe uninstallation.
-- **Dedicated Plugins Dashboard:** In-app management interface under Settings > Plugins displaying capabilities, status badges, and custom configuration panels.
-- **Reference Implementations:** Checksum Verifier plugin and optional yt-dlp downloader integration demonstrating provider registration, progress reporting, and task cancellation.
+- **Decoupled Plugin SPI:** Extensible Java architecture (`xdm-plugin-api`) enabling third-party developers to extend XDM without modifying core source code.
+- **Supported Plugin Categories:** Download Providers (custom protocols/engines), Post-Download File Processors (chained verification/transcoding), Network Proxy Providers (scoped SOCKS/HTTP resolution), VPN Telemetry (client status & pause policy), UI Contributors (context menus, toolbar buttons, settings panels, dashboard widgets, status bar indicators), and Event Bus Automation.
+- **Security Notice & Quarantine:** In-process JVM plugins execute with OS user account privileges. All newly discovered plugins default to `UNTRUSTED` quarantine until explicitly reviewed and approved by the user.
+- **Easy Installation:** Install extension packages (`.xdmplugin` or `.jar`) via **Settings > Plugins > Install from File...** (`Alt+I`) or drop unpacked plugins into the `plugins/` directory.
+- **Documentation & Developer Guides:**
+  - [Plugin Manager User Guide](docs/PLUGIN_MANAGER_USER_GUIDE.md) — How to install, configure, troubleshoot, and export secret-free diagnostics.
+  - [Plugin Developer Guide (SDK v2)](docs/PLUGIN_DEVELOPMENT.md) — Quick start, manifest schema, SPI implementations, and packaging.
+  - [Plugin API Reference Specification](docs/PLUGIN_API_REFERENCE.md) — Verified signatures, models, and interfaces for API v2.
+  - [Plugin v1 to v2 Migration Guide](docs/PLUGIN_V1_TO_V2_MIGRATION_GUIDE.md) — Roadmap and instructions for updating legacy v1 plugins.
+  - [Plugin Security & Trust Model](docs/PLUGIN_SECURITY_AND_TRUST_MODEL.md) — Honest privilege boundaries and archive hardening defenses.
+- **Compilable Sample Projects:** Standalone samples built outside the main application module in [`sample-plugins/`](sample-plugins/):
+  - [`sample-plugins/ytdlp-downloader-plugin`](sample-plugins/ytdlp-downloader-plugin/): Download provider with visible tasks and CLI integration.
+  - [`sample-plugins/proxy-provider-sample`](sample-plugins/proxy-provider-sample/): Scoped SOCKS5/HTTP proxy profile resolution.
+  - [`sample-plugins/vpn-status-sample`](sample-plugins/vpn-status-sample/): Non-privileged VPN client status and profile discovery.
+  - [`sample-plugins/ui-notification-sample`](sample-plugins/ui-notification-sample/): Context menus, toolbar buttons, status pills, details tabs, and notifications.
 
 ### 6. Utilities and Automation
 - **Post-Download Action Rules:** Automated execution of user-defined commands upon transfer completion based on file extension matching, supporting secure variable substitution (`%file%`, `%file_directory%`, etc.).
@@ -176,11 +188,13 @@ Skins are packaged as standard ZIP archives containing a declarative `skin.json`
 - Reference implementation: [`sample-skins/cyber-neon.xdmskin`](sample-skins/cyber-neon.xdmskin)
 
 ### Plugin Developer SDK (`xdm-plugin-api`)
-The public plugin API allows developers to register custom download providers, media stream resolvers, post-download hooks, context menu actions, and settings panels.
+The public plugin API allows developers to build composable extensions across download protocols, file processors, network proxies, VPN telemetry, and UI actions.
 - Complete documentation: [Plugin Development Guide](docs/PLUGIN_DEVELOPMENT.md)
+- Architecture specification: [Plugin SDK v2 Technical Design](docs/PLUGIN_SDK_V2_DESIGN.md)
 - Reference implementations:
   - Checksum Verifier Plugin: [`sample-plugins/checksum-verifier.xdmplugin`](sample-plugins/checksum-verifier.xdmplugin)
   - Optional yt-dlp Integration: [`sample-plugins/ytdlp-downloader.xdmplugin`](sample-plugins/ytdlp-downloader.xdmplugin)
+  - Sample SDK v2 Processor & Widget: [`sample-plugins/v2-sample-plugin.xdmplugin`](sample-plugins/v2-sample-plugin.xdmplugin)
 
 ---
 

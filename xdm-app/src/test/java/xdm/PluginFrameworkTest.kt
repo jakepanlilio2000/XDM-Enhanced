@@ -240,6 +240,7 @@ class PluginFrameworkTest : DownloadManagerTestBase() {
         assertNotNull(loaded, "Faulty plugin should be discovered")
 
         // Activate should isolate fault without throwing out of PluginManager
+        AppContext.config.trustedPlugins = listOf("faulty-plugin")
         val activated = PluginManager.activatePlugin(loaded!!)
         assertFalse(activated, "Activating faulty plugin should return false")
         assertEquals(PluginStatus.FAULTED, loaded.status, "Plugin should be marked as FAULTED")
@@ -266,6 +267,7 @@ class PluginFrameworkTest : DownloadManagerTestBase() {
         val loaded = PluginManager.installedPlugins.firstOrNull { it.manifest.id == "faulty-shutdown-plugin" }
         assertNotNull(loaded, "Faulty shutdown plugin should be discovered")
 
+        AppContext.config.trustedPlugins = listOf("faulty-shutdown-plugin")
         val activated = PluginManager.activatePlugin(loaded!!)
         assertTrue(activated, "Plugin should activate successfully")
         assertEquals(PluginStatus.ACTIVE, loaded.status)
@@ -291,6 +293,7 @@ class PluginFrameworkTest : DownloadManagerTestBase() {
 
         assertDoesNotThrow {
             PluginEventBus.publish("test.topic", "hello")
+            PluginEventBus.awaitIdle()
         }
         assertEquals(listOf("hello"), receivedList, "Healthy subscriber must receive event despite faulty subscriber crash")
         PluginEventBus.clearAll()

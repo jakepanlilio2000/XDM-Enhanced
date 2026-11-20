@@ -243,6 +243,11 @@ class DownloadTableView(
         table.selectionModel.addListSelectionListener(ListSelectionListener { e ->
             if (!e.valueIsAdjusting) {
                 bulkSelectionCallback?.invoke(selectedItems.size > 1)
+                val infos = selectedItems.map { xdm.app.plugins.PluginManager.toDownloadInfo(it) }
+                xdm.app.plugins.PluginEventBus.publish(
+                    xdm.plugin.api.events.EventTopics.SELECTION_CHANGED,
+                    xdm.plugin.api.events.SelectionChangeEvent(infos)
+                )
             }
         })
 

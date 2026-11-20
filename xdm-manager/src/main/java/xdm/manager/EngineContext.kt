@@ -128,6 +128,18 @@ interface PlatformHooks {
      */
     fun insecureTrust(): CertTrust? = null
 
+    /**
+     * Resolves proxy routing configuration for a specific download task and destination URL.
+     * Returns null to use the application's global proxy settings.
+     */
+    fun resolveProxy(id: Long, url: String?): xdm.core.network.ProxyConfig? = null
+
+    /**
+     * Checks whether download prerequisites (such as required VPN connection) are satisfied.
+     * Returns true if allowed, or false if prerequisites are unmet.
+     */
+    fun checkPrerequisites(id: Long, url: String?): Boolean = true
+
     /** Hold (true) or release (false) whatever keeps the device awake and the process alive. Idempotent. */
     fun keepAwake(on: Boolean)
 

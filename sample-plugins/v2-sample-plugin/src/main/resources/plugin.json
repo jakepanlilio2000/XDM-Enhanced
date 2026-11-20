@@ -1,0 +1,25 @@
+{
+  "manifestVersion": 2,
+  "id": "v2-sample-processor",
+  "name": "Sample v2 Processor & Widget Plugin",
+  "version": "1.0.0",
+  "author": "XDM Enhanced Team",
+  "description": "Demonstrates SDK v2 SPIs: PostDownloadProcessor, Registration handles, and DashboardWidgetContributor.",
+  "minAppVersion": "1.0.0-beta.4",
+  "minApiVersion": "1.1.0",
+  "entryPoint": "xdm.sample.v2.V2SamplePlugin",
+  "capabilities": [
+    "POST_DOWNLOAD_PROCESSOR",
+    "DASHBOARD_WIDGET",
+    "CONTEXT_MENU",
+    "SETTINGS_PANEL",
+    "TOOLBAR",
+    "DETAILS_SECTION",
+    "STATUS_INDICATOR",
+    "NETWORK_PROXY",
+    "VPN_STATUS"
+  ],
+  "dependencies": [],
+  "license": "GPL-3.0-or-later",
+  "homepage": "https://github.com/jakepanlilio2000/XDM-Enhanced"
+}

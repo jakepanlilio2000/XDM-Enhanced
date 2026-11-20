@@ -21,9 +21,16 @@ object PluginManifestValidator {
     private val ID_REGEX = Regex("^[a-zA-Z0-9_-]{3,64}$")
     private val CLASS_REGEX = Regex("^[a-zA-Z_\$][a-zA-Z0-9_\$]*(\\.[a-zA-Z_\$][a-zA-Z0-9_\$]*)+$")
 
-    private val DISALLOWED_EXTENSIONS = setOf(
+    val DISALLOWED_EXTENSIONS = setOf(
         "exe", "dll", "so", "dylib", "bat", "cmd", "sh", "ps1",
-        "vbs", "js", "py", "bin", "com", "scr", "msi", "appimage"
+        "vbs", "js", "py", "bin", "com", "scr", "msi", "appimage",
+        "cpl", "hta", "wsf", "reg", "pif"
+    )
+
+    val RESERVED_IDS = setOf(
+        "core", "app", "system", "xdm", "builtin", "manager", "torrent",
+        "http", "api", "config", "settings", "root", "admin", "administrator",
+        "internal", "official", "default", "null", "con", "prn", "aux"
     )
 
     data class ValidationResult(
@@ -88,8 +95,9 @@ object PluginManifestValidator {
                     }
 
                     val name = entry.name
-                    // Zip Slip protection: reject any relative directory traversal or root prefix
-                    if (name.contains("..") || name.startsWith("/") || name.startsWith("\\") || name.contains(":")) {
+                    val normalizedName = name.replace('\\', '/')
+                    // Zip Slip protection: reject any relative directory traversal, root prefix, drive separator, or home prefix
+                    if (normalizedName.contains("..") || normalizedName.startsWith("/") || normalizedName.contains(":") || normalizedName.startsWith("~")) {
                         errors.add("Hostile archive entry path detected (Zip Slip): '$name'")
                         return ValidationResult(false, errors, warnings, null, sha256)
                     }
@@ -159,12 +167,15 @@ object PluginManifestValidator {
             errors.add("Manifest 'id' is required and cannot be blank.")
         } else if (!ID_REGEX.matches(manifest.id)) {
             errors.add("Manifest 'id' '${manifest.id}' is invalid. Must be 3-64 characters (letters, numbers, hyphens, underscores).")
+        } else if (RESERVED_IDS.contains(manifest.id.lowercase())) {
+            errors.add("Manifest 'id' '${manifest.id}' is a reserved namespace identifier and cannot be used by third-party plugins.")
         }
 
-        // 2. Name, Version, Author
+        // 2. Name, Version, Author, License
         if (manifest.name.isBlank()) errors.add("Manifest 'name' is required.")
         if (manifest.version.isBlank()) errors.add("Manifest 'version' is required.")
         if (manifest.author.isBlank()) errors.add("Manifest 'author' is required.")
+        if (manifest.license.isBlank()) warnings.add("Manifest 'license' is not specified.")
 
         // 3. Entry point
         if (manifest.entryPoint.isBlank()) {
@@ -219,15 +230,85 @@ object PluginManifestValidator {
             }
         }
 
-        // 6. Capabilities check
-        val knownCapabilities = PluginCapability.entries.map { it.name }
+        // 6. Target platform validation
+        if (manifest.targetPlatforms.isNotEmpty() && !isPlatformSupported(manifest.targetPlatforms)) {
+            errors.add("Plugin does not support current platform '${getCurrentPlatform()}'. Supported: ${manifest.targetPlatforms.joinToString(", ")}.")
+        }
+
+        // 7. Dependencies syntax validation
+        manifest.dependencies.forEach { dep ->
+            val trimmed = dep.trim()
+            if (trimmed.isBlank()) {
+                errors.add("Declared dependency cannot be blank.")
+            } else {
+                val depId = trimmed.split("@", ":", limit = 2)[0].trim()
+                if (!ID_REGEX.matches(depId)) {
+                    errors.add("Declared dependency identifier '$depId' is invalid. Must be 3-64 characters (alphanumeric, hyphens, underscores).")
+                }
+            }
+        }
+
+        // 8. Capabilities check with alias normalization
         manifest.capabilities.forEach { cap ->
-            if (!knownCapabilities.contains(cap.uppercase())) {
+            val parsed = PluginCapability.parse(cap)
+            if (parsed == null) {
                 warnings.add("Unknown capability declared: '$cap'.")
             }
         }
 
         return ValidationResult(errors.isEmpty(), errors, warnings, manifest)
+    }
+
+    /**
+     * Determines current operating system and architecture tag.
+     */
+    fun getCurrentPlatform(): String {
+        val os = System.getProperty("os.name", "").lowercase()
+        val arch = System.getProperty("os.arch", "").lowercase()
+        val osName = when {
+            os.contains("win") -> "windows"
+            os.contains("mac") || os.contains("darwin") -> "macos"
+            os.contains("linux") -> "linux"
+            else -> "unknown"
+        }
+        val archName = when {
+            arch.contains("64") -> "x64"
+            arch.contains("86") -> "x86"
+            arch.contains("arm") || arch.contains("aarch") -> "arm64"
+            else -> arch
+        }
+        return "$osName-$archName"
+    }
+
+    /**
+     * Checks if current platform matches any of the target platform specifiers.
+     * Supported specifiers: "all", "*", "windows", "win", "linux", "mac", "macos", "darwin",
+     * or architecture combinations like "windows-x64", "linux-arm64", etc.
+     */
+    fun isPlatformSupported(targetPlatforms: List<String>): Boolean {
+        if (targetPlatforms.isEmpty()) return true
+        val current = getCurrentPlatform().lowercase()
+        val os = current.substringBefore('-')
+        val arch = current.substringAfter('-')
+
+        return targetPlatforms.any { spec ->
+            val s = spec.trim().lowercase()
+            when (s) {
+                "all", "*" -> true
+                "windows", "win" -> os == "windows"
+                "linux" -> os == "linux"
+                "mac", "macos", "darwin" -> os == "macos"
+                else -> {
+                    if (s == current) {
+                        true
+                    } else if (s.startsWith("$os-") || s.endsWith("-$arch")) {
+                        s == current
+                    } else {
+                        false
+                    }
+                }
+            }
+        }
     }
 
     /**

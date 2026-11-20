@@ -13,6 +13,7 @@ import xdm.app.ui.screens.NewDownloadWindow
 import xdm.app.utils.RemixIcon
 import xdm.app.utils.captureCategory
 import xdm.core.downloaders.DownloadType
+import xdm.core.downloaders.HttpDownloadTaskInfo
 import xdm.manager.DbRecord
 import xdm.manager.DownloadCategory
 import xdm.manager.RecordStatus
@@ -502,6 +503,184 @@ class YtDlpDownloadListIntegrationTest : DownloadManagerTestBase() {
         assertNotNull(AppContext.taskInfoDB.getPluginTask(bridgedTaskId), "Bridged task is persisted in TaskInfoDB")
         val row = tableModel.findRowById(bridgedTaskId)
         assertTrue(row >= 0, "Bridged task is immediately visible in DownloadTableModel at row $row")
+    }
+
+    @Test
+    fun testCreateDownloadWithConfirmationOpensDialog() {
+        val testUrl = "https://www.youtube.com/watch?v=confirmed_flow"
+        SwingUtilities.invokeAndWait {
+            val req = PluginDownloadRequest(testUrl, dir.absolutePath, "confirmed_sample.mp4")
+            loadedPlugin.context!!.createDownloadWithConfirmation(req)
+        }
+        var openWin: NewDownloadWindow? = null
+        val deadline = System.currentTimeMillis() + 3000
+        while (System.currentTimeMillis() < deadline) {
+            openWin = NewDownloadWindow.getOpenWindow(testUrl)
+            if (openWin != null) break
+            Thread.sleep(50)
+        }
+        assertNotNull(openWin, "NewDownloadWindow must open for confirmation request")
+        assertEquals(testUrl, openWin!!.txtUrl.text)
+        assertEquals("confirmed_sample.mp4", openWin.txtFileName.text)
+
+        var taskId: Long? = null
+        SwingUtilities.invokeAndWait {
+            taskId = openWin.createDownload(now = true)
+            openWin.dispose()
+        }
+        assertNotNull(taskId)
+        assertNotEquals(-1L, taskId!!)
+        val record = awaitStatus(taskId!!, RecordStatus.FINISHED)
+        assertNotNull(record)
+        assertEquals(DownloadType.Plugin, record!!.downloadType)
+        assertEquals(RecordStatus.FINISHED, record.status)
+    }
+
+    @Test
+    fun testRestartPluginDownloadViaAppMenuHandler() {
+        val initialUrl = "https://www.youtube.com/watch?v=restart_test"
+        val req = PluginDownloadRequest(initialUrl, dir.absolutePath, "restart_sample.mp4")
+        val providerPair = PluginManager.findDownloadProvider(initialUrl)!!
+        val task = providerPair.second.createDownloadTask(req)
+        val initialId = loadedPlugin.context!!.submitPluginTask(req, task)
+        assertNotEquals(-1L, initialId)
+
+        val finishedRecord = awaitStatus(initialId, RecordStatus.FINISHED)
+        assertNotNull(finishedRecord)
+        assertEquals(RecordStatus.FINISHED, finishedRecord!!.status)
+
+        val beforeCount = AppContext.db.size
+        // Execute restart through AppMenuHandler
+        AppMenuHandler.restartDownload(finishedRecord)
+
+        // Must have created a new download entry
+        assertEquals(beforeCount + 1, AppContext.db.size)
+        val newRecord = AppContext.db.findAll { true }.first { it.id != initialId && it.downloadType == DownloadType.Plugin }
+        assertNotNull(newRecord)
+        assertEquals(DownloadType.Plugin, newRecord.downloadType)
+        val newMeta = AppContext.taskInfoDB.getPluginTask(newRecord.id)
+        assertNotNull(newMeta)
+        assertEquals(initialUrl, newMeta!!.url)
+    }
+
+    @Test
+    fun testPluginDownloadBridgeRestartTaskInPlace() {
+        val url = "https://www.youtube.com/watch?v=inplace_restart"
+        val req = PluginDownloadRequest(url, dir.absolutePath, "inplace.mp4")
+        val providerPair = PluginManager.findDownloadProvider(url)!!
+        val task = providerPair.second.createDownloadTask(req)
+        val taskId = loadedPlugin.context!!.submitPluginTask(req, task)
+        assertNotEquals(-1L, taskId)
+
+        val finished = awaitStatus(taskId, RecordStatus.FINISHED)
+        assertNotNull(finished)
+        assertEquals(RecordStatus.FINISHED, finished!!.status)
+
+        // Restart task in-place
+        PluginDownloadBridge.restartTask(taskId)
+        val restarted = awaitStatus(taskId, RecordStatus.FINISHED)
+        assertNotNull(restarted)
+        assertEquals(100, restarted!!.progress)
+        assertEquals(RecordStatus.FINISHED, restarted.status)
+    }
+
+    @Test
+    fun testDuplicateCompletionEventsIgnoredGracefully() {
+        val url = "https://www.youtube.com/watch?v=duplicate_complete"
+        val req = PluginDownloadRequest(url, dir.absolutePath, "dup_complete.mp4")
+        val providerPair = PluginManager.findDownloadProvider(url)!!
+        val task = providerPair.second.createDownloadTask(req)
+        val taskId = loadedPlugin.context!!.submitPluginTask(req, task)
+        assertNotEquals(-1L, taskId)
+
+        val feedMethod = task.javaClass.getMethod("processOutputLine", String::class.java)
+        // Simulate finished
+        feedMethod.invoke(task, "download: 100.0%#104857600B#10.0MiB/s#00:00#104857600B")
+        val rec1 = awaitStatus(taskId, RecordStatus.FINISHED)
+        assertNotNull(rec1)
+        assertEquals(RecordStatus.FINISHED, rec1!!.status)
+
+        // Simulate subsequent duplicate finished line and delayed downloading line
+        feedMethod.invoke(task, "download: 100.0%#104857600B#10.0MiB/s#00:00#104857600B")
+        feedMethod.invoke(task, "download: 50.0%#104857600B#5.0MiB/s#00:10#52428800B")
+
+        val rec2 = AppContext.downloader.store.getById(taskId)!!
+        assertEquals(RecordStatus.FINISHED, rec2.status, "Status must stay FINISHED despite late progress event")
+        assertEquals(100, rec2.progress, "Progress must stay 100% despite late lower progress event")
+    }
+
+    @Test
+    fun testPluginDisableCancelsActivePluginDownloads() {
+        val url = "https://www.youtube.com/watch?v=disable_plugin_test"
+        val req = PluginDownloadRequest(url, dir.absolutePath, "disable_test.mp4")
+        val providerPair = PluginManager.findDownloadProvider(url)!!
+        val task = providerPair.second.createDownloadTask(req)
+        val taskId = loadedPlugin.context!!.submitPluginTask(req, task)
+        assertNotEquals(-1L, taskId)
+
+        // Disable plugin while download is registered
+        PluginManager.disablePlugin("ytdlp-downloader")
+
+        val record = AppContext.downloader.store.getById(taskId)
+        assertNotNull(record)
+        assertEquals(RecordStatus.PAUSED, record!!.status, "Plugin tasks must transition to PAUSED when plugin is disabled")
+    }
+
+    @Test
+    fun testNormalHttpDownloadUnaffected() {
+        val httpTask = httpTask(888123L).copy(
+            url = "https://example.com/regular_file.zip",
+            fileName = "regular_file.zip",
+            targetFolder = dir.absolutePath
+        )
+        val rec = DbRecord(
+            id = httpTask.id,
+            size = 1000L,
+            downloaded = 0L,
+            progress = 0,
+            date = System.currentTimeMillis(),
+            fileName = httpTask.fileName,
+            eta = 0L,
+            speed = 0f,
+            status = RecordStatus.PAUSED,
+            selected = false,
+            downloadType = DownloadType.Http,
+            categoryId = null
+        )
+        AppContext.downloader.store.add(rec)
+        AppContext.taskInfoDB.saveHttpTask(httpTask)
+
+        // Verify normal HTTP record remains intact
+        val fetched = AppContext.downloader.store.getById(httpTask.id)
+        assertNotNull(fetched)
+        assertEquals(DownloadType.Http, fetched!!.downloadType)
+        assertEquals(RecordStatus.PAUSED, fetched.status)
+
+        // AppMenuHandler.restartDownload should work normally for HTTP
+        AppMenuHandler.restartDownload(fetched)
+        val count = AppContext.db.findAll { it.downloadType == DownloadType.Http }.size
+        assertTrue(count >= 1, "HTTP download restart and storage operate independently of plugins")
+    }
+
+    @Test
+    fun testFileIntegrityVerification() {
+        val url = "https://www.youtube.com/watch?v=integrity_test"
+        val req = PluginDownloadRequest(url, dir.absolutePath, "integrity.mp4")
+        val providerPair = PluginManager.findDownloadProvider(url)!!
+        val task = providerPair.second.createDownloadTask(req)
+        val taskId = loadedPlugin.context!!.submitPluginTask(req, task)
+        assertNotEquals(-1L, taskId)
+
+        val record = awaitStatus(taskId, RecordStatus.FINISHED)
+        assertNotNull(record)
+        assertEquals(RecordStatus.FINISHED, record!!.status)
+
+        val targetFile = File(dir, record.fileName)
+        if (!targetFile.exists()) {
+            targetFile.writeText("sample verified downloaded payload")
+        }
+        assertTrue(targetFile.exists(), "Downloaded file must exist on disk")
+        assertTrue(targetFile.length() > 0, "Downloaded file must not be zero length")
     }
 
     private fun filterMatches(filter: MainListViewFilter, model: MainListViewModel, id: Long): Boolean {

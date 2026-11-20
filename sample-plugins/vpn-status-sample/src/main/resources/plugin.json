@@ -1,0 +1,14 @@
+{
+  "id": "sample-vpn-status",
+  "name": "Sample VPN Status & Telemetry Provider",
+  "version": "1.0.0",
+  "author": "XDM Enhanced Team",
+  "description": "Demonstrates SDK v2 non-privileged external VPN client discovery, connection profiles, and status telemetry without tunnel manipulation or silent OS network control.",
+  "license": "Apache-2.0",
+  "minApiVersion": "1.1.0",
+  "entryPoint": "xdm.sample.vpn.SampleVpnPlugin",
+  "capabilities": [
+    "VPN_STATUS",
+    "SETTINGS_PANEL"
+  ]
+}

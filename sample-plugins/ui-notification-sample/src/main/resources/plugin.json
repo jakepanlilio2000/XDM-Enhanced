@@ -1,0 +1,18 @@
+{
+  "id": "sample-ui-notification",
+  "name": "Sample UI & Notification Enhancement",
+  "version": "1.0.0",
+  "author": "XDM Enhanced Team",
+  "description": "Demonstrates SDK v2 UI extension points: context menu actions, toolbar buttons, status bar indicators, download details tabs, theme observation, and desktop notifications.",
+  "license": "Apache-2.0",
+  "minApiVersion": "1.1.0",
+  "entryPoint": "xdm.sample.ui.SampleUiPlugin",
+  "capabilities": [
+    "CONTEXT_MENU",
+    "TOOLBAR",
+    "STATUS_INDICATOR",
+    "DETAILS_SECTION",
+    "SETTINGS_PANEL",
+    "EVENT_BUS"
+  ]
+}
