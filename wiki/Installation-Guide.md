@@ -6,11 +6,15 @@ This guide covers installing and running **XDM Enhanced** across supported deskt
 
 ## 1. Prerequisites & System Requirements
 
-| Package Target | Minimum Operating System | Java Runtime | Required Free Disk Space |
+| Package Target | Supported Platform / OS | Runtime Requirement | Package Format |
 |:---|:---|:---|:---:|
-| **Windows Setup (.exe)** | Windows 10 or 11 (64-bit) | None (Bundled Liberica JDK 25) | ~250 MB |
-| **Windows Portable (.zip)** | Windows 10 or 11 (64-bit) | None (Bundled Liberica JDK 25) | ~280 MB |
-| **Universal Executable (.jar)** | Linux, macOS 12+, BSD | 64-bit Java 25 | ~50 MB |
+| **Windows Setup (.exe)** | Windows 10 & 11 (64-bit) | None (Bundled Liberica JDK 25) | NSIS Installer |
+| **Windows Portable (.zip)** | Windows 10 & 11 (64-bit) | None (Bundled Liberica JDK 25) | Standalone Zip |
+| **Windows MSI Installer** | Windows 10 & 11 (x64 / ARM64) | None (Bundled Liberica JDK 25) | Windows Installer MSI |
+| **macOS Native App (.dmg)** | macOS 12+ Monterey / Ventura / Sonoma / Sequoia | None (Bundled Liberica JDK 25) | Apple Silicon & Intel DMG |
+| **Linux Native Packages** | Debian, Ubuntu, Fedora, RHEL, Arch, Manjaro | None (Bundled native JRE) | `.deb`, `.rpm`, `.pkg.tar.zst` |
+| **Linux Portable (.tar.gz)**| Any modern Linux (x64 / ARM64) | None (Bundled native JRE) | Compressed Tarball |
+| **Universal Executable (.jar)**| Any desktop OS | 64-bit Java 25+ | Runnable Fat JAR |
 
 ---
 
@@ -18,9 +22,11 @@ This guide covers installing and running **XDM Enhanced** across supported deskt
 
 ### Option A: Modern NSIS Installer (Recommended)
 
-1. Download [`XDM-Enhanced-Setup-v1.0.2-win-x64.exe`](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.0.2/XDM-Enhanced-Setup-v1.0.2-win-x64.exe) from GitHub Releases.
+1. Download the latest Windows installer:
+   - **Beta Preview (Plugin SDK v2):** [`XDM-Enhanced-Setup-v1.1.0-beta.1-win-x64.exe`](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.1.0-beta.1/XDM-Enhanced-Setup-v1.1.0-beta.1-win-x64.exe)
+   - **Stable Release:** [`XDM-Enhanced-Setup-v1.0.2-win-x64.exe`](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.0.2/XDM-Enhanced-Setup-v1.0.2-win-x64.exe)
 2. Launch the installer executable.
-   *Note: If Windows SmartScreen displays an "Unknown Publisher" prompt, click **More info** and select **Run anyway** (pre-release binaries are community builds).*
+   *Note: If Windows SmartScreen displays an "Unknown Publisher" prompt, click **More info** and select **Run anyway** (community-signed release builds).*
 3. Follow the setup wizard to choose your installation directory (default: `C:\Program Files\XDM-Enhanced`).
 4. Select optional components:
    - Create Desktop Shortcut
@@ -28,23 +34,60 @@ This guide covers installing and running **XDM Enhanced** across supported deskt
    - Register Browser Native Messaging Protocol (`xdm-app://`)
 5. Click **Finish** to complete setup and launch XDM Enhanced.
 
-**Expected Result:**
-The XDM Enhanced main window opens, and the project squircle icon appears in the Windows system notification area (system tray).
+### Option B: Windows MSI Installer (Enterprise & ARM64)
+- **x64 Systems:** [`xdm-1.1.0-beta.1-x64.msi`](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.1.0-beta.1/xdm-1.1.0-beta.1-x64.msi)
+- **ARM64 Copilot+ PCs:** [`xdm-1.1.0-beta.1-arm64.msi`](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.1.0-beta.1/xdm-1.1.0-beta.1-arm64.msi)
 
----
+### Option C: Windows Portable Bundle (Zero-Install)
 
-### Option B: Windows Portable Bundle (Zero-Install)
-
-1. Download [`XDM-Enhanced-v1.0.2-windows-x64.zip`](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.0.2/XDM-Enhanced-v1.0.2-windows-x64.zip).
+1. Download [`XDM-Enhanced-v1.1.0-beta.1-windows-x64.zip`](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.1.0-beta.1/XDM-Enhanced-v1.1.0-beta.1-windows-x64.zip) or [`v1.0.2 Portable`](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.0.2/XDM-Enhanced-v1.0.2-windows-x64.zip).
 2. Right-click the `.zip` file and select **Extract All...** to a permanent location (e.g. `C:\Tools\XDM-Enhanced` or an external USB flash drive).
 3. Open the extracted directory and double-click `xdm-app.exe`.
 
-**Expected Result:**
-XDM Enhanced runs in standalone portable mode. Application configuration files and temporary segment caches are stored locally inside the portable directory without writing to the Windows Registry.
+---
+
+## 3. macOS Installation (Native DMG)
+
+1. Download the disk image matching your Mac processor from GitHub Releases:
+   - **Apple Silicon (M1 / M2 / M3 / M4):** [`xdm-app-1.1.0-beta.1-arm64.dmg`](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.1.0-beta.1/xdm-app-1.1.0-beta.1-arm64.dmg)
+   - **Intel x64:** [`xdm-app-1.1.0-beta.1-x64.dmg`](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.1.0-beta.1/xdm-app-1.1.0-beta.1-x64.dmg)
+2. Double-click the `.dmg` file to mount it.
+3. Drag **XDM Enhanced** into your **Applications** folder.
+4. Launch XDM Enhanced from Spotlight or Launchpad.
 
 ---
 
-## 3. Linux & macOS Installation (Universal JAR)
+## 4. Linux Installation (Native Packages & Tarball)
+
+Native Linux packages include a tailored JRE runtime and desktop menu integration:
+
+- **Debian / Ubuntu / Linux Mint:**
+  ```bash
+  # x64:
+  sudo dpkg -i xdm-app_1.1.0~beta.1_amd64.deb
+  # ARM64:
+  sudo dpkg -i xdm-app_1.1.0~beta.1_arm64.deb
+  ```
+- **Fedora / RHEL / openSUSE:**
+  ```bash
+  # x64:
+  sudo rpm -i xdm-app-1.1.0~beta.1-1.x86_64.rpm
+  # ARM64:
+  sudo rpm -i xdm-app-1.1.0~beta.1-1.aarch64.rpm
+  ```
+- **Arch Linux / Manjaro:**
+  ```bash
+  sudo pacman -U xdm-app-1.1.0beta.1-1-x86_64.pkg.tar.zst
+  ```
+- **Portable Tarball (Zero-Install):**
+  ```bash
+  tar -xzf xdm-app-1.1.0-beta.1-linux-x64.tar.gz
+  ./xdm-app/xdm-app
+  ```
+
+---
+
+## 5. Linux & macOS (Universal Fat JAR)
 
 1. Verify that 64-bit Java 25 is installed on your workstation:
    ```bash

@@ -61,13 +61,19 @@ XDM Enhanced is engineered from the ground up for maximum download throughput, d
 
 ---
 
-## 5. Decoupled Java Plugin SPI v2
+## 5. Modular Java Plugin Platform (SDK v2)
 
-- **Independent Compilation:** Plugins compile against `xdm-plugin-api.jar` with zero dependencies on internal desktop classes (`xdm.app.*`).
-- **Semantic Version Range Matching:** Plugin manifests declare compatibility ranges (e.g. `[1.0.0, 2.0.0)`), guaranteeing that minor host updates never break installed plugins.
-- **Decoupled Event Bus (`PluginEventBus`):** Clean publish-subscribe lifecycle and transfer progress events.
-- **Central Download List Bridge (`PluginDownloadBridge`):** Routes third-party downloads (e.g. yt-dlp) into the central task scheduler, displaying real-time progress, speed, ETA, and history alongside standard downloads.
-- **Hardened Subprocess Invocation:** Executes external helper binaries using `ProcessBuilder` with strict array argument passing to eliminate shell injection vulnerabilities.
+- **Independent SPI Compilation:** Plugins compile exclusively against `xdm-plugin-api.jar` (Specification 2.0.0) with zero access to internal desktop classes (`xdm.app.*`, `xdm.core.*`, `xdm.manager.*`).
+- **Expanded Service Provider Interfaces:**
+  - `PluginDownloadEngine`: Register native or subprocess media extractors (`yt-dlp`, aria2) with first-class progress telemetry and pause/resume lifecycle.
+  - `PluginNetworkManager` & `ProxyProfile`: Supply authenticated SOCKS5/HTTP/HTTPS proxy configurations.
+  - `PluginVpnIntegration`: Provide non-privileged status and connectivity monitoring for WireGuard and OpenVPN clients.
+  - `PluginUiContext` & `PluginView`: Contribute custom tab views, side-panel widgets, and desktop toast alerts following active FlatLaf skins.
+  - `PluginSettings`: Type-safe configuration persistence with JSON backing and masked credential storage.
+- **Honest Security & Quarantine Posture:** In-process plugins run with user account privileges. Untrusted plugins are quarantined by default. Extractors defend against Zip Slip traversal, symlinks, and archive bombs.
+- **Modernized Plugin Manager UX:** Status badges (`ACTIVE`, `DISABLED`, `QUARANTINED`, `CRASHED`, `RECOVERY_MODE`), toggle controls, and one-click diagnostic bundle export with credential scrubbing.
+- **Fault-Tolerant Watchdogs & Safe Mode:** 10-second watchdog timers isolate plugin startup from the UI Event Dispatch Thread. Starting with `--safe-mode` disables all third-party plugins for disaster recovery.
+- **Transparent Legacy v1 Coexistence:** Backward compatibility adapter ensures existing v1 plugins run without recompilation.
 
 ---
 

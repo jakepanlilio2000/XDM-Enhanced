@@ -10,8 +10,11 @@ hero:
     alt: XDM Enhanced Logo
   actions:
     - theme: brand
-      text: Download v1.0.2
+      text: Download v1.0.2 (Stable)
       link: /downloads
+    - theme: alt
+      text: Try v1.1.0-beta.1 (Preview)
+      link: /downloads#beta-preview
     - theme: alt
       text: Documentation & Guides
       link: /docs/
@@ -30,8 +33,8 @@ features:
     title: Full-App Custom Skinning
     details: Choose between modern FlatLaf and authentic Original XDM presets. Create portable .xdmskin packages with custom wallpapers, modal backdrops, and live reload.
   - icon: 🧩
-    title: Decoupled Plugin SPI v2
-    details: Extensible public Java API with semantic version range matching [1.0.0, 2.0.0), publish-subscribe event bus, and central download task bridge.
+    title: Modular Plugin SDK v2
+    details: Extensible public Java API (Specification 2.0.0) with download engines, proxy profile providers, VPN telemetry listeners, typed event bus, and quarantined safe mode.
   - icon: 🌐
     title: Companion Browser Extensions
     details: Non-intrusive Manifest V3 (Chromium) and V2 (Firefox) extensions with local loopback verification (127.0.0.1:8597) and floating HTML5 media sniffer.
@@ -43,15 +46,15 @@ features:
 <div class="card-box" style="margin: 2rem 0; border-left: 4px solid var(--vp-c-brand-1);">
   <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
     <div>
-      <span class="badge-pill badge-verified">Current Stable Release</span>
-      <strong style="margin-left: 0.5rem; font-size: 1.05rem;">XDM Enhanced v1.0.2 is Available</strong>
+      <span class="badge-pill badge-verified">Latest Preview</span>
+      <strong style="margin-left: 0.5rem; font-size: 1.05rem;">XDM Enhanced v1.1.0-beta.1 is Released</strong>
       <p style="margin: 0.25rem 0 0 0; color: var(--vp-c-text-2); font-size: 0.9rem;">
-        Featuring synchronized scheduler concurrency, atomic persistence, libtorrent4j HashFailedAlert recovery, and 5k soak stability.
+        Introducing Modular Plugin SDK v2, expanded multi-platform binaries (macOS DMGs, Linux native packages, Windows ARM64 MSI), quarantine trust security, and disaster recovery mode. Stable v1.0.2 remains available.
       </p>
     </div>
     <div style="display: flex; gap: 0.75rem;">
-      <a href="/downloads" class="btn-primary" style="font-size: 0.875rem; padding: 0.5rem 1rem;">Get Installer</a>
-      <a href="/releases" class="btn-secondary" style="font-size: 0.875rem; padding: 0.5rem 1rem;">Changelog</a>
+      <a href="/downloads" class="btn-primary" style="font-size: 0.875rem; padding: 0.5rem 1rem;">Get Downloads</a>
+      <a href="/releases" class="btn-secondary" style="font-size: 0.875rem; padding: 0.5rem 1rem;">Release Notes</a>
     </div>
   </div>
 </div>

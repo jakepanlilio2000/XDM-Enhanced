@@ -2,7 +2,7 @@
 
 **XDM Enhanced** is an independently maintained, open-source desktop download manager forked from [Xtreme Download Manager (XDM)](https://github.com/subhra74/xdm). It provides dynamic multi-segment HTTP/HTTPS download acceleration, native BitTorrent 2.0 swarm handling, modern FlatLaf dynamic theming, custom `.xdmskin` theme archives, a decoupled Java plugin platform (SPI v2), and companion browser extensions.
 
-> **Release Channel Notice:** XDM Enhanced **v1.0.2** is the current active stable release. Please consult the [[Release Channels and Updates|Release-Channels-and-Updates]] guide for binary verification and release notes.
+> **Release Channel Notice:** XDM Enhanced **v1.0.2** is the current active stable release. A preview of the Modular Plugin SDK v2 and expanded multi-platform binaries is now available in **v1.1.0-beta.1**. Please consult the [[Release Channels and Updates|Release-Channels-and-Updates]] guide for binary verification and release notes.
 
 ---
 
@@ -10,7 +10,7 @@
 
 | I want to... | Recommended Guide | Key Steps |
 |:---|:---|:---|
-| **Install XDM Enhanced** | [Installation Guide](Installation-Guide) | Download Windows Setup `.exe`, Portable `.zip`, or Universal `.jar`. |
+| **Install XDM Enhanced** | [Installation Guide](Installation-Guide) | Download Windows Setup `.exe`/`.msi`, macOS `.dmg`, Linux `.deb`/`.rpm`/`.pkg.tar.zst`, or Universal `.jar`. |
 | **Download my first file** | [First Download Guide](First-Download-Guide) | Paste a URL or use automatic clipboard link capture. |
 | **Integrate with my browser** | [Browser Extension Setup](Browser-Extension-Setup) | Install Chromium MV3 or Firefox MV2 add-ons. |
 | **Fix a disconnected extension** | [Browser Extension Disconnected](Browser-Extension-Disconnected) | Run the desktop self-repair utility and verify loopback port 8597. |
@@ -72,7 +72,8 @@ XDM Enhanced is an independent fork of [Xtreme Download Manager (XDM)](https://g
 ## Project Portals & Repository Links
 
 - **Official Website:** [https://jakepanlilio2000.github.io/XDM-Enhanced/](https://jakepanlilio2000.github.io/XDM-Enhanced/)
-- **Latest Release:** [GitHub Releases v1.0.2](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/tag/v1.0.2)
+- **Latest Stable Release:** [GitHub Releases v1.0.2](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/tag/v1.0.2)
+- **Beta Preview Release:** [GitHub Releases v1.1.0-beta.1 (Plugin SDK v2)](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/tag/v1.1.0-beta.1)
 - **Source Code Repository:** [https://github.com/jakepanlilio2000/XDM-Enhanced](https://github.com/jakepanlilio2000/XDM-Enhanced)
 - **Authoritative Technical Specs:** [docs/ Specifications Directory](https://github.com/jakepanlilio2000/XDM-Enhanced/tree/master/docs)
 - **Reference Samples in Repo:** [sample-plugins/](https://github.com/jakepanlilio2000/XDM-Enhanced/tree/master/sample-plugins) and [sample-skins/](https://github.com/jakepanlilio2000/XDM-Enhanced/tree/master/sample-skins)
