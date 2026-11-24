@@ -175,7 +175,90 @@ Install the companion browser extension to enable automatic link capturing and t
 
 ## 4. SHA-256 Checksums (`v1.1.0`)
 
-Verify downloaded binaries against the cryptographic hashes published in [`SHA256SUMS.txt`](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.1.0/SHA256SUMS.txt) on the `v1.1.0` GitHub Release.
+Verify downloaded binaries against the cryptographic hashes published in [`SHA256SUMS.txt`](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.1.0/SHA256SUMS.txt) on the `v1.1.0` GitHub Release:
+
+<table class="checksum-table">
+  <thead>
+    <tr>
+      <th style="width: 45%;">File Name</th>
+      <th>SHA-256 Checksum</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>XDM-Enhanced-Setup-v1.1.0-win-x64.exe</strong></td>
+      <td><code>32a07432de279420934fad99c324ce65e23d402c33a2ef1e958364373373c4fa</code></td>
+    </tr>
+    <tr>
+      <td><strong>XDM-Enhanced-v1.1.0-windows-x64.zip</strong></td>
+      <td><code>24caf7a59901e9c46747d6ff6dd83de4216b8016f5c0fc12ea8ddbbd13831418</code></td>
+    </tr>
+    <tr>
+      <td><strong>xdm-1.1.0-x64.msi</strong></td>
+      <td><code>07e8c18dc0c7b13f241b5a45d5141b0b75a15789dcf5f04a1032f9c408cff88c</code></td>
+    </tr>
+    <tr>
+      <td><strong>xdm-1.1.0-arm64.msi</strong></td>
+      <td><code>c465e72b833bb3f5b0f940c9d1eef740d964502f0c745dd7de6a5c6a31f02a22</code></td>
+    </tr>
+    <tr>
+      <td><strong>xdm-app-1.1.0-arm64.dmg</strong></td>
+      <td><code>4897a8a4b6800bcbb8f45443cf5346ff203d3a9f20c89cf6b6fe8735478d0252</code></td>
+    </tr>
+    <tr>
+      <td><strong>xdm-app-1.1.0-x64.dmg</strong></td>
+      <td><code>75ef36ad1a9837811cd23e740411b78e91da7dd26e0b1a64765101c1fbb76646</code></td>
+    </tr>
+    <tr>
+      <td><strong>xdm-app_1.1.0_amd64.deb</strong></td>
+      <td><code>e6f6af843acc3f3d67e639d7b64e9967ddecfce6e5ef5599f159b89acbf5bb16</code></td>
+    </tr>
+    <tr>
+      <td><strong>xdm-app_1.1.0_arm64.deb</strong></td>
+      <td><code>f44d84357ed7c62e6b2b808e5bc90c474f741d3ed1c52bf0b026223024a81f0a</code></td>
+    </tr>
+    <tr>
+      <td><strong>xdm-app-1.1.0-1.x86_64.rpm</strong></td>
+      <td><code>e660e4368da461b0013d8b03a24c5cde603a7e6f4a9c423534e8cc6f4ebc5df1</code></td>
+    </tr>
+    <tr>
+      <td><strong>xdm-app-1.1.0-1.aarch64.rpm</strong></td>
+      <td><code>018d85134edd64b00641cec17d85e8daa948e74dac7c1eb9e9b5d7aed8e8f693</code></td>
+    </tr>
+    <tr>
+      <td><strong>xdm-app-1.1.0-1-x86_64.pkg.tar.zst</strong></td>
+      <td><code>06ddb88e6859361bc7aca6fe7148d1029120e563a22068809ed10091cc79c025</code></td>
+    </tr>
+    <tr>
+      <td><strong>xdm-app-1.1.0-1-aarch64.pkg.tar.zst</strong></td>
+      <td><code>5f448dd18c2f795cce362e8c3f4b2cd9b4b58ac981fbbd9c4aa8ca20c692d566</code></td>
+    </tr>
+    <tr>
+      <td><strong>xdm-app-1.1.0-linux-x64.tar.gz</strong></td>
+      <td><code>1e99116c3e5d22d0500dcb26b980039c0538b267d527d68ea98badaff7ed0794</code></td>
+    </tr>
+    <tr>
+      <td><strong>xdm-app-1.1.0-linux-arm64.tar.gz</strong></td>
+      <td><code>4fa802b7b790d86c605e62058c21597580d5baa3c4b1f5eef46c4fb33ac63c5b</code></td>
+    </tr>
+    <tr>
+      <td><strong>xdm-app-1.1.0.jar</strong></td>
+      <td><code>6e0a23347d95187dee7f7f0883d1c55f3c778d7ba7e16b12125015474e5e19ff</code></td>
+    </tr>
+    <tr>
+      <td><strong>xdm-plugin-api-1.1.0.jar</strong></td>
+      <td><code>42edba3f3895853bca0e2450aa2355d2646f6e7f8de2debd1f7690b4830e58ea</code></td>
+    </tr>
+    <tr>
+      <td><strong>XDM-Enhanced-Extension-Chromium-v1.1.0.zip</strong></td>
+      <td><code>884993cd0acd8b95543532b695dc3a9191294e20d594cbbad3dfcef5de166f0e</code></td>
+    </tr>
+    <tr>
+      <td><strong>XDM-Enhanced-Extension-Firefox-v1.1.0.xpi</strong></td>
+      <td><code>b178768eca3835a483ccdddd5d3a2610827124cb78b24eefdaaac685a99a7814</code></td>
+    </tr>
+  </tbody>
+</table>
 
 ### Verifying Checksums Locally
 

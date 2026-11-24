@@ -25,7 +25,36 @@ Every official release includes a CI-generated `SHA256SUMS.txt` manifest. Verify
 
 ### Verified Hashes for `v1.1.0` (Current Stable)
 
-Download and verify against [`SHA256SUMS.txt`](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.1.0/SHA256SUMS.txt) attached to the [`v1.1.0` GitHub Release](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/tag/v1.1.0). *(Exact release binary hashes are synced here once the `v1.1.0` release workflow finishes publishing artifacts.)*
+Download and verify against [`SHA256SUMS.txt`](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.1.0/SHA256SUMS.txt) attached to the [`v1.1.0` GitHub Release](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/tag/v1.1.0):
+
+| Package Filename | Target System / Type | SHA-256 Hash |
+|:---|:---|:---|
+| `XDM-Enhanced-Setup-v1.1.0-win-x64.exe` | Windows x64 NSIS Setup | `32a07432de279420934fad99c324ce65e23d402c33a2ef1e958364373373c4fa` |
+| `XDM-Enhanced-v1.1.0-windows-x64.zip` | Windows x64 Portable | `24caf7a59901e9c46747d6ff6dd83de4216b8016f5c0fc12ea8ddbbd13831418` |
+| `xdm-1.1.0-x64.msi` | Windows x64 MSI | `07e8c18dc0c7b13f241b5a45d5141b0b75a15789dcf5f04a1032f9c408cff88c` |
+| `xdm-1.1.0-arm64.msi` | Windows ARM64 MSI | `c465e72b833bb3f5b0f940c9d1eef740d964502f0c745dd7de6a5c6a31f02a22` |
+| `xdmsetup-1.1.0.msi` | Windows x64 Legacy Update MSI | `07e8c18dc0c7b13f241b5a45d5141b0b75a15789dcf5f04a1032f9c408cff88c` |
+| `xdm-app-1.1.0-arm64.dmg` | macOS Apple Silicon DMG | `4897a8a4b6800bcbb8f45443cf5346ff203d3a9f20c89cf6b6fe8735478d0252` |
+| `xdm-app-1.1.0-x64.dmg` | macOS Intel DMG | `75ef36ad1a9837811cd23e740411b78e91da7dd26e0b1a64765101c1fbb76646` |
+| `xdm-app_1.1.0_amd64.deb` | Debian / Ubuntu Linux x64 | `e6f6af843acc3f3d67e639d7b64e9967ddecfce6e5ef5599f159b89acbf5bb16` |
+| `xdm-app_1.1.0_arm64.deb` | Debian / Ubuntu Linux ARM64 | `f44d84357ed7c62e6b2b808e5bc90c474f741d3ed1c52bf0b026223024a81f0a` |
+| `xdm-app-1.1.0-1.x86_64.rpm` | Fedora / RHEL Linux x64 | `e660e4368da461b0013d8b03a24c5cde603a7e6f4a9c423534e8cc6f4ebc5df1` |
+| `xdm-app-1.1.0-1.aarch64.rpm` | Fedora / RHEL Linux ARM64 | `018d85134edd64b00641cec17d85e8daa948e74dac7c1eb9e9b5d7aed8e8f693` |
+| `xdm-app-1.1.0-1-x86_64.pkg.tar.zst` | Arch Linux / Manjaro x64 | `06ddb88e6859361bc7aca6fe7148d1029120e563a22068809ed10091cc79c025` |
+| `xdm-app-1.1.0-1-aarch64.pkg.tar.zst` | Arch Linux / Manjaro ARM64 | `5f448dd18c2f795cce362e8c3f4b2cd9b4b58ac981fbbd9c4aa8ca20c692d566` |
+| `xdm-app-1.1.0-linux-x64.tar.gz` | Linux x64 Portable | `1e99116c3e5d22d0500dcb26b980039c0538b267d527d68ea98badaff7ed0794` |
+| `xdm-app-1.1.0-linux-arm64.tar.gz` | Linux ARM64 Portable | `4fa802b7b790d86c605e62058c21597580d5baa3c4b1f5eef46c4fb33ac63c5b` |
+| `xdm-app-1.1.0.jar` | Universal Java 25 Application | `6e0a23347d95187dee7f7f0883d1c55f3c778d7ba7e16b12125015474e5e19ff` |
+| `xdm-plugin-api-1.1.0.jar` | Public Plugin API JAR | `42edba3f3895853bca0e2450aa2355d2646f6e7f8de2debd1f7690b4830e58ea` |
+| `XDM-Enhanced-Extension-Chromium-v1.1.0.zip` | Chromium Extension (MV3) | `884993cd0acd8b95543532b695dc3a9191294e20d594cbbad3dfcef5de166f0e` |
+| `XDM-Enhanced-Extension-Firefox-v1.1.0.xpi` | Firefox Add-on (MV2) | `b178768eca3835a483ccdddd5d3a2610827124cb78b24eefdaaac685a99a7814` |
+| `ytdlp-downloader.xdmplugin` | Media Engine Plugin | `bde0b6288b4b695779605ecd8f44c32f96080d9363c4c9c1b31cdca94bd70dd8` |
+| `proxy-provider.xdmplugin` | Network Proxy Plugin | `dd83ff8bc27adc4615ac928ba7ef4eeb8080c6a3996c8ab43281c6ec1a29ea22` |
+| `vpn-status.xdmplugin` | VPN Telemetry Plugin | `62406b0fa6b30ec08b941ac1223149d083013e98e1cc869f5cd0aabff7dbfec4` |
+| `ui-notification.xdmplugin` | UI & Toast Alerts Plugin | `5d252e11b9a56de2830913d5e4320ef8437e63ffd607a5d6b67202c24926bcc6` |
+| `v2-sample-plugin.xdmplugin` | Reference SDK v2 Plugin | `a8190202d94c06c1fc5119102278bd1e097e12ef281170515980d1765c7c1195` |
+| `checksum-verifier.xdmplugin` | Checksum Plugin | `e5abfa34e8b18f3bff45f835edbecfc838e4089050df729b81a54a6933f672ee` |
+| `cyber-neon.xdmskin` | Custom FlatLaf Theme Skin | `476cbd73d0ae68105dc6eab00cfdf1c8e1ddf377e59677e301f4ec3191a85a29` |
 
 ### Verified Hashes for `v1.1.0-beta.1` (Archived Beta Preview)
 

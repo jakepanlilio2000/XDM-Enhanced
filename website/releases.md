@@ -23,9 +23,120 @@ First stable release of the `1.1.x` line — graduating the **Modular Plugin SDK
 - **Networking, Platform & Accessibility Hardening:**
   - Added early `Force IPv4` startup setting (`preferIPv4Stack`), `AssistiveTech` sanitization at startup (`jdk.accessibility`), XDG Desktop Portal `keepAwake` inhibition and `gdbus` shutdown fallback on Linux, and Dark/Light theme row & contrast refinements.
 
-### Published Assets & Checksums (`v1.1.0`)
+### Published Assets &amp; Checksums (`v1.1.0`)
 
-Verify all release binaries against [`SHA256SUMS.txt`](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.1.0/SHA256SUMS.txt) on the [GitHub Release](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/tag/v1.1.0). *(Verified per-file CI SHA-256 checksums are synced here once the `v1.1.0` build workflow publishes artifacts.)*
+Verify all release binaries against [`SHA256SUMS.txt`](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.1.0/SHA256SUMS.txt) on the [GitHub Release](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/tag/v1.1.0):
+
+<table class="checksum-table">
+  <thead>
+    <tr>
+      <th style="width: 45%;">Asset Filename</th>
+      <th>SHA-256 Checksum</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>XDM-Enhanced-Setup-v1.1.0-win-x64.exe</strong></td>
+      <td><code>32a07432de279420934fad99c324ce65e23d402c33a2ef1e958364373373c4fa</code></td>
+    </tr>
+    <tr>
+      <td><strong>XDM-Enhanced-v1.1.0-windows-x64.zip</strong></td>
+      <td><code>24caf7a59901e9c46747d6ff6dd83de4216b8016f5c0fc12ea8ddbbd13831418</code></td>
+    </tr>
+    <tr>
+      <td><strong>xdm-1.1.0-x64.msi</strong></td>
+      <td><code>07e8c18dc0c7b13f241b5a45d5141b0b75a15789dcf5f04a1032f9c408cff88c</code></td>
+    </tr>
+    <tr>
+      <td><strong>xdm-1.1.0-arm64.msi</strong></td>
+      <td><code>c465e72b833bb3f5b0f940c9d1eef740d964502f0c745dd7de6a5c6a31f02a22</code></td>
+    </tr>
+    <tr>
+      <td><strong>xdm-app-1.1.0-arm64.dmg</strong></td>
+      <td><code>4897a8a4b6800bcbb8f45443cf5346ff203d3a9f20c89cf6b6fe8735478d0252</code></td>
+    </tr>
+    <tr>
+      <td><strong>xdm-app-1.1.0-x64.dmg</strong></td>
+      <td><code>75ef36ad1a9837811cd23e740411b78e91da7dd26e0b1a64765101c1fbb76646</code></td>
+    </tr>
+    <tr>
+      <td><strong>xdm-app_1.1.0_amd64.deb</strong></td>
+      <td><code>e6f6af843acc3f3d67e639d7b64e9967ddecfce6e5ef5599f159b89acbf5bb16</code></td>
+    </tr>
+    <tr>
+      <td><strong>xdm-app_1.1.0_arm64.deb</strong></td>
+      <td><code>f44d84357ed7c62e6b2b808e5bc90c474f741d3ed1c52bf0b026223024a81f0a</code></td>
+    </tr>
+    <tr>
+      <td><strong>xdm-app-1.1.0-1.x86_64.rpm</strong></td>
+      <td><code>e660e4368da461b0013d8b03a24c5cde603a7e6f4a9c423534e8cc6f4ebc5df1</code></td>
+    </tr>
+    <tr>
+      <td><strong>xdm-app-1.1.0-1.aarch64.rpm</strong></td>
+      <td><code>018d85134edd64b00641cec17d85e8daa948e74dac7c1eb9e9b5d7aed8e8f693</code></td>
+    </tr>
+    <tr>
+      <td><strong>xdm-app-1.1.0-1-x86_64.pkg.tar.zst</strong></td>
+      <td><code>06ddb88e6859361bc7aca6fe7148d1029120e563a22068809ed10091cc79c025</code></td>
+    </tr>
+    <tr>
+      <td><strong>xdm-app-1.1.0-1-aarch64.pkg.tar.zst</strong></td>
+      <td><code>5f448dd18c2f795cce362e8c3f4b2cd9b4b58ac981fbbd9c4aa8ca20c692d566</code></td>
+    </tr>
+    <tr>
+      <td><strong>xdm-app-1.1.0-linux-x64.tar.gz</strong></td>
+      <td><code>1e99116c3e5d22d0500dcb26b980039c0538b267d527d68ea98badaff7ed0794</code></td>
+    </tr>
+    <tr>
+      <td><strong>xdm-app-1.1.0-linux-arm64.tar.gz</strong></td>
+      <td><code>4fa802b7b790d86c605e62058c21597580d5baa3c4b1f5eef46c4fb33ac63c5b</code></td>
+    </tr>
+    <tr>
+      <td><strong>xdm-app-1.1.0.jar</strong></td>
+      <td><code>6e0a23347d95187dee7f7f0883d1c55f3c778d7ba7e16b12125015474e5e19ff</code></td>
+    </tr>
+    <tr>
+      <td><strong>xdm-plugin-api-1.1.0.jar</strong></td>
+      <td><code>42edba3f3895853bca0e2450aa2355d2646f6e7f8de2debd1f7690b4830e58ea</code></td>
+    </tr>
+    <tr>
+      <td><strong>XDM-Enhanced-Extension-Chromium-v1.1.0.zip</strong></td>
+      <td><code>884993cd0acd8b95543532b695dc3a9191294e20d594cbbad3dfcef5de166f0e</code></td>
+    </tr>
+    <tr>
+      <td><strong>XDM-Enhanced-Extension-Firefox-v1.1.0.xpi</strong></td>
+      <td><code>b178768eca3835a483ccdddd5d3a2610827124cb78b24eefdaaac685a99a7814</code></td>
+    </tr>
+    <tr>
+      <td><strong>checksum-verifier.xdmplugin</strong></td>
+      <td><code>e5abfa34e8b18f3bff45f835edbecfc838e4089050df729b81a54a6933f672ee</code></td>
+    </tr>
+    <tr>
+      <td><strong>proxy-provider.xdmplugin</strong></td>
+      <td><code>dd83ff8bc27adc4615ac928ba7ef4eeb8080c6a3996c8ab43281c6ec1a29ea22</code></td>
+    </tr>
+    <tr>
+      <td><strong>vpn-status.xdmplugin</strong></td>
+      <td><code>62406b0fa6b30ec08b941ac1223149d083013e98e1cc869f5cd0aabff7dbfec4</code></td>
+    </tr>
+    <tr>
+      <td><strong>ui-notification.xdmplugin</strong></td>
+      <td><code>5d252e11b9a56de2830913d5e4320ef8437e63ffd607a5d6b67202c24926bcc6</code></td>
+    </tr>
+    <tr>
+      <td><strong>v2-sample-plugin.xdmplugin</strong></td>
+      <td><code>a8190202d94c06c1fc5119102278bd1e097e12ef281170515980d1765c7c1195</code></td>
+    </tr>
+    <tr>
+      <td><strong>ytdlp-downloader.xdmplugin</strong></td>
+      <td><code>bde0b6288b4b695779605ecd8f44c32f96080d9363c4c9c1b31cdca94bd70dd8</code></td>
+    </tr>
+    <tr>
+      <td><strong>cyber-neon.xdmskin</strong></td>
+      <td><code>476cbd73d0ae68105dc6eab00cfdf1c8e1ddf377e59677e301f4ec3191a85a29</code></td>
+    </tr>
+  </tbody>
+</table>
 
 ---
 
