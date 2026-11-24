@@ -1,26 +1,27 @@
-# XDM Enhanced v1.1.0
+# XDM Enhanced v1.2.0
 
-Stable Release of **XDM Enhanced** — graduating the **Modular Plugin SDK v2** (`xdm-plugin-api:1.1.0`, Specification 2.0.0) alongside synced upstream core media muxing, HLS playlist capture, link refresh, early IPv4 networking, and desktop accessibility improvements.
+Stable Release of **XDM Enhanced** — introducing **Skin Schema v3** custom window chrome and widget styling, **5 new sample `.xdmskin` theme packages**, and **1:1 Original XDM (`subhra74/xdm`)** UI parity while preserving **Modular Plugin SDK v2** (`xdm-plugin-api`, Specification 2.0.0) compatibility.
 
 ---
 
 ## Release Highlights
 
-- **Graduated Modular Plugin SDK v2 (`xdm-plugin-api:1.1.0`):**
-  - Clean public Java SPI (Specification 2.0.0) isolated from internal host classes (`xdm.app.*`, `xdm.core.*`, `xdm.manager.*`) via `PluginFilteringClassLoader`.
-  - First-class SPIs for download engines (`PluginDownloadEngine`), scoped network proxies (`ProxyProvider` / `PluginNetworkManager`), non-privileged VPN telemetry (`VpnStatusProvider`), chained post-download processors (`PostDownloadProcessor`), UI contributors, typed `EventTopics`, and `PluginSettings`.
-  - Full legacy v1 compatibility via `LegacyV1PluginAdapter`, default `UNTRUSTED` quarantine approval, zip-slip/archive-bomb/executable hardening, 10s watchdog timers, and `--safe-mode` / `--no-plugins` recovery flags.
-  - 6 standalone compilable sample plugins in `sample-plugins/`: `proxy-provider-sample`, `vpn-status-sample`, `ui-notification-sample`, `v2-sample-plugin`, `checksum-verifier-plugin`, and `ytdlp-downloader-plugin`.
-  - Fixed signed ID negativity and terminal-state delete race conditions in `PluginDownloadBridge` and `TaskInfoDB`.
-- **Media Muxing & HLS Playlist Body Capture:**
-  - Synced upstream `xdm-core` muxer and codec improvements across MP4/ISO, MKV, Ogg, TS, AAC/Opus/FLAC/AC3/Vorbis, chunk takeover/retry logic, and atomic output commits.
-  - Added browser extension captured playlist body forwarding (`hls-hook.js` / `hls-relay.js` in Chromium MV3 and `readPlaylistBody` in Firefox MV2) backed by `HlsPlaylistStore` and `PlaylistTextCache`.
-  - Added configurable **Save streams as MP4** setting across settings UI, config persistence, and the New Video Download dialog.
-- **Link Refresh, Source Tracking & Retry Resilience:**
-  - Preserved `sourceUrl` and `sourceCookie` across captured downloads, New Download / Link Refresh dialogs, completion notes, and `LinkRefresher`.
-  - Added server-busy retry ETA display (`retryAt`) in `ProgressWindow` and `HeadlessCli`.
-- **Networking, Platform & Accessibility Hardening:**
-  - Added early **Force IPv4** (`java.net.preferIPv4Stack`) startup setting, `AssistiveTech` sanitization with `jdk.accessibility` module support, XDG Desktop Portal `KeepAwake` inhibition and `gdbus` shutdown fallback, and Light/Dark theme refinements.
+- **Skin Schema v3 Custom Window Chrome & Widget Engine (`chromeMode: "custom"`):**
+  - Declarative custom titlebars with gradient fills, header textures, alignment options, live speed/transfer stats ticker (`LcdStatsTicker`), and toggleable compact **WindowShade** frame collapse.
+  - Custom window control button styles (`mac`, `beveled`, `anime`, `steampunk`, `minimal`, plus custom PNG control overrides) and 3D beveled/riveted outer chassis borders (`SkinnedFrameBorder`).
+  - Custom `SkinnedProgressBarUI` renderers (`segmented_led`, `brass_gauge`, `striped_candy`, `gradient_glow`), `SkinnedButtonStyler` presets (`beveled_3d`, `riveted_brass`, `neon_outline`, `pill_glow`) with contrast protection, and subtle CRT scanline overlays.
+  - Enhanced `CategoryTreeRenderer` sidebar selection contrast across both dark and light custom themes.
+- **Five New Verified Sample Skins in `sample-skins/` (6 Total):**
+  - `retro-hifi.xdmskin` (**Retro Hi-Fi Console**): Brushed metallic bevel deck, textured titlebar, LCD ticker, `34px` shade toggle, segmented LED meters, `beveled_3d` buttons, and CRT scanlines.
+  - `anime-sakura.xdmskin` (**Anime Sakura Studio**): Cherry blossom wallpapers in dark and light palettes, custom anime window controls, candy-striped progress bars, and `pill_glow` buttons.
+  - `steampunk-brass.xdmskin` (**Steampunk Brass Works**): Mahogany walnut & `6px` riveted brass bezel, Victorian `steampunk` controls, `brass_gauge` progress meters, and `riveted_brass` buttons.
+  - `modern-aurora.xdmskin` (**Modern Aurora Frost**): Centered frameless titlebar with `minimal` controls, `1px` frame border, northern-lights ribbons, and `gradient_glow` progress bars.
+  - `synthwave-outrun.xdmskin` (**Synthwave Outrun 1986**): Horizon laser grid backdrop, `mac` controls, neon-outlined buttons, sunset glow bars, and subtle CRT scanlines.
+  - `cyber-neon.xdmskin` (**Cyber Neon**): Refreshed Schema v2 reference skin covering all 13 UI region slots.
+- **1:1 Original XDM (`classic_xdm` / `subhra74/xdm`) UI Parity:**
+  - Selecting **Original XDM** switches seamlessly to upstream layout mode (`chromeMode: "upstream"`): `AppToolBar` (`+ New`, `Clear`, `Sort`, `Settings`, `Search`, menu), `FilterListPanel` (`LIBRARY`, `FILE TYPES`, `Stay in touch`), `UpstreamClassicListView`, and FlatMac Dark/Light palettes under the `"Xtreme Download Manager"` window title.
+- **Modular Plugin SDK v2 Compatibility Preserved (`API 1.1.0` / Spec `2.0.0`):**
+  - Full backward compatibility for all `v1.1.0` and legacy `v1` `.xdmplugin` extensions, quarantine trust prompts, isolated `PluginFilteringClassLoader`, and recovery flags (`--safe-mode`, `--no-plugins`).
 
 ---
 
@@ -30,7 +31,7 @@ Every release publishes a `SHA256SUMS.txt` file containing cryptographic SHA-256
 
 ```powershell
 # Verify on Windows (PowerShell)
-Get-FileHash -Algorithm SHA256 .\XDM-Enhanced-Setup-v1.1.0-win-x64.exe
+Get-FileHash -Algorithm SHA256 .\XDM-Enhanced-Setup-v1.2.0-win-x64.exe
 
 # Verify on Linux / macOS
 sha256sum -c SHA256SUMS.txt

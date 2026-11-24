@@ -103,7 +103,8 @@ Create `skin.json` in the root of your folder:
 
 ## Related Developer Articles
 
-* [[Skin Schema & UI Slots|Skin-Schema-and-UI-Slots]]: Complete schema and display mode reference.
+* [[Skin Schema & UI Slots|Skin-Schema-and-UI-Slots]]: Complete Schema v3 and display mode reference.
 * [[Appearance & Skins Guide|Appearance-and-Skins-Guide]]: User guide for skin management.
-* Reference sample skin: [`sample-skins/cyber-neon.xdmskin`](https://github.com/jakepanlilio2000/XDM-Enhanced/tree/master/sample-skins).
+* Authoritative specification: [`docs/SKIN_DEVELOPMENT.md`](https://github.com/jakepanlilio2000/XDM-Enhanced/blob/master/docs/SKIN_DEVELOPMENT.md).
+* Sample packages (`sample-skins/`): [`sample-skins/`](https://github.com/jakepanlilio2000/XDM-Enhanced/tree/master/sample-skins) (`retro-hifi`, `anime-sakura`, `steampunk-brass`, `modern-aurora`, `synthwave-outrun`, `cyber-neon`).
 

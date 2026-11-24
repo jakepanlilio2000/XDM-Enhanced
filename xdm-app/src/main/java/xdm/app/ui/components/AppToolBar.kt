@@ -3,8 +3,11 @@ package xdm.app.ui.components
 import com.formdev.flatlaf.FlatClientProperties
 import xdm.app.AppContext
 import xdm.app.I8N.text
+import xdm.app.skins.SkinRegion
+import xdm.app.skins.SkinStyleResolver
 import xdm.app.ui.screens.AboutDialog
 import xdm.app.ui.screens.SettingsWindow
+import xdm.app.ui.screens.TorrentUiBridge
 import xdm.app.ui.screens.UpdateDialog
 import xdm.app.utils.RemixIcon
 import xdm.app.update.UpdateChecker
@@ -20,6 +23,7 @@ import xdm.app.utils.shownWindow
 import java.awt.Color
 import java.awt.Component
 import java.awt.Dimension
+import java.awt.Graphics
 import java.awt.Insets
 import java.awt.event.ActionEvent
 import java.awt.event.ActionListener
@@ -49,7 +53,14 @@ class AppToolBar(
     private val btnClear: JButton
     private val btnMenu: JButton
     private val btnDelete: JButton
-    private val toolbar = JToolBar()
+    private val toolbar = object : JToolBar() {
+        override fun paintComponent(g: Graphics) {
+            val painted = SkinStyleResolver.paintRegionBackground(g, width, height, SkinRegion.TOOLBAR)
+            if (!painted) super.paintComponent(g)
+        }
+    }
+    private val txtSearch: JTextField
+    private val newMenu: JPopupMenu
     private val btnNewGap: Component
     private val btnSortGap: Component
     private val btnSettingsGap: Component
@@ -74,31 +85,38 @@ class AppToolBar(
     init {
         this.contextMenu = createContextMenu()
         this.sortMenu = createSortMenu()
-        this.btnNew = createToolButton(RemixIcon.ADD_LARGE_FILL, buttonCallback, "TOOL_DOWNLOAD", Color.gray)
+        this.newMenu = createNewMenu()
+        val iconColor = AppTheme.listSelectedButtonColor
+        this.btnNew = createToolButton(RemixIcon.ADD_LARGE_FILL, {}, "TOOL_DOWNLOAD", iconColor)
+        this.btnNew.addActionListener {
+            showMenu(btnNew, newMenu, alignStart = true)
+        }
         this.btnNewGap = Box.createRigidArea(scaledSize(5, 0))
 
-        this.btnClear = createToolButton(RemixIcon.DELETE_BIN_LINE, buttonCallback, "TOOL_CLEAR", Color.gray)
+        this.btnClear = createToolButton(RemixIcon.DELETE_BIN_LINE, buttonCallback, "TOOL_CLEAR", iconColor)
         this.btnClearGap = Box.createRigidArea(scaledSize(5, 0))
 
-        this.btnDelete = createToolButton(RemixIcon.DELETE_BIN_LINE, buttonCallback, "TOOL_DELETE", Color.gray)
+        this.btnDelete = createToolButton(RemixIcon.DELETE_BIN_LINE, buttonCallback, "TOOL_DELETE", iconColor)
         this.btnDeleteGap = Box.createRigidArea(scaledSize(5, 0))
 
-        this.btnSort = createToolButton(RemixIcon.SORT_DESC, buttonCallback, "TOOL_SORT", Color.gray) // "Stop all");
+        this.btnSort = createToolButton(RemixIcon.SORT_DESC, buttonCallback, "TOOL_SORT", iconColor)
         this.btnSort.addActionListener {
             showMenu(btnSort, sortMenu)
         }
         this.btnSortGap = Box.createRigidArea(scaledSize(5, 0))
 
-        this.btnSettings = createToolButton(RemixIcon.SETTINGS_4_LINE, buttonCallback, "TOOL_SETTINGS", Color.gray) // "Settings");
+        this.btnSettings = createToolButton(RemixIcon.SETTINGS_4_LINE, buttonCallback, "TOOL_SETTINGS", iconColor)
         this.btnSettingsGap = Box.createRigidArea(scaledSize(5, 0))
         this.btnSettings.addActionListener { showSettings() }
 
-        this.btnMenu = createToolButton(RemixIcon.MENU_LINE, Color.gray)
+        this.btnMenu = createToolButton(RemixIcon.MENU_LINE, iconColor)
         btnMenu.addActionListener {
             showMenu(btnMenu, contextMenu)
         }
 
         toolbar.apply {
+            isFloatable = false
+            border = xdm.app.utils.ScaledEmptyBorder(0, 6, 4, 6)
             add(btnNew)
             add(btnNewGap)
             add(btnClear)
@@ -114,14 +132,17 @@ class AppToolBar(
             background = AppTheme.listBackground
         }
 
-        val txtSearch = JTextField(12).apply {
-            addActionListener {
-                searchCallback(this.text)
-            }
+        txtSearch = JTextField(12).apply {
+            addActionListener { searchCallback(this.text) }
+            document.addDocumentListener(object : javax.swing.event.DocumentListener {
+                override fun insertUpdate(e: javax.swing.event.DocumentEvent?) = searchCallback(text)
+                override fun removeUpdate(e: javax.swing.event.DocumentEvent?) = searchCallback(text)
+                override fun changedUpdate(e: javax.swing.event.DocumentEvent?) = searchCallback(text)
+            })
             putClientProperty(FlatClientProperties.STYLE, "arc: 10")
             putClientProperty("JTextField.placeholderText", "Search")
             putClientProperty(
-                "JTextField.trailingIcon", createIcon(RemixIcon.SEARCH_LINE, 16, Color.GRAY)
+                "JTextField.trailingIcon", createIcon(RemixIcon.SEARCH_LINE, 16, AppTheme.sidebarIcon)
             )
         }
         val d = txtSearch.preferredSize
@@ -148,6 +169,30 @@ class AppToolBar(
         mHelp = addMenuItem("MENU_HELP_SUP", ctx, a)
         mAbout = addMenuItem("MENU_ABOUT", ctx, a)
         mExit = addMenuItem("MENU_EXIT", ctx, a)
+        return ctx
+    }
+
+    private fun createNewMenu(): JPopupMenu {
+        val ctx = JPopupMenu()
+        val window = { SwingUtilities.windowForComponent(toolbar) }
+        ctx.add(JMenuItem("New HTTP Download...").apply {
+            icon = createIcon(RemixIcon.GLOBAL_LINE, 15, AppTheme.sidebarIcon)
+            addActionListener { AppContext.app.addDownload(null) }
+        })
+        ctx.add(JMenuItem("Add Magnet Link...").apply {
+            icon = createIcon(RemixIcon.DOWNLOAD_2_LINE, 15, AppTheme.sidebarIcon)
+            addActionListener { TorrentUiBridge.addMagnet(window()) }
+        })
+        ctx.add(JMenuItem("Open Torrent File...").apply {
+            icon = createIcon(RemixIcon.FILE_ZIP_LINE, 15, AppTheme.sidebarIcon)
+            addActionListener { TorrentUiBridge.addTorrentFile(window()) }
+        })
+        ctx.add(JMenuItem(text("MENU_STREAM_DOWNLOAD")).apply {
+            addActionListener { AppMenuHandler.showStreamDialog(window()) }
+        })
+        ctx.add(JMenuItem(text("MENU_BATCH_DOWNLOAD")).apply {
+            addActionListener { AppMenuHandler.showBatchDialog(window()) }
+        })
         return ctx
     }
 
@@ -269,6 +314,33 @@ class AppToolBar(
     val component: Component
         get() = toolbar
 
+    fun updateTheme() {
+        val iconColor = AppTheme.listSelectedButtonColor
+        toolbar.background = AppTheme.listBackground
+        toolbar.isOpaque = !xdm.app.skins.SkinManager.currentSkin.hasWallpaper()
+        val fg = AppTheme.listTitle
+        btnNew.icon = createIcon(RemixIcon.ADD_LARGE_FILL, 16, iconColor)
+        btnClear.icon = createIcon(RemixIcon.DELETE_BIN_LINE, 16, iconColor)
+        btnDelete.icon = createIcon(RemixIcon.DELETE_BIN_LINE, 16, iconColor)
+        btnSort.icon = createIcon(RemixIcon.SORT_DESC, 16, iconColor)
+        btnSettings.icon = createIcon(RemixIcon.SETTINGS_4_LINE, 16, iconColor)
+        btnMenu.icon = createIcon(RemixIcon.MENU_LINE, 16, iconColor)
+        listOf(btnNew, btnClear, btnDelete, btnSort, btnSettings, btnMenu).forEach {
+            it.foreground = fg
+        }
+        txtSearch.background = AppTheme.sidebarBackground
+        txtSearch.foreground = fg
+        txtSearch.putClientProperty(
+            "JTextField.trailingIcon", createIcon(RemixIcon.SEARCH_LINE, 16, AppTheme.sidebarIcon)
+        )
+        toolbar.revalidate()
+        toolbar.repaint()
+    }
+
+    fun setSearchVisible(visible: Boolean) {
+        txtSearch.isVisible = visible
+    }
+
     fun setMultiSelectView(isMultiSelect: Boolean) {
         btnSettings.isVisible = !isMultiSelect
         btnSettingsGap.isVisible = !isMultiSelect
@@ -288,9 +360,12 @@ class AppToolBar(
     ): JButton {
         return JButton(text(key)).apply {
             name = key
-            iconTextGap = 10
+            iconTextGap = 8
             icon = createIcon(iconName, 16, iconColor)
-            margin = Insets(5, 5, 5, 5)
+            foreground = AppTheme.listTitle
+            putClientProperty(FlatClientProperties.BUTTON_TYPE, FlatClientProperties.BUTTON_TYPE_TOOLBAR_BUTTON)
+            isFocusable = false
+            margin = Insets(5, 6, 5, 6)
             addActionListener(callback)
         }
     }
@@ -298,7 +373,10 @@ class AppToolBar(
     private fun createToolButton(iconName: RemixIcon, iconColor: Color = Color.gray): JButton {
         return JButton().apply {
             icon = createIcon(iconName, 16, iconColor)
-            margin = Insets(5, 5, 5, 5)
+            foreground = AppTheme.listTitle
+            putClientProperty(FlatClientProperties.BUTTON_TYPE, FlatClientProperties.BUTTON_TYPE_TOOLBAR_BUTTON)
+            isFocusable = false
+            margin = Insets(5, 6, 5, 6)
         }
     }
 }

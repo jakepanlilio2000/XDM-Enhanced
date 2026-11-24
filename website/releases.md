@@ -4,7 +4,27 @@ Detailed changelog and binary checksum records for all published releases of **X
 
 ---
 
-## [1.1.0] — 2026-11-24 (Latest Stable Release)
+## [1.2.0] — 2026-11-24 (Latest Stable Release)
+
+Feature release introducing **Skin Schema v3** custom window chrome and widget styling, **5 new sample `.xdmskin` theme packages**, and **1:1 Original XDM (`subhra74/xdm`)** UI parity while keeping full **Modular Plugin SDK v2** compatibility.
+
+### Highlights &amp; Key Improvements
+
+- **Skin Schema v3 Custom Window &amp; Widget Chrome (`chromeMode: "custom"`):**
+  - Declarative custom window titlebars (`SkinnedTitleBar`) with gradients, textures, alignment, live transfer stats ticker (`LcdStatsTicker`), toggleable compact **WindowShade** frame collapse, custom control sprites (`mac`, `beveled`, `anime`, `steampunk`, `minimal`, plus PNG overrides), and 3D beveled/riveted outer chassis borders (`SkinnedFrameBorder`).
+  - Custom `SkinnedProgressBarUI` renderers (`segmented_led`, `brass_gauge`, `striped_candy`, `gradient_glow`), `SkinnedButtonStyler` presets (`beveled_3d`, `riveted_brass`, `neon_outline`, `pill_glow`), CRT scanline overlays, and high-contrast light/dark sidebar tree selection rendering (`CategorySidebar`).
+- **Five New Verified Sample Skins (`sample-skins/`):**
+  - Published `retro-hifi.xdmskin`, `anime-sakura.xdmskin`, `steampunk-brass.xdmskin`, `modern-aurora.xdmskin`, and `synthwave-outrun.xdmskin` alongside refreshed `cyber-neon.xdmskin`.
+- **1:1 Original XDM (`classic_xdm` / `subhra74/xdm`) UI Parity:**
+  - Updated `Original XDM` (`chromeMode: "upstream"`) to reproduce `subhra74/xdm` pixel-for-pixel across `AppToolBar`, `FilterListPanel`, `UpstreamClassicListView`, and FlatMac Dark/Light palettes.
+
+### Published Assets &amp; Checksums (`v1.2.0`)
+
+Verify all release binaries against [`SHA256SUMS.txt`](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.2.0/SHA256SUMS.txt) on the [`v1.2.0` GitHub Release](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/tag/v1.2.0).
+
+---
+
+## [1.1.0] — 2026-11-24
 
 First stable release of the `1.1.x` line — graduating the **Modular Plugin SDK v2** (`xdm-plugin-api:1.1.0`, Specification 2.0.0) and syncing upstream core media muxing, HLS playlist capture, link refresh, IPv4 networking, and desktop accessibility fixes.
 

@@ -234,6 +234,35 @@ class PhaseC1VisualSkinScreenshotTest : DownloadManagerTestBase() {
                 captureComponent(progClassic, 580, 520, File(artifactDir, "screenshot-dialog-progress-classic-xdm.png"))
                 progClassic.dispose()
             }
+
+            // 12. Showcase Schema v3 custom window skins (5 themes + compact WindowShade capture)
+            val showcaseCaptures = listOf(
+                Triple("retro-hifi", "dark", "screenshot-skin-retro-hifi-dark.png"),
+                Triple("anime-sakura", "dark", "screenshot-skin-anime-sakura-dark.png"),
+                Triple("anime-sakura", "light", "screenshot-skin-anime-sakura-light.png"),
+                Triple("steampunk-brass", "dark", "screenshot-skin-steampunk-brass-dark.png"),
+                Triple("modern-aurora", "dark", "screenshot-skin-modern-aurora-dark.png"),
+                Triple("synthwave-outrun", "dark", "screenshot-skin-synthwave-outrun-dark.png")
+            )
+            for ((skinId, mode, outName) in showcaseCaptures) {
+                val archive = File(repoRoot, "sample-skins/$skinId.xdmskin")
+                if (archive.exists()) {
+                    runOnEdt {
+                        SkinManager.installSkin(archive)
+                        SkinManager.applySkin(skinId, saveConfig = false)
+                        ThemeManager.applyTheme(mode, null, 100, saveConfig = false)
+                        val win = AppWindow(logoImage(256), startHidden = true)
+                        win.updateDownloadInView(0)
+                        captureComponent(win, 1040, 640, File(artifactDir, outName))
+                        if (skinId == "retro-hifi") {
+                            win.applyWindowShade(true)
+                            captureComponent(win, 1040, 44, File(artifactDir, "screenshot-skin-retro-hifi-shaded.png"))
+                            win.applyWindowShade(false)
+                        }
+                        win.dispose()
+                    }
+                }
+            }
         }
 
         // Restore clean default state

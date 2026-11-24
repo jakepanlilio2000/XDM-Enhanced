@@ -1,0 +1,122 @@
+        {
+          "schemaVersion": 3,
+          "id": "modern-aurora",
+          "name": "Modern Aurora Frost",
+          "version": "1.2.0",
+          "author": "XDM Enhanced Team",
+          "description": "Ultra-clean contemporary frosted glass workspace with centered frameless titlebar chrome, flowing northern-lights backdrop ribbons, and luminous sky-indigo progress.",
+          "minAppVersion": "1.2.0",
+          "license": "GPL-3.0-or-later",
+          "homepage": "https://github.com/jakepanlilio2000/XDM-Enhanced",
+          "geometry": {
+            "componentArc": 14,
+            "buttonArc": 12,
+            "rowHeight": 56,
+            "sidebarWidth": 206
+          },
+          "accents": {
+            "dark": "#38BDF8",
+            "light": "#0284C7"
+          },
+          "colors": {
+            "dark": {
+              "windowBackground": "#0D1119",
+      "panelBackground": "#131926",
+      "sidebarBackground": "#0A0E16",
+      "sidebarBorder": "#1E293B",
+      "sidebarForeground": "#CBD5E1",
+      "sidebarSelectedForeground": "#38BDF8",
+      "sidebarSelectionBackground": "#172A44",
+      "sidebarHoverBackground": "#141D2E",
+      "listBackground": "#0F1520",
+      "listTitleForeground": "#F1F5F9",
+      "listSelectionBackground": "#172A44",
+      "listHoverBackground": "#141D2E"
+            },
+            "light": {
+              "windowBackground": "#F3F7FB",
+      "panelBackground": "#FFFFFF",
+      "sidebarBackground": "#EAF0F8",
+      "sidebarBorder": "#D1DCE8",
+      "sidebarForeground": "#334155",
+      "sidebarSelectedForeground": "#0284C7",
+      "sidebarSelectionBackground": "#DCEEFB",
+      "sidebarHoverBackground": "#E2ECF5",
+      "listBackground": "#FFFFFF",
+      "listTitleForeground": "#0F172A",
+      "listSelectionBackground": "#DCEEFB",
+      "listHoverBackground": "#F1F5F9"
+            }
+          },
+          "wallpaper": {
+            "dark": "backgrounds/modern-aurora-dark.png",
+            "light": "backgrounds/modern-aurora-light.png",
+            "mode": "fill",
+            "opacity": 0.24
+          },
+          "layout": {
+            "toolbarPosition": "top",
+"sidebarPosition": "left",
+"showStatusBar": true,
+"showSearchBar": true,
+"showMenuBar": false,
+"chromeMode": "custom"
+          },
+          "window": {
+            "customTitleBar": true,
+"hideNativeTitleBar": true,
+"titleBarHeight": 34,
+"titleText": "XDM Enhanced — Aurora",
+"titleAlignment": "center",
+"showAppIcon": true,
+"showWindowShadeButton": true,
+"windowShadeHeight": 64,
+"showStatsTicker": false,
+"controlButtonsStyle": "minimal",
+"titleBarGradientStartDark": "#0F172A",
+"titleBarGradientEndDark": "#11223A",
+"titleBarGradientStartLight": "#F0F6FC",
+"titleBarGradientEndLight": "#E2EDF8",
+"titleBarForegroundDark": "#E2E8F0",
+"titleBarForegroundLight": "#0F172A",
+"frameBorderWidth": 1,
+"frameCornerArc": 14,
+"frameBorderDark": "#263449",
+"frameBorderLight": "#CBD5E1",
+"frameHighlightDark": "#38BDF8",
+"frameHighlightLight": "#FFFFFF",
+"frameShadowDark": "#090D14",
+"frameShadowLight": "#94A3B8"
+          },
+          "widgets": {
+            "progressBarStyle": "gradient_glow",
+"progressTrackDark": "#1B2434",
+"progressTrackLight": "#E2E8F0",
+"progressFillStartDark": "#38BDF8",
+"progressFillEndDark": "#818CF8",
+"progressFillStartLight": "#0284C7",
+"progressFillEndLight": "#6366F1",
+"progressSegments": 16,
+"buttonBevelStyle": "flat"
+          },
+          "icons": {
+            "categories": {
+              "documents": "icons/categories/documents.png",
+              "compressed": "icons/categories/compressed.png",
+              "music": "icons/categories/music.png",
+              "video": "icons/categories/videos.png",
+              "videos": "icons/categories/videos.png",
+              "programs": "icons/categories/programs.png",
+              "images": "icons/categories/images.png",
+              "torrents": "icons/categories/torrents.png",
+              "all": "icons/categories/all.png"
+            },
+            "toolbar": {
+              "ADD_URL": "icons/toolbar/add.png",
+              "RESUME": "icons/toolbar/resume.png",
+              "STOP": "icons/toolbar/pause.png",
+              "DELETE": "icons/toolbar/delete.png",
+              "SETTINGS": "icons/toolbar/settings.png"
+            }
+          }
+        }

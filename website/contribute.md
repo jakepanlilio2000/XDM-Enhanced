@@ -12,9 +12,9 @@ Before opening a new issue on GitHub:
 
 ### Bug Report Checklist
 When filing a bug, please include:
-- **Application Version:** (e.g., `v1.1.0`)
+- **Application Version:** (e.g., `v1.2.0`)
 - **Operating System:** (e.g., Windows 11 x64, Ubuntu 24.04, macOS 14.5)
-- **Browser & Extension Version:** (e.g., Google Chrome 130, Chromium MV3 v3.5.4 / v1.1.0)
+- **Browser & Extension Version:** (e.g., Google Chrome 130, Chromium MV3 v3.5.4 / v1.2.0)
 - **Steps to Reproduce:** Exact URLs or actions that trigger the failure.
 - **Log Output:** Relevant error logs from `~/.xdm/logs/` or extension console.
 

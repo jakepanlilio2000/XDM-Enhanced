@@ -1,0 +1,136 @@
+        {
+          "schemaVersion": 3,
+          "id": "retro-hifi",
+          "name": "Retro Hi-Fi Console",
+          "version": "1.2.0",
+          "author": "XDM Enhanced Team",
+          "description": "Classic brushed dark-slate hardware deck featuring 3D metallic bevel frame, green phosphor LCD stats ticker, compact shade toggle, segmented LED meters, and scanlines.",
+          "minAppVersion": "1.2.0",
+          "license": "GPL-3.0-or-later",
+          "homepage": "https://github.com/jakepanlilio2000/XDM-Enhanced",
+          "geometry": {
+            "componentArc": 2,
+            "buttonArc": 2,
+            "rowHeight": 50,
+            "sidebarWidth": 196
+          },
+          "accents": {
+            "dark": "#00FF66",
+            "light": "#059669"
+          },
+          "colors": {
+            "dark": {
+              "windowBackground": "#1D202B",
+      "panelBackground": "#232634",
+      "sidebarBackground": "#191C26",
+      "sidebarBorder": "#3E4458",
+      "sidebarForeground": "#D7DCE8",
+      "sidebarSelectedForeground": "#00FF66",
+      "sidebarSelectionBackground": "#1B2E24",
+      "sidebarHoverBackground": "#262B3A",
+      "listBackground": "#12141B",
+      "listTitleForeground": "#E8FFEC",
+      "listSelectionBackground": "#1B2E24",
+      "listHoverBackground": "#1D2230"
+            },
+            "light": {
+              "windowBackground": "#E2E5EE",
+      "panelBackground": "#F1F3F8",
+      "sidebarBackground": "#D4D9E6",
+      "sidebarBorder": "#8C94A8",
+      "sidebarForeground": "#1F2430",
+      "sidebarSelectedForeground": "#047857",
+      "sidebarSelectionBackground": "#CBE8DA",
+      "sidebarHoverBackground": "#DFE3EE",
+      "listBackground": "#F8FAFC",
+      "listTitleForeground": "#141821",
+      "listSelectionBackground": "#D1FAE5",
+      "listHoverBackground": "#EDF2F7"
+            }
+          },
+          "wallpaper": {
+            "dark": "backgrounds/retro-hifi-dark.png",
+            "light": "backgrounds/retro-hifi-light.png",
+            "mode": "fill",
+            "opacity": 0.22
+          },
+          "layout": {
+            "toolbarPosition": "top",
+"sidebarPosition": "left",
+"showStatusBar": true,
+"showSearchBar": true,
+"showMenuBar": false,
+"chromeMode": "custom"
+          },
+          "window": {
+            "customTitleBar": true,
+"hideNativeTitleBar": true,
+"titleBarHeight": 32,
+"titleText": "XDM ENHANCED // HI-FI CONSOLE",
+"titleAlignment": "left",
+"showAppIcon": true,
+"showWindowShadeButton": true,
+"windowShadeHeight": 34,
+"showStatsTicker": true,
+"controlButtonsStyle": "beveled",
+"titleBarGradientStartDark": "#2F3446",
+"titleBarGradientEndDark": "#1A1D28",
+"titleBarGradientStartLight": "#C5CADB",
+"titleBarGradientEndLight": "#9EA5BC",
+"titleBarForegroundDark": "#E6FFEB",
+"titleBarForegroundLight": "#111827",
+"titleBarTexture": {
+  "dark": "backgrounds/titlebar-dark.png",
+  "light": "backgrounds/titlebar-light.png",
+  "mode": "tile",
+  "opacity": 0.45
+},
+"frameBorderWidth": 5,
+"frameCornerArc": 2,
+"frameBorderDark": "#393F52",
+"frameBorderLight": "#9CA3B8",
+"frameHighlightDark": "#858DA6",
+"frameHighlightLight": "#ECEFF7",
+"frameShadowDark": "#0F1118",
+"frameShadowLight": "#555C70"
+          },
+          "widgets": {
+            "progressBarStyle": "segmented_led",
+"progressTrackDark": "#0B110B",
+"progressTrackLight": "#1E293B",
+"progressFillStartDark": "#00FF55",
+"progressFillEndDark": "#FF3B30",
+"progressFillStartLight": "#10B981",
+"progressFillEndLight": "#EF4444",
+"progressSegments": 22,
+"buttonBevelStyle": "beveled_3d",
+"buttonSurfaceDark": "#3A3F52",
+"buttonSurfaceLight": "#D6DBE8",
+"buttonHighlightDark": "#8C95AE",
+"buttonShadowDark": "#161822",
+"buttonHighlightLight": "#FFFFFF",
+"buttonShadowLight": "#646B80",
+"showScanlines": true,
+"scanlineOpacity": 0.08
+          },
+          "icons": {
+            "categories": {
+              "documents": "icons/categories/documents.png",
+              "compressed": "icons/categories/compressed.png",
+              "music": "icons/categories/music.png",
+              "video": "icons/categories/videos.png",
+              "videos": "icons/categories/videos.png",
+              "programs": "icons/categories/programs.png",
+              "images": "icons/categories/images.png",
+              "torrents": "icons/categories/torrents.png",
+              "all": "icons/categories/all.png"
+            },
+            "toolbar": {
+              "ADD_URL": "icons/toolbar/add.png",
+              "RESUME": "icons/toolbar/resume.png",
+              "STOP": "icons/toolbar/pause.png",
+              "DELETE": "icons/toolbar/delete.png",
+              "SETTINGS": "icons/toolbar/settings.png"
+            }
+          }
+        }

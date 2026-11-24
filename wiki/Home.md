@@ -2,7 +2,7 @@
 
 **XDM Enhanced** is an independently maintained, open-source desktop download manager forked from [Xtreme Download Manager (XDM)](https://github.com/subhra74/xdm). It provides dynamic multi-segment HTTP/HTTPS download acceleration, native BitTorrent 2.0 swarm handling, modern FlatLaf dynamic theming, custom `.xdmskin` theme archives, a decoupled Java plugin platform (SPI v2), and companion browser extensions.
 
-> **Release Channel Notice:** XDM Enhanced **v1.1.0** is the current active stable release, graduating the Modular Plugin SDK v2, expanded multi-platform native installers, upstream media muxing & HLS playlist capture improvements, and networking/accessibility hardening. Please consult the [[Release Channels and Updates|Release-Channels-and-Updates]] guide for binary verification and release notes.
+> **Release Channel Notice:** XDM Enhanced **v1.2.0** is the current active stable release, introducing **Skin Schema v3** custom window chrome and widgets, 5 new sample `.xdmskin` theme packages, and **1:1 Original XDM (`subhra74/xdm`)** UI parity while preserving **Modular Plugin SDK v2** compatibility. Please consult the [[Release Channels and Updates|Release-Channels-and-Updates]] guide for binary verification and release notes.
 
 ---
 
@@ -72,7 +72,7 @@ XDM Enhanced is an independent fork of [Xtreme Download Manager (XDM)](https://g
 ## Project Portals & Repository Links
 
 - **Official Website:** [https://jakepanlilio2000.github.io/XDM-Enhanced/](https://jakepanlilio2000.github.io/XDM-Enhanced/)
-- **Latest Stable Release:** [GitHub Releases v1.1.0](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/tag/v1.1.0)
+- **Latest Stable Release:** [GitHub Releases v1.2.0](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/tag/v1.2.0)
 - **Previous Releases:** [All GitHub Releases (v1.0.x & Pre-releases)](https://github.com/jakepanlilio2000/XDM-Enhanced/releases)
 - **Source Code Repository:** [https://github.com/jakepanlilio2000/XDM-Enhanced](https://github.com/jakepanlilio2000/XDM-Enhanced)
 - **Authoritative Technical Specs:** [docs/ Specifications Directory](https://github.com/jakepanlilio2000/XDM-Enhanced/tree/master/docs)

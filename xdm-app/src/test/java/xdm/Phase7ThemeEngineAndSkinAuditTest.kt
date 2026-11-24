@@ -292,11 +292,12 @@ class Phase7ThemeEngineAndSkinAuditTest : DownloadManagerTestBase() {
         assertEquals(20, addIcon!!.iconWidth)
         assertEquals(20, addIcon.iconHeight)
 
-        // 4. Live switching between BuiltInClassic (arc: 0) and BuiltInEnhanced (arc: 8)
+        // 4. Live switching between BuiltInClassic (1:1 upstream 8px) and BuiltInEnhanced (8px)
         runOnEdt {
             SkinManager.applySkin(SkinManager.SKIN_ORIGINAL_XDM, saveConfig = false)
-            assertEquals(0, UIManager.getInt("Component.arc"))
-            assertEquals(0, UIManager.getInt("Button.arc"))
+            assertEquals(8, UIManager.getInt("Component.arc"))
+            assertEquals(8, UIManager.getInt("Button.arc"))
+            assertEquals(Color(0x1E, 0x1E, 0x1E), UIManager.getColor("XDM.list.background"))
 
             SkinManager.applySkin(SkinManager.SKIN_ENHANCED, saveConfig = false)
             assertEquals(8, UIManager.getInt("Component.arc"))

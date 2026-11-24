@@ -12,9 +12,8 @@ XDM Enhanced includes two permanent built-in theme presets:
    - Modern, high-DPI desktop interface powered by FlatLaf.
    - Dynamic **Light**, **Dark**, or **Follow System** theme switching.
    - Four vibrant accent swatches: **Emerald Green**, **Purple**, **Ocean Blue**, and **Amber Gold**.
-2. **Original XDM:**
-   - Authentic recreation of the classic Xtreme Download Manager interface.
-   - Preserves retro toolbar iconography and nostalgic layout for legacy users.
+2. **Original XDM (`classic_xdm`):**
+   - Authentic 1:1 recreation of the upstream [`subhra74/xdm`](https://github.com/subhra74/xdm) interface (`AppToolBar`, `FilterListPanel`, classic transfer list, FlatMac Dark/Light palettes).
 
 ---
 
@@ -38,9 +37,15 @@ You can set custom wallpaper artwork behind the main window and transfer lists:
 
 ## 3. Installing Custom Skin Packages (`.xdmskin`)
 
-Community designers can package full themes into `.xdmskin` archives containing custom icons, fonts, and wallpapers:
+Community designers can package full themes (Schema v1–v3) into `.xdmskin` archives containing custom window chrome, WindowShade collapse, custom progress meters, beveled buttons, scanlines, icons, fonts, and wallpapers:
 
-1. Download a `.xdmskin` package (e.g. [`cyber-neon.xdmskin`](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.1.0/cyber-neon.xdmskin)).
+1. Download a sample `.xdmskin` package from the [`v1.2.0` release](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/tag/v1.2.0) or [`sample-skins/`](https://github.com/jakepanlilio2000/XDM-Enhanced/tree/master/sample-skins):
+   - [`retro-hifi.xdmskin`](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.2.0/retro-hifi.xdmskin) (Retro Hi-Fi Console)
+   - [`anime-sakura.xdmskin`](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.2.0/anime-sakura.xdmskin) (Anime Sakura Studio)
+   - [`steampunk-brass.xdmskin`](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.2.0/steampunk-brass.xdmskin) (Steampunk Brass Works)
+   - [`modern-aurora.xdmskin`](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.2.0/modern-aurora.xdmskin) (Modern Aurora Frost)
+   - [`synthwave-outrun.xdmskin`](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.2.0/synthwave-outrun.xdmskin) (Synthwave Outrun 1986)
+   - [`cyber-neon.xdmskin`](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.2.0/cyber-neon.xdmskin) (Cyber Neon)
 2. In XDM Enhanced &rarr; **Settings > Appearance** &rarr; click **Install Skin**.
 3. Select the `.xdmskin` file.
 4. The skin is validated, installed into your local settings directory (`~/.xdm/skins/`), and applied instantly.

@@ -9,7 +9,7 @@ The **XDM Enhanced Skin Engine** provides declarative, full-application theming.
 XDM Enhanced ships with two permanent built-in skins:
 
 1. **XDM Enhanced (Default):** Modern FlatLaf theme supporting dynamic Light and Dark mode switching, adjustable border radiuses, and vibrant accent swatches (Emerald, Purple, Blue, Amber).
-2. **Original XDM:** Authentic recreation of the classic Xtreme Download Manager UI, preserving original toolbar layouts and nostalgic retro styling.
+2. **Original XDM (`classic_xdm`):** 1:1 visual and layout recreation of upstream [`subhra74/xdm`](https://github.com/subhra74/xdm) (`chromeMode: "upstream"`, `AppToolBar`, `FilterListPanel`, classic rows, FlatMac Dark/Light palettes).
 
 ---
 
@@ -108,8 +108,8 @@ To test your custom skin without restarting XDM Enhanced:
 
 ## 7. Authoritative References & Samples
 
-- **Authoritative Specification:** [`docs/SKIN_DEVELOPMENT.md` ↗](https://github.com/jakepanlilio2000/XDM-Enhanced/blob/master/docs/SKIN_DEVELOPMENT.md)
-- **Reference Skin Package in Repo:** [`sample-skins/cyber-neon.xdmskin` ↗](https://github.com/jakepanlilio2000/XDM-Enhanced/tree/master/sample-skins)
+- **Authoritative Specification (Schema v3):** [`docs/SKIN_DEVELOPMENT.md` ↗](https://github.com/jakepanlilio2000/XDM-Enhanced/blob/master/docs/SKIN_DEVELOPMENT.md)
+- **Sample Skin Packages in Repo (`sample-skins/`):** [`retro-hifi.xdmskin`](https://github.com/jakepanlilio2000/XDM-Enhanced/tree/master/sample-skins), `anime-sakura.xdmskin`, `steampunk-brass.xdmskin`, `modern-aurora.xdmskin`, `synthwave-outrun.xdmskin`, and `cyber-neon.xdmskin`
 - **Community Wiki Guide:** [Skin Developer Quick Start ↗](https://github.com/jakepanlilio2000/XDM-Enhanced/wiki/Skin-Developer-Quick-Start)
 - **Skin Schema & UI Slots:** [Wiki Schema Reference ↗](https://github.com/jakepanlilio2000/XDM-Enhanced/wiki/Skin-Schema-and-UI-Slots)
 

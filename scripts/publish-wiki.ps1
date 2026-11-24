@@ -58,7 +58,7 @@ try {
         if ($DryRun) {
             Write-Host "[DRY RUN] Dry run complete. No commit or push was executed." -ForegroundColor Yellow
         } else {
-            git commit -m "docs(wiki): synchronize 27 user and developer guide pages with v1.1.0-beta.1 release and SDK v2"
+            git commit -m "docs(wiki): synchronize 27 user and developer guide pages with v1.2.0 release and Schema v3 skins"
             git push origin master
             Write-Host "Wiki pages successfully synchronized and published!" -ForegroundColor Green
         }

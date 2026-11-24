@@ -228,6 +228,25 @@ object SkinStyleResolver {
             skin.paintWallpaper(g, width, height, isDark)
         }
 
+        // 3. Optional subtle CRT scanlines on major surfaces
+        val widgets = skin.widgetsConfig
+        if (widgets?.showScanlines == true &&
+            (region == SkinRegion.MAIN_FRAME || region == SkinRegion.DOWNLOAD_LIST || region == SkinRegion.SIDEBAR)
+        ) {
+            val g2 = g.create() as java.awt.Graphics2D
+            try {
+                val alpha = (widgets.scanlineOpacity.coerceIn(0.01f, 0.35f) * 255).toInt()
+                g2.color = Color(0, 0, 0, alpha)
+                var y = 0
+                while (y < height) {
+                    g2.drawLine(0, y, width, y)
+                    y += 3
+                }
+            } finally {
+                g2.dispose()
+            }
+        }
+
         return painted || wpPainted
     }
 }

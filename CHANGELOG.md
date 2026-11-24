@@ -5,6 +5,17 @@ All notable changes to the XDM Enhanced project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-11-24
+
+### Added
+- **Skin Schema v3 Custom Window Chrome & Widget Styling (`chromeMode: "custom"`):** Extended `SkinManifest`, `SkinPackageValidator`, `SkinStyleResolver`, `SkinnedWindowChrome`, and `SkinnedWidgets` to support custom titlebar gradients and tiled/scaled textures, live stats ticker (`LcdStatsTicker`), compact WindowShade frame collapse (`applyWindowShade`), outer 3D chassis bevels/rivets (`SkinnedFrameBorder`), custom control button sprites (`mac`, `beveled`, `anime`, `steampunk`, `minimal`, plus PNG overrides), custom progress meters (`segmented_led`, `brass_gauge`, `striped_candy`, `gradient_glow`), custom button bevel styles (`beveled_3d`, `riveted_brass`, `neon_outline`, `pill_glow`), and optional CRT scanline overlays.
+- **Five New Verified Schema v3 Sample `.xdmskin` Packages:** Added [`retro-hifi.xdmskin`](sample-skins/retro-hifi.xdmskin) (Retro Hi-Fi Console), [`anime-sakura.xdmskin`](sample-skins/anime-sakura.xdmskin) (Anime Sakura Studio), [`steampunk-brass.xdmskin`](sample-skins/steampunk-brass.xdmskin) (Steampunk Brass Works), [`modern-aurora.xdmskin`](sample-skins/modern-aurora.xdmskin) (Modern Aurora Frost), and [`synthwave-outrun.xdmskin`](sample-skins/synthwave-outrun.xdmskin) (Synthwave Outrun 1986) alongside refreshed [`cyber-neon.xdmskin`](sample-skins/cyber-neon.xdmskin).
+- **1:1 Upstream Original XDM UI Mode (`chromeMode: "upstream"`):** Added `UpstreamClassicListView` and `UpstreamClassicListRow` (`RowWashPanel` + `DownloadRowPanel`), restored upstream `AppToolBar` (`+ New`, `Clear`, `Sort`, `Settings`, `Search`, `≡`) and `FilterListPanel` (`LIBRARY`, `FILE TYPES`, `"Stay in touch"`), and aligned `BuiltInClassicXdmSkin` (`classic_xdm`) geometry and FlatMac Dark/Light palettes directly with [`subhra74/xdm`](https://github.com/subhra74/xdm).
+
+### Changed
+- **Light Skin Sidebar Selection Contrast (`CategorySidebar`):** Updated `CategoryTreeRenderer` to respect skin `Tree.selectionBackground`, `sidebarSelectedForeground`, and `sidebarForeground` tokens for crisp selection readability in light custom skins such as `anime-sakura` light mode.
+- **Skin Documentation, Showcase Website & Wiki:** Updated `docs/SKIN_DEVELOPMENT.md`, `docs/README.md`, `README.md`, `website/` (including captured screenshots of Schema v3 skins and 1:1 Original XDM mode), and `wiki/` guides for `v1.2.0`.
+
 ## [1.1.0] - 2026-11-24
 
 ### Added

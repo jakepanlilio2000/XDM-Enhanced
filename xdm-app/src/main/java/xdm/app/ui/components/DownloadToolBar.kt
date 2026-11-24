@@ -4,6 +4,8 @@ import com.formdev.flatlaf.FlatClientProperties
 import xdm.app.AppContext
 import xdm.app.I8N.text
 import xdm.app.skins.SkinManager
+import xdm.app.skins.SkinRegion
+import xdm.app.skins.SkinStyleResolver
 import xdm.app.ui.screens.AboutDialog
 import xdm.app.ui.screens.SettingsWindow
 import xdm.app.utils.FontIcon
@@ -157,7 +159,19 @@ class DownloadToolBar(
     fun updateTheme() {
         border = BorderFactory.createMatteBorder(0, 0, 1, 0, AppTheme.sidebarBorder)
         updateButtonIcons()
+        val toolButtons = listOf(
+            btnAddUrl, btnAddMagnet, btnAddTorrent,
+            btnResume, btnStop, btnStopAll,
+            btnDelete, btnDeleteCompleted, btnScheduler, btnSettings, btnSort
+        )
+        toolButtons.forEach { SkinnedButtonStyler.apply(it, SkinRegion.TOOLBAR) }
+        revalidate()
         repaint()
+    }
+
+    override fun paintComponent(g: java.awt.Graphics) {
+        val painted = SkinStyleResolver.paintRegionBackground(g, width, height, SkinRegion.TOOLBAR)
+        if (!painted) super.paintComponent(g)
     }
 
     private fun updateButtonIcons() {

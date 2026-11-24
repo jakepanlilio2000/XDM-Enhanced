@@ -1,0 +1,128 @@
+        {
+          "schemaVersion": 3,
+          "id": "anime-sakura",
+          "name": "Anime Sakura Studio",
+          "version": "1.2.0",
+          "author": "XDM Enhanced Team",
+          "description": "Dreamy anime visual-novel aesthetic with cherry blossom twilight bokeh, rounded glowing pastel cards, blossom window controls, and candy-striped progress bars.",
+          "minAppVersion": "1.2.0",
+          "license": "GPL-3.0-or-later",
+          "homepage": "https://github.com/jakepanlilio2000/XDM-Enhanced",
+          "geometry": {
+            "componentArc": 16,
+            "buttonArc": 14,
+            "rowHeight": 56,
+            "sidebarWidth": 208
+          },
+          "accents": {
+            "dark": "#FF6FAE",
+            "light": "#DB2777"
+          },
+          "colors": {
+            "dark": {
+              "windowBackground": "#191124",
+      "panelBackground": "#221731",
+      "sidebarBackground": "#140D1D",
+      "sidebarBorder": "#462A63",
+      "sidebarForeground": "#FCE7F3",
+      "sidebarSelectedForeground": "#FF85C0",
+      "sidebarSelectionBackground": "#391D4F",
+      "sidebarHoverBackground": "#2B183B",
+      "listBackground": "#160F20",
+      "listTitleForeground": "#FFF1F7",
+      "listSelectionBackground": "#391D4F",
+      "listHoverBackground": "#271737"
+            },
+            "light": {
+              "windowBackground": "#FFF5F8",
+      "panelBackground": "#FFFFFF",
+      "sidebarBackground": "#FFEBF2",
+      "sidebarBorder": "#F5C2D7",
+      "sidebarForeground": "#4A1D38",
+      "sidebarSelectedForeground": "#BE185D",
+      "sidebarSelectionBackground": "#FBCFE8",
+      "sidebarHoverBackground": "#FCE7F3",
+      "listBackground": "#FFF9FB",
+      "listTitleForeground": "#3B152C",
+      "listSelectionBackground": "#FBCFE8",
+      "listHoverBackground": "#FDF2F8"
+            }
+          },
+          "wallpaper": {
+            "dark": "backgrounds/anime-sakura-dark.png",
+            "light": "backgrounds/anime-sakura-light.png",
+            "mode": "fill",
+            "opacity": 0.25
+          },
+          "layout": {
+            "toolbarPosition": "top",
+"sidebarPosition": "left",
+"showStatusBar": true,
+"showSearchBar": true,
+"showMenuBar": true,
+"chromeMode": "custom"
+          },
+          "window": {
+            "customTitleBar": true,
+"hideNativeTitleBar": true,
+"titleBarHeight": 36,
+"titleText": "XDM Enhanced :: Sakura Studio",
+"titleAlignment": "left",
+"showAppIcon": true,
+"showWindowShadeButton": true,
+"windowShadeHeight": 66,
+"showStatsTicker": true,
+"controlButtonsStyle": "anime",
+"titleBarGradientStartDark": "#432259",
+"titleBarGradientEndDark": "#7D2460",
+"titleBarGradientStartLight": "#FBCFE8",
+"titleBarGradientEndLight": "#E9D5FF",
+"titleBarForegroundDark": "#FFF0F7",
+"titleBarForegroundLight": "#4A1D38",
+"frameBorderWidth": 3,
+"frameCornerArc": 16,
+"frameBorderDark": "#9D4EDD",
+"frameBorderLight": "#F472B6",
+"frameHighlightDark": "#FF99C8",
+"frameHighlightLight": "#FFFFFF",
+"frameShadowDark": "#240E36",
+"frameShadowLight": "#DB2777"
+          },
+          "widgets": {
+            "progressBarStyle": "striped_candy",
+"progressTrackDark": "#2A1B3D",
+"progressTrackLight": "#FBCFE8",
+"progressFillStartDark": "#FF6EC7",
+"progressFillEndDark": "#A78BFA",
+"progressFillStartLight": "#EC4899",
+"progressFillEndLight": "#8B5CF6",
+"progressSegments": 16,
+"buttonBevelStyle": "pill_glow",
+"buttonSurfaceDark": "#331D46",
+"buttonSurfaceLight": "#FCE7F3",
+"buttonHighlightDark": "#FF75B5",
+"buttonShadowDark": "#1F112B",
+"buttonHighlightLight": "#EC4899",
+"buttonShadowLight": "#F9A8D4"
+          },
+          "icons": {
+            "categories": {
+              "documents": "icons/categories/documents.png",
+              "compressed": "icons/categories/compressed.png",
+              "music": "icons/categories/music.png",
+              "video": "icons/categories/videos.png",
+              "videos": "icons/categories/videos.png",
+              "programs": "icons/categories/programs.png",
+              "images": "icons/categories/images.png",
+              "torrents": "icons/categories/torrents.png",
+              "all": "icons/categories/all.png"
+            },
+            "toolbar": {
+              "ADD_URL": "icons/toolbar/add.png",
+              "RESUME": "icons/toolbar/resume.png",
+              "STOP": "icons/toolbar/pause.png",
+              "DELETE": "icons/toolbar/delete.png",
+              "SETTINGS": "icons/toolbar/settings.png"
+            }
+          }
+        }

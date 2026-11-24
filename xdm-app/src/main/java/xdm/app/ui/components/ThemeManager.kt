@@ -253,13 +253,20 @@ object ThemeManager {
         val resolvedDark = AppMain.resolveDark(theme, SystemTheme::isDark)
         lastResolvedDark = resolvedDark
 
+        val activeSkin = SkinManager.currentSkin
+        val effectiveAccent = accent ?: if (activeSkin is xdm.app.skins.CustomSkin) {
+            if (resolvedDark) activeSkin.defaultDarkAccent else activeSkin.defaultLightAccent
+        } else {
+            null
+        }
+        val effectiveAccentFg = effectiveAccent?.let { contrastForeground(it) } ?: Color.WHITE
+
         // FlatLaf dynamic accent color callback
-        val accentFg = accent?.let { contrastForeground(it) } ?: Color.WHITE
-        if (accent != null) {
+        if (effectiveAccent != null) {
             FlatLaf.setSystemColorGetter { key ->
                 when (key) {
-                    "accent", "Component.accentColor", "XDM.accent" -> accent
-                    "accent.foreground", "Component.accentColor.foreground", "XDM.accent.foreground" -> accentFg
+                    "accent", "Component.accentColor", "XDM.accent" -> effectiveAccent
+                    "accent.foreground", "Component.accentColor.foreground", "XDM.accent.foreground" -> effectiveAccentFg
                     else -> null
                 }
             }
@@ -268,10 +275,10 @@ object ThemeManager {
         }
 
         // Setup theme Look and Feel:
-        // Original XDM and presets with square buttons use standard FlatDarkLaf/FlatLightLaf
+        // Presets with explicitly square buttons (buttonArc == 0) use standard FlatDarkLaf/FlatLightLaf
         // to strictly respect rectangular geometry, avoiding macOS-style pill buttons.
-        val activeSkin = SkinManager.currentSkin
-        val useClassicLaf = activeSkin.id == SkinManager.SKIN_ORIGINAL_XDM || activeSkin.buttonArc == 0
+        // Original XDM (subhra74/xdm) uses FlatMacDarkLaf/FlatMacLightLaf with 8px rounded chrome.
+        val useClassicLaf = activeSkin.buttonArc == 0
         if (useClassicLaf) {
             if (resolvedDark) FlatDarkLaf.setup() else FlatLightLaf.setup()
         } else {
@@ -283,18 +290,18 @@ object ThemeManager {
 
         Logger.info("Theme applied: ${if (FlatLaf.isLafDark()) "dark" else "light"} ($theme), accent: ${currentAccentHex ?: "default"}, zoom: $zoomPercent%")
 
-        if (accent != null) {
-            UIManager.put("Component.accentColor", accent)
-            UIManager.put("XDM.accent", accent)
-            UIManager.put("Button.default.background", accent)
-            UIManager.put("Button.default.borderColor", accent)
-            UIManager.put("Button.default.foreground", accentFg)
-            UIManager.put("CheckBox.icon[filled].selectedBackground", accent)
-            UIManager.put("CheckBox.icon[filled].checkmarkColor", accentFg)
-            UIManager.put("ProgressBar.foreground", accent)
-            UIManager.put("ProgressBar.selectionForeground", accentFg)
-            UIManager.put("Slider.trackValueColor", accent)
-            UIManager.put("Component.focusColor", accent)
+        if (effectiveAccent != null) {
+            UIManager.put("Component.accentColor", effectiveAccent)
+            UIManager.put("XDM.accent", effectiveAccent)
+            UIManager.put("Button.default.background", effectiveAccent)
+            UIManager.put("Button.default.borderColor", effectiveAccent)
+            UIManager.put("Button.default.foreground", effectiveAccentFg)
+            UIManager.put("CheckBox.icon[filled].selectedBackground", effectiveAccent)
+            UIManager.put("CheckBox.icon[filled].checkmarkColor", effectiveAccentFg)
+            UIManager.put("ProgressBar.foreground", effectiveAccent)
+            UIManager.put("ProgressBar.selectionForeground", effectiveAccentFg)
+            UIManager.put("Slider.trackValueColor", effectiveAccent)
+            UIManager.put("Component.focusColor", effectiveAccent)
         } else {
             UIManager.put("Component.accentColor", null)
             UIManager.put("XDM.accent", null)
@@ -317,6 +324,8 @@ object ThemeManager {
         UIManager.put("TableHeader.cellMargins", Insets(0, 10, 0, 0))
         UIManager.put("SplitPaneDivider.gripDotCount", 0)
         UIManager.put("SplitPane.dividerSize", 10)
+        UIManager.put("ProgressBarUI", SkinnedProgressBarUI::class.java.name)
+        UIManager.getDefaults()[SkinnedProgressBarUI::class.java.name] = SkinnedProgressBarUI::class.java
         if (WaylandToolkit.isActive) UIManager.put("ComboBoxUI", WaylandComboBoxUI::class.java.name)
         if (detectOS() == OS.Linux) LinuxPlaces.install()
         JOptionPane.getRootFrame().iconImages = windowIconImages

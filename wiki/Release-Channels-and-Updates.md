@@ -9,13 +9,13 @@ Understand the release channel hierarchy, update mechanisms, and cryptographic i
 XDM Enhanced distributes builds through two release channels:
 
 ### Stable Channel (Recommended)
-- **Current Version:** `v1.1.0` (Published: November 24, 2026).
+- **Current Version:** `v1.2.0` (Published: November 24, 2026).
 - **Target Audience:** General users and production environments.
-- **Characteristics:** Graduates the Modular Plugin SDK v2 (`xdm-plugin-api:1.1.0`, Specification 2.0.0), multi-platform packaging (Windows NSIS & MSI, macOS Apple Silicon & Intel DMGs, Linux native `.deb`, `.rpm`, `.pkg.tar.zst`, and portable `.tar.gz`), quarantine trust security, `--safe-mode`, HLS/DASH muxing and playlist hook capture improvements, link refresh `sourceUrl`/`sourceCookie` forwarding, early `preferIPv4Stack` toggle, and assistive-technology compatibility fixes.
+- **Characteristics:** Introduces Skin Schema v3 custom window chrome and widgets, 5 new sample `.xdmskin` packages (`retro-hifi`, `anime-sakura`, `steampunk-brass`, `modern-aurora`, `synthwave-outrun`), and 1:1 `subhra74/xdm` Original XDM UI parity alongside graduated Modular Plugin SDK v2 (`API 1.1.0` / Spec `2.0.0`), multi-platform packaging, HLS/DASH muxing fixes, and early `preferIPv4Stack`.
 
 ### Pre-release Channel (Beta / Preview)
-- **Status:** `v1.1.0` has graduated to the Stable Channel. When future minor releases enter preview, beta builds are published here.
-- **Archive:** Historical preview and beta releases (`v1.1.0-beta.1`, `v1.0.0-rc.1`, and `v1.0.0-beta.1` through `v1.0.0-beta.6`) remain archived on GitHub Releases.
+- **Status:** `v1.2.0` is active on the Stable Channel. When upcoming releases enter preview, beta builds are published here.
+- **Archive:** Historical stable and beta releases (`v1.1.0`, `v1.1.0-beta.1`, `v1.0.2`, `v1.0.0-rc.1`, and `v1.0.0-beta.1` through `v1.0.0-beta.6`) remain archived on GitHub Releases.
 
 ---
 
@@ -23,7 +23,11 @@ XDM Enhanced distributes builds through two release channels:
 
 Every official release includes a CI-generated `SHA256SUMS.txt` manifest. Verifying checksums ensures that your download was not tampered with, intercepted, or corrupted during transit.
 
-### Verified Hashes for `v1.1.0` (Current Stable)
+### Verified Hashes for `v1.2.0` (Current Stable)
+
+Download and verify against [`SHA256SUMS.txt`](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.2.0/SHA256SUMS.txt) attached to the [`v1.2.0` GitHub Release](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/tag/v1.2.0).
+
+### Verified Hashes for `v1.1.0` (Previous Stable)
 
 Download and verify against [`SHA256SUMS.txt`](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.1.0/SHA256SUMS.txt) attached to the [`v1.1.0` GitHub Release](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/tag/v1.1.0):
 
@@ -101,12 +105,12 @@ Download and verify against [`SHA256SUMS.txt`](https://github.com/jakepanlilio20
 
 #### On Windows (PowerShell):
 ```powershell
-Get-FileHash -Algorithm SHA256 .\XDM-Enhanced-Setup-v1.1.0-win-x64.exe
+Get-FileHash -Algorithm SHA256 .\XDM-Enhanced-Setup-v1.2.0-win-x64.exe
 ```
 
 #### On Linux or macOS (Terminal):
 ```bash
-sha256sum XDM-Enhanced-Setup-v1.1.0-win-x64.exe
+sha256sum XDM-Enhanced-Setup-v1.2.0-win-x64.exe
 ```
 
 ---

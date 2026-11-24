@@ -1,0 +1,128 @@
+        {
+          "schemaVersion": 3,
+          "id": "steampunk-brass",
+          "name": "Steampunk Brass Works",
+          "version": "1.2.0",
+          "author": "XDM Enhanced Team",
+          "description": "Victorian clockwork theme featuring riveted antique brass bezel, mahogany walnut chassis, amber vacuum-tube pressure gauges, and interlocking cogwheel blueprints.",
+          "minAppVersion": "1.2.0",
+          "license": "GPL-3.0-or-later",
+          "homepage": "https://github.com/jakepanlilio2000/XDM-Enhanced",
+          "geometry": {
+            "componentArc": 6,
+            "buttonArc": 6,
+            "rowHeight": 54,
+            "sidebarWidth": 210
+          },
+          "accents": {
+            "dark": "#E6A832",
+            "light": "#B45309"
+          },
+          "colors": {
+            "dark": {
+              "windowBackground": "#1B120C",
+      "panelBackground": "#241810",
+      "sidebarBackground": "#150E09",
+      "sidebarBorder": "#7A5628",
+      "sidebarForeground": "#F5DEB3",
+      "sidebarSelectedForeground": "#FFCA58",
+      "sidebarSelectionBackground": "#3E2914",
+      "sidebarHoverBackground": "#2C1D0F",
+      "listBackground": "#18100A",
+      "listTitleForeground": "#FBE8C6",
+      "listSelectionBackground": "#3E2914",
+      "listHoverBackground": "#261A10"
+            },
+            "light": {
+              "windowBackground": "#F5ECD8",
+      "panelBackground": "#FBF6EA",
+      "sidebarBackground": "#EADBC0",
+      "sidebarBorder": "#A67C46",
+      "sidebarForeground": "#3B2412",
+      "sidebarSelectedForeground": "#92400E",
+      "sidebarSelectionBackground": "#E6CFA8",
+      "sidebarHoverBackground": "#EFE0C5",
+      "listBackground": "#FBF6EA",
+      "listTitleForeground": "#2E1A0B",
+      "listSelectionBackground": "#E6CFA8",
+      "listHoverBackground": "#F3E8D2"
+            }
+          },
+          "wallpaper": {
+            "dark": "backgrounds/steampunk-brass-dark.png",
+            "light": "backgrounds/steampunk-brass-light.png",
+            "mode": "fill",
+            "opacity": 0.22
+          },
+          "layout": {
+            "toolbarPosition": "top",
+"sidebarPosition": "left",
+"showStatusBar": true,
+"showSearchBar": true,
+"showMenuBar": true,
+"chromeMode": "custom"
+          },
+          "window": {
+            "customTitleBar": true,
+"hideNativeTitleBar": true,
+"titleBarHeight": 36,
+"titleText": "CHRONO-XDM // AETHER WORKS",
+"titleAlignment": "left",
+"showAppIcon": true,
+"showWindowShadeButton": true,
+"windowShadeHeight": 64,
+"showStatsTicker": true,
+"controlButtonsStyle": "steampunk",
+"titleBarGradientStartDark": "#593816",
+"titleBarGradientEndDark": "#2A1809",
+"titleBarGradientStartLight": "#CFA360",
+"titleBarGradientEndLight": "#9C6E31",
+"titleBarForegroundDark": "#FBE8C6",
+"titleBarForegroundLight": "#241305",
+"frameBorderWidth": 6,
+"frameCornerArc": 4,
+"frameBorderDark": "#8B6328",
+"frameBorderLight": "#B3833E",
+"frameHighlightDark": "#F2C96B",
+"frameHighlightLight": "#FFF0C2",
+"frameShadowDark": "#211205",
+"frameShadowLight": "#5A3A15"
+          },
+          "widgets": {
+            "progressBarStyle": "brass_gauge",
+"progressTrackDark": "#22150A",
+"progressTrackLight": "#E5D3B3",
+"progressFillStartDark": "#B45309",
+"progressFillEndDark": "#FBBF24",
+"progressFillStartLight": "#92400E",
+"progressFillEndLight": "#D97706",
+"progressSegments": 16,
+"buttonBevelStyle": "riveted_brass",
+"buttonSurfaceDark": "#382414",
+"buttonSurfaceLight": "#E6CFA8",
+"buttonHighlightDark": "#D4AF37",
+"buttonShadowDark": "#1A1007",
+"buttonHighlightLight": "#92400E",
+"buttonShadowLight": "#B38B4D"
+          },
+          "icons": {
+            "categories": {
+              "documents": "icons/categories/documents.png",
+              "compressed": "icons/categories/compressed.png",
+              "music": "icons/categories/music.png",
+              "video": "icons/categories/videos.png",
+              "videos": "icons/categories/videos.png",
+              "programs": "icons/categories/programs.png",
+              "images": "icons/categories/images.png",
+              "torrents": "icons/categories/torrents.png",
+              "all": "icons/categories/all.png"
+            },
+            "toolbar": {
+              "ADD_URL": "icons/toolbar/add.png",
+              "RESUME": "icons/toolbar/resume.png",
+              "STOP": "icons/toolbar/pause.png",
+              "DELETE": "icons/toolbar/delete.png",
+              "SETTINGS": "icons/toolbar/settings.png"
+            }
+          }
+        }

@@ -83,6 +83,15 @@ To prevent user-selected wallpapers from rendering dialog text unreadable:
 
 ---
 
+## 6. Schema v3 Window Chrome (`window`) &amp; Widgets (`widgets`)
+
+For full window-level customization (`schemaVersion: 3` with `layout.chromeMode: "custom"`), see the complete schema in [`docs/SKIN_DEVELOPMENT.md`](https://github.com/jakepanlilio2000/XDM-Enhanced/blob/master/docs/SKIN_DEVELOPMENT.md):
+- **`layout.chromeMode`:** `"enhanced"` (default), `"upstream"` (`1:1 Original XDM`), or `"custom"` (frameless skinned titlebar &amp; frame).
+- **`window`:** Custom titlebar (`customTitleBar`, `hideNativeTitleBar`, gradients, `titleBarTexture`, `showStatsTicker`, `showWindowShadeButton`, `windowShadeHeight`, `controlButtonsStyle`: `mac`/`beveled`/`anime`/`steampunk`/`minimal`, PNG overrides, beveled outer `frameBorderWidth`).
+- **`widgets`:** Custom progress bars (`progressBarStyle`: `segmented_led`, `brass_gauge`, `striped_candy`, `gradient_glow`), custom button bevels (`buttonBevelStyle`: `beveled_3d`, `riveted_brass`, `neon_outline`, `pill_glow`), and CRT scanline overlays (`showScanlines`).
+
+---
+
 ## Related Developer Articles
 
 * [[Skin Developer Quick Start|Skin-Developer-Quick-Start]]: Packaging tutorial.

@@ -46,7 +46,7 @@
 ### Quick Links
 
 * [Project Website](https://jakepanlilio2000.github.io/XDM-Enhanced/)
-* [Latest Stable (v1.1.0)](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/tag/v1.1.0)
+* [Latest Stable (v1.2.0)](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/tag/v1.2.0)
 * [Previous Releases](https://github.com/jakepanlilio2000/XDM-Enhanced/releases)
 * [Source Code Repository](https://github.com/jakepanlilio2000/XDM-Enhanced)
 * [Authoritative Specs (docs/)](https://github.com/jakepanlilio2000/XDM-Enhanced/tree/master/docs)

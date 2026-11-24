@@ -10,7 +10,7 @@ hero:
     alt: XDM Enhanced Logo
   actions:
     - theme: brand
-      text: Download v1.1.0 (Stable)
+      text: Download v1.2.0 (Stable)
       link: /downloads
     - theme: alt
       text: Release Notes
@@ -30,8 +30,8 @@ features:
     title: Native BitTorrent 2.0 & Magnets
     details: Powered by libtorrent4j with DHT/PEX peer discovery, background magnet metadata resolution, interactive file tree filtering, and piece rechecking.
   - icon: 🎨
-    title: Full-App Custom Skinning
-    details: Choose between modern FlatLaf and authentic Original XDM presets. Create portable .xdmskin packages with custom wallpapers, modal backdrops, and live reload.
+    title: Schema v3 Custom Window & Widget Skins
+    details: Choose modern FlatLaf, 1:1 Original XDM (subhra74/xdm), or Schema v3 .xdmskin packages with custom titlebars, compact WindowShade collapse, beveled frames, custom progress meters, and wallpapers.
   - icon: 🧩
     title: Modular Plugin SDK v2
     details: Extensible public Java API (Specification 2.0.0) with download engines, proxy profile providers, VPN telemetry listeners, typed event bus, and quarantined safe mode.
@@ -47,9 +47,9 @@ features:
   <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
     <div>
       <span class="badge-pill badge-verified">Latest Stable</span>
-      <strong style="margin-left: 0.5rem; font-size: 1.05rem;">XDM Enhanced v1.1.0 is Released</strong>
+      <strong style="margin-left: 0.5rem; font-size: 1.05rem;">XDM Enhanced v1.2.0 is Released</strong>
       <p style="margin: 0.25rem 0 0 0; color: var(--vp-c-text-2); font-size: 0.9rem;">
-        Graduating the Modular Plugin SDK v2, multi-platform binaries (Windows NSIS/MSI, macOS DMGs, Linux packages), HLS playlist hook &amp; muxer fixes, source-page link refresh, early IPv4 networking, and assistive-technology startup hardening.
+        Introducing Skin Schema v3 custom window chrome and widgets, 5 new sample .xdmskin packages (retro-hifi, anime-sakura, steampunk-brass, modern-aurora, synthwave-outrun), and 1:1 Original XDM (subhra74/xdm) layout parity alongside Modular Plugin SDK v2.
       </p>
     </div>
     <div style="display: flex; gap: 0.75rem;">
@@ -88,7 +88,7 @@ XDM Enhanced is built on a high-performance modular Java runtime bundled nativel
       <p>Modern NSIS installer with bundled Liberica JDK runtime, system tray integration, start menu shortcuts, and auto-registration.</p>
     </div>
     <div style="margin-top: 1.25rem;">
-      <a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.1.0/XDM-Enhanced-Setup-v1.1.0-win-x64.exe" class="btn-primary" style="width: 100%; box-sizing: border-box;">Download Setup .EXE</a>
+      <a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.2.0/XDM-Enhanced-Setup-v1.2.0-win-x64.exe" class="btn-primary" style="width: 100%; box-sizing: border-box;">Download Setup .EXE</a>
       <div style="margin-top: 0.5rem; text-align: center; font-size: 0.8rem; color: var(--vp-c-text-3);">
         Supports Windows 10 & 11 (64-bit)
       </div>
@@ -102,7 +102,7 @@ XDM Enhanced is built on a high-performance modular Java runtime bundled nativel
       <p>Fully standalone portable archive. Unpack and run without administrative privileges or registry writes. All settings stay local.</p>
     </div>
     <div style="margin-top: 1.25rem;">
-      <a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.1.0/XDM-Enhanced-v1.1.0-windows-x64.zip" class="btn-secondary" style="width: 100%; box-sizing: border-box;">Download Portable .ZIP</a>
+      <a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.2.0/XDM-Enhanced-v1.2.0-windows-x64.zip" class="btn-secondary" style="width: 100%; box-sizing: border-box;">Download Portable .ZIP</a>
       <div style="margin-top: 0.5rem; text-align: center; font-size: 0.8rem; color: var(--vp-c-text-3);">
         Zero installation footprint
       </div>
@@ -116,7 +116,7 @@ XDM Enhanced is built on a high-performance modular Java runtime bundled nativel
       <p>Platform-agnostic executable JAR for Linux, macOS, and BSD systems with an existing 64-bit Java 25 runtime.</p>
     </div>
     <div style="margin-top: 1.25rem;">
-      <a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.1.0/xdm-app-1.1.0.jar" class="btn-secondary" style="width: 100%; box-sizing: border-box;">Download App .JAR</a>
+      <a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.2.0/xdm-app-1.2.0.jar" class="btn-secondary" style="width: 100%; box-sizing: border-box;">Download App .JAR</a>
       <div style="margin-top: 0.5rem; text-align: center; font-size: 0.8rem; color: var(--vp-c-text-3);">
         Requires 64-bit Java 25
       </div>

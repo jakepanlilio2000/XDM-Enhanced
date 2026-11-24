@@ -76,6 +76,25 @@ interface Skin {
     /** Custom layout specification. */
     val layoutConfig: SkinLayoutConfig get() = SkinLayoutConfig()
 
+    /** Custom window frame and titlebar customization specification. */
+    val windowConfig: SkinWindowConfig? get() = null
+
+    /** Custom widget chrome (progress bars, beveled buttons, scanlines). */
+    val widgetsConfig: SkinWidgetsConfig? get() = null
+
+    /** Optional custom titlebar window control icon override (minimize, maximize, restore, shade, close). */
+    fun getWindowControlIcon(actionKey: String, size: Int): Icon? = null
+
+    /** Paints an arbitrary wallpaper/texture config (e.g. titlebar texture stripe) on [g]. */
+    fun paintWallpaperConfigSurface(
+        g: java.awt.Graphics,
+        width: Int,
+        height: Int,
+        config: SkinWallpaperConfig,
+        isDark: Boolean,
+        scope: String
+    ): Boolean = false
+
     /**
      * Paints the skin's window wallpaper/background on [g] if defined.
      * Returns true if a wallpaper was painted, false otherwise.

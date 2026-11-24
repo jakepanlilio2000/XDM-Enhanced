@@ -41,27 +41,38 @@ class ClassicCardContainer : JPanel(BorderLayout()) {
 
         if (w > 0 && h > 0) {
             val isDark = FlatLaf.isLafDark()
+            val skin = xdm.app.skins.SkinManager.currentSkin
+            val isCustomSkin = skin is xdm.app.skins.CustomSkin
+            val resolvedArc = xdm.app.skins.SkinStyleResolver.resolveCardArc(
+                xdm.app.skins.SkinRegion.DOWNLOAD_LIST, 10
+            ).px
+            val customPanelBg = if (isCustomSkin) UIManager.getColor("Panel.background") else null
             val cardBg = when {
                 selected -> AppTheme.listSelectionBackground
-                hovered -> if (isDark) Color(0x28, 0x2C, 0x36) else Color(0xEE, 0xF2, 0xF8)
-                else -> if (isDark) Color(0x21, 0x25, 0x2E) else Color(0xF8, 0xF9, 0xFB)
+                hovered -> if (customPanelBg != null) {
+                    if (isDark) customPanelBg.brighter() else customPanelBg.darker()
+                } else {
+                    if (isDark) Color(0x28, 0x2C, 0x36) else Color(0xEE, 0xF2, 0xF8)
+                }
+                else -> customPanelBg ?: if (isDark) Color(0x21, 0x25, 0x2E) else Color(0xF8, 0xF9, 0xFB)
             }
             g2.color = cardBg
-            g2.fillRoundRect(x, y, w, h, cardArc, cardArc)
+            g2.fillRoundRect(x, y, w, h, resolvedArc, resolvedArc)
 
             // Card border
             if (selected) {
                 g2.color = AppTheme.accent
                 g2.stroke = BasicStroke(2f.px)
-                g2.drawRoundRect(x + 1, y + 1, w - 2, h - 2, cardArc, cardArc)
+                g2.drawRoundRect(x + 1, y + 1, w - 2, h - 2, resolvedArc, resolvedArc)
             } else if (hovered) {
-                g2.color = if (isDark) Color(0x48, 0x50, 0x60) else Color(0xB8, 0xC4, 0xD2)
+                g2.color = AppTheme.accent
                 g2.stroke = BasicStroke(1f)
-                g2.drawRoundRect(x, y, w - 1, h - 1, cardArc, cardArc)
+                g2.drawRoundRect(x, y, w - 1, h - 1, resolvedArc, resolvedArc)
             } else {
-                g2.color = if (isDark) Color(0x32, 0x37, 0x42) else Color(0xDA, 0xE0, 0xE7)
+                val baseBorder = if (isCustomSkin) AppTheme.sidebarBorder else if (isDark) Color(0x32, 0x37, 0x42) else Color(0xDA, 0xE0, 0xE7)
+                g2.color = baseBorder
                 g2.stroke = BasicStroke(1f)
-                g2.drawRoundRect(x, y, w - 1, h - 1, cardArc, cardArc)
+                g2.drawRoundRect(x, y, w - 1, h - 1, resolvedArc, resolvedArc)
             }
         }
         g2.dispose()
@@ -393,6 +404,11 @@ class ClassicCardPanel {
         btnResume.isVisible = ent.canResume
 
         // Progress bar
+        val pbH = if (xdm.app.skins.SkinManager.currentSkin.widgetsConfig?.progressBarStyle?.equals("flat", true) == false) 11.px else 8.px
+        if (prg.preferredSize.height != pbH) {
+            prg.preferredSize = Dimension(100, pbH)
+            prg.maximumSize = Dimension(Int.MAX_VALUE, pbH)
+        }
         prg.foreground = accent
         if (ent.status == RecordStatus.MOVING || ent.status == RecordStatus.ASSEMBLING) {
             prg.isIndeterminate = true

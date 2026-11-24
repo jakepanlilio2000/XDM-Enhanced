@@ -18,7 +18,7 @@
 > [🌐 Official Website](https://jakepanlilio2000.github.io/XDM-Enhanced/) • 
 > [📖 Documentation & Guides](https://jakepanlilio2000.github.io/XDM-Enhanced/docs/) • 
 > [📚 Community Wiki](https://github.com/jakepanlilio2000/XDM-Enhanced/wiki) • 
-> [📦 Latest Stable (v1.1.0)](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/tag/v1.1.0) • 
+> [📦 Latest Stable (v1.2.0)](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/tag/v1.2.0) • 
 > [💬 Issue Tracker](https://github.com/jakepanlilio2000/XDM-Enhanced/issues)
 
 ---
@@ -56,8 +56,8 @@ The original upstream documentation is preserved in [README.UPSTREAM.md](README.
 - **Per-Site Exclusions:** One-click domain blocking to pause download interception on sensitive websites.
 
 ### 4. Appearance and Customization
-- **Built-in & Custom Skins:** Seamlessly switch between the modern **XDM Enhanced** look and authentic **Original XDM** classic look, or install community-created `.xdmskin` packages.
-- **Declarative Skin Architecture:** Customize window backgrounds, wallpapers, toolbar icons, category sidebar icons, buttons, fonts, border radii, and accent colors.
+- **Built-in & Custom Skins:** Seamlessly switch between the modern **XDM Enhanced** theme, an authentic **1:1 Original XDM** (`subhra74/xdm`) classic preset, or install community-created `.xdmskin` packages (including 6 sample skins under `sample-skins/`).
+- **Declarative Skin Architecture (Schema v3):** Customize window titlebars, compact WindowShade collapse, beveled/riveted outer frames, control icons, progress meters, wallpapers, toolbar/category icons, fonts, border radii, and accent colors.
 - **Dual Presentation Modes:** Toggle between a high-density **Table View** with sortable columns (Name, Size, Status, Progress, Speed, ETA) and an informational **Classic Cards** view.
 - **Segment Progress Visualization:** Multi-segment colored visualization bar depicting downloaded, active, and pending chunks alongside a collapsible connection table.
 - **Dynamic Theming (FlatLaf):** Instant switching between Light, Dark, and System modes with customizable accent color palettes.
@@ -182,9 +182,9 @@ Pre-compiled packages and release assets are available on the [GitHub Releases p
 XDM Enhanced provides public extension points allowing developers to build custom visual skins and functional plugins without modifying core application sources.
 
 ### Custom Skins (`.xdmskin`)
-Skins are packaged as standard ZIP archives containing a declarative `skin.json` manifest and localized graphic assets. Supported customizations include window backgrounds, toolbar icons, category icons, buttons, fonts, and geometry.
+Skins are packaged as standard ZIP archives containing a declarative `skin.json` manifest and localized graphic assets. Supported customizations include custom titlebars and window chrome, compact WindowShade mode, beveled frames, custom progress meters, wallpapers, toolbar/category icons, fonts, and geometry.
 - Complete documentation: [Skin Development Guide](docs/SKIN_DEVELOPMENT.md)
-- Reference implementation: [`sample-skins/cyber-neon.xdmskin`](sample-skins/cyber-neon.xdmskin)
+- Showcase sample packages: [`sample-skins/`](sample-skins/) (`anime-sakura`, `modern-aurora`, `steampunk-brass`, `retro-hifi`, `synthwave-outrun`, `cyber-neon`)
 
 ### Plugin Developer SDK (`xdm-plugin-api`)
 The public plugin API allows developers to build composable extensions across download protocols, file processors, network proxies, VPN telemetry, and UI actions.

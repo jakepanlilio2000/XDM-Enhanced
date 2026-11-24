@@ -129,8 +129,8 @@ object SkinPackageValidator {
         val warnings = mutableListOf<String>()
 
         // 1. Schema Version validation
-        if (manifest.schemaVersion !in 1..2) {
-            errors.add("Unsupported schemaVersion '${manifest.schemaVersion}'. Supported versions are 1 and 2.")
+        if (manifest.schemaVersion !in 1..3) {
+            errors.add("Unsupported schemaVersion '${manifest.schemaVersion}'. Supported versions are 1, 2, and 3.")
         }
 
         // 2. Identifier validation
@@ -175,6 +175,80 @@ object SkinPackageValidator {
         }
         if (l.sidebarPosition !in listOf("left", "right", "hidden")) {
             errors.add("sidebarPosition must be 'left', 'right', or 'hidden' (was '${l.sidebarPosition}').")
+        }
+        if (l.chromeMode !in listOf("enhanced", "upstream", "custom")) {
+            errors.add("chromeMode must be 'enhanced', 'upstream', or 'custom' (was '${l.chromeMode}').")
+        }
+
+        // 6b. Schema v3 Window & Widgets validation
+        manifest.window?.let { w ->
+            if (w.titleBarHeight !in 20..72) {
+                errors.add("window.titleBarHeight must be between 20 and 72 (was ${w.titleBarHeight}).")
+            }
+            if (w.windowShadeHeight !in 24..160) {
+                errors.add("window.windowShadeHeight must be between 24 and 160 (was ${w.windowShadeHeight}).")
+            }
+            if (w.frameBorderWidth !in 0..12) {
+                errors.add("window.frameBorderWidth must be between 0 and 12 (was ${w.frameBorderWidth}).")
+            }
+            if (w.frameCornerArc !in 0..36) {
+                errors.add("window.frameCornerArc must be between 0 and 36 (was ${w.frameCornerArc}).")
+            }
+            if (w.titleAlignment !in listOf("left", "center")) {
+                errors.add("window.titleAlignment must be 'left' or 'center' (was '${w.titleAlignment}').")
+            }
+            if (w.controlButtonsStyle !in listOf("mac", "beveled", "anime", "steampunk", "minimal")) {
+                errors.add("window.controlButtonsStyle is invalid (was '${w.controlButtonsStyle}').")
+            }
+            listOfNotNull(
+                w.titleBarBackgroundDark?.let { "titleBarBackgroundDark" to it },
+                w.titleBarBackgroundLight?.let { "titleBarBackgroundLight" to it },
+                w.titleBarGradientStartDark?.let { "titleBarGradientStartDark" to it },
+                w.titleBarGradientEndDark?.let { "titleBarGradientEndDark" to it },
+                w.titleBarGradientStartLight?.let { "titleBarGradientStartLight" to it },
+                w.titleBarGradientEndLight?.let { "titleBarGradientEndLight" to it },
+                w.titleBarForegroundDark?.let { "titleBarForegroundDark" to it },
+                w.titleBarForegroundLight?.let { "titleBarForegroundLight" to it },
+                w.frameBorderDark?.let { "frameBorderDark" to it },
+                w.frameBorderLight?.let { "frameBorderLight" to it },
+                w.frameHighlightDark?.let { "frameHighlightDark" to it },
+                w.frameHighlightLight?.let { "frameHighlightLight" to it },
+                w.frameShadowDark?.let { "frameShadowDark" to it },
+                w.frameShadowLight?.let { "frameShadowLight" to it }
+            ).forEach { (prop, color) ->
+                if (!HEX_COLOR_REGEX.matches(color)) {
+                    errors.add("window.$prop must be a valid #RRGGBB or #AARRGGBB hex color (was '$color').")
+                }
+            }
+        }
+        manifest.widgets?.let { wg ->
+            if (wg.progressBarStyle !in listOf("flat", "segmented_led", "gradient_glow", "brass_gauge", "striped_candy")) {
+                errors.add("widgets.progressBarStyle is invalid (was '${wg.progressBarStyle}').")
+            }
+            if (wg.progressSegments !in 4..48) {
+                errors.add("widgets.progressSegments must be between 4 and 48 (was ${wg.progressSegments}).")
+            }
+            if (wg.buttonBevelStyle !in listOf("flat", "beveled_3d", "pill_glow", "riveted_brass", "neon_outline")) {
+                errors.add("widgets.buttonBevelStyle is invalid (was '${wg.buttonBevelStyle}').")
+            }
+            listOfNotNull(
+                wg.progressTrackDark?.let { "progressTrackDark" to it },
+                wg.progressTrackLight?.let { "progressTrackLight" to it },
+                wg.progressFillStartDark?.let { "progressFillStartDark" to it },
+                wg.progressFillEndDark?.let { "progressFillEndDark" to it },
+                wg.progressFillStartLight?.let { "progressFillStartLight" to it },
+                wg.progressFillEndLight?.let { "progressFillEndLight" to it },
+                wg.buttonSurfaceDark?.let { "buttonSurfaceDark" to it },
+                wg.buttonSurfaceLight?.let { "buttonSurfaceLight" to it },
+                wg.buttonHighlightDark?.let { "buttonHighlightDark" to it },
+                wg.buttonShadowDark?.let { "buttonShadowDark" to it },
+                wg.buttonHighlightLight?.let { "buttonHighlightLight" to it },
+                wg.buttonShadowLight?.let { "buttonShadowLight" to it }
+            ).forEach { (prop, color) ->
+                if (!HEX_COLOR_REGEX.matches(color)) {
+                    errors.add("widgets.$prop must be a valid #RRGGBB or #AARRGGBB hex color (was '$color').")
+                }
+            }
         }
 
         // 7. Schema v2 Regions validation
@@ -260,6 +334,16 @@ object SkinPackageValidator {
                 checkAssetFile(r.wallpaper?.dark, "region '$slotId' dark wallpaper")
                 checkAssetFile(r.wallpaper?.light, "region '$slotId' light wallpaper")
                 checkAssetFile(r.customIcon, "region '$slotId' custom icon")
+            }
+
+            manifest.window?.let { w ->
+                checkAssetFile(w.titleBarTexture?.dark, "window dark titleBarTexture")
+                checkAssetFile(w.titleBarTexture?.light, "window light titleBarTexture")
+                checkAssetFile(w.controlIcons.minimize, "window minimize control icon")
+                checkAssetFile(w.controlIcons.maximize, "window maximize control icon")
+                checkAssetFile(w.controlIcons.restore, "window restore control icon")
+                checkAssetFile(w.controlIcons.shade, "window shade control icon")
+                checkAssetFile(w.controlIcons.close, "window close control icon")
             }
         }
 

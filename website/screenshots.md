@@ -177,3 +177,139 @@ Every screenshot below is a **Verified Runtime Capture** taken directly from act
     </div>
   </div>
 </div>
+
+---
+
+## 4. Custom Window Skins (Schema v3) &amp; 1:1 Original XDM Preset
+
+<div class="gallery-grid">
+  <div class="gallery-card">
+    <img src="/assets/site/screenshots/real/skin-classic-xdm-dark.png" alt="Original XDM 1:1 Preset in Dark Mode" loading="lazy" />
+    <div class="gallery-card-content">
+      <span class="badge-pill badge-verified">1:1 Upstream Parity</span>
+      <h4>Original XDM — Dark Mode</h4>
+      <p>1:1 match of upstream <code>subhra74/xdm</code> layout with AppToolBar, FilterListPanel, and FlatMac Dark styling.</p>
+    </div>
+    <div class="gallery-card-footer">
+      <span>Built-in</span>
+      <span>classic_xdm</span>
+    </div>
+  </div>
+
+  <div class="gallery-card">
+    <img src="/assets/site/screenshots/real/skin-classic-xdm-light.png" alt="Original XDM 1:1 Preset in Light Mode" loading="lazy" />
+    <div class="gallery-card-content">
+      <span class="badge-pill badge-verified">1:1 Upstream Parity</span>
+      <h4>Original XDM — Light Mode</h4>
+      <p>Clean upstream FlatMac Light presentation preserving classic sidebar grouping and transfer rows.</p>
+    </div>
+    <div class="gallery-card-footer">
+      <span>Built-in</span>
+      <span>classic_xdm</span>
+    </div>
+  </div>
+
+  <div class="gallery-card">
+    <img src="/assets/site/screenshots/real/skin-retro-hifi-dark.png" alt="Retro Hi-Fi Console Custom Skin" loading="lazy" />
+    <div class="gallery-card-content">
+      <span class="badge-pill badge-verified">Schema v3</span>
+      <h4>Retro Hi-Fi Console</h4>
+      <p>Brushed 3D bevel frame, custom titlebar with live LCD ticker, segmented LED progress bars, and scanlines.</p>
+    </div>
+    <div class="gallery-card-footer">
+      <span>Custom Chrome</span>
+      <span>retro-hifi.xdmskin</span>
+    </div>
+  </div>
+
+  <div class="gallery-card">
+    <img src="/assets/site/screenshots/real/skin-retro-hifi-shaded.png" alt="Retro Hi-Fi Console WindowShade Collapse Mode" loading="lazy" />
+    <div class="gallery-card-content">
+      <span class="badge-pill badge-verified">WindowShade Mode</span>
+      <h4>Compact Frame Collapse</h4>
+      <p>Double-clicking or toggling the shade button collapses custom-chrome frames to a compact header strip.</p>
+    </div>
+    <div class="gallery-card-footer">
+      <span>34px Shade</span>
+      <span>retro-hifi.xdmskin</span>
+    </div>
+  </div>
+
+  <div class="gallery-card">
+    <img src="/assets/site/screenshots/real/skin-anime-sakura-dark.png" alt="Anime Sakura Studio Dark Mode" loading="lazy" />
+    <div class="gallery-card-content">
+      <span class="badge-pill badge-verified">Schema v3</span>
+      <h4>Anime Sakura Studio — Dark</h4>
+      <p>Twilight blossom backdrop, pastel anime window controls, candy-striped progress bars, and glowing pill buttons.</p>
+    </div>
+    <div class="gallery-card-footer">
+      <span>Custom Chrome</span>
+      <span>anime-sakura.xdmskin</span>
+    </div>
+  </div>
+
+  <div class="gallery-card">
+    <img src="/assets/site/screenshots/real/skin-anime-sakura-light.png" alt="Anime Sakura Studio Light Mode" loading="lazy" />
+    <div class="gallery-card-content">
+      <span class="badge-pill badge-verified">Schema v3</span>
+      <h4>Anime Sakura Studio — Light</h4>
+      <p>Soft petal light theme with crisp dark-crimson sidebar selection highlighting and striped progress meters.</p>
+    </div>
+    <div class="gallery-card-footer">
+      <span>Custom Chrome</span>
+      <span>anime-sakura.xdmskin</span>
+    </div>
+  </div>
+
+  <div class="gallery-card">
+    <img src="/assets/site/screenshots/real/skin-steampunk-brass-dark.png" alt="Steampunk Brass Works Custom Skin" loading="lazy" />
+    <div class="gallery-card-content">
+      <span class="badge-pill badge-verified">Schema v3</span>
+      <h4>Steampunk Brass Works</h4>
+      <p>Mahogany and riveted antique brass bezel, Victorian controls, brass pressure gauges, and gear blueprint wallpaper.</p>
+    </div>
+    <div class="gallery-card-footer">
+      <span>Custom Chrome</span>
+      <span>steampunk-brass.xdmskin</span>
+    </div>
+  </div>
+
+  <div class="gallery-card">
+    <img src="/assets/site/screenshots/real/skin-modern-aurora-dark.png" alt="Modern Aurora Frost Custom Skin" loading="lazy" />
+    <div class="gallery-card-content">
+      <span class="badge-pill badge-verified">Schema v3</span>
+      <h4>Modern Aurora Frost</h4>
+      <p>Minimal centered custom header chrome, northern-lights backdrop ribbons, and luminous gradient progress bars.</p>
+    </div>
+    <div class="gallery-card-footer">
+      <span>Custom Chrome</span>
+      <span>modern-aurora.xdmskin</span>
+    </div>
+  </div>
+
+  <div class="gallery-card">
+    <img src="/assets/site/screenshots/real/skin-synthwave-outrun-dark.png" alt="Synthwave Outrun 1986 Custom Skin" loading="lazy" />
+    <div class="gallery-card-content">
+      <span class="badge-pill badge-verified">Schema v3</span>
+      <h4>Synthwave Outrun 1986</h4>
+      <p>Ultraviolet sunset laser grid artwork, neon-outlined toolbar buttons, mac-style controls, and CRT scanline texture.</p>
+    </div>
+    <div class="gallery-card-footer">
+      <span>Custom Chrome</span>
+      <span>synthwave-outrun.xdmskin</span>
+    </div>
+  </div>
+
+  <div class="gallery-card">
+    <img src="/assets/site/screenshots/real/skin-cyber-neon-dark.png" alt="Cyber Neon Schema v2 Custom Skin" loading="lazy" />
+    <div class="gallery-card-content">
+      <span class="badge-pill badge-verified">Schema v2</span>
+      <h4>Cyber Neon Reference</h4>
+      <p>Region-scoped Schema v2 cyberpunk theme styling all 13 UI zones with sharp cyber accents and custom icons.</p>
+    </div>
+    <div class="gallery-card-footer">
+      <span>13 Regions</span>
+      <span>cyber-neon.xdmskin</span>
+    </div>
+  </div>
+</div>

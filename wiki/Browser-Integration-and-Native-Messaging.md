@@ -36,7 +36,7 @@ XDM Enhanced uses a resilient two-tier architecture for browser integration:
   ```json
   {
     "status": "ready",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "port": 8597,
     "fileTypes": [".zip", ".rar", ".exe", ".iso", ".mp4", ".mkv"],
     "blockedSites": ["*.bank.example.com"]

@@ -15,15 +15,19 @@ class RowWashPanel : JPanel() {
     var hovered = false
 
     override fun paintComponent(g: Graphics) {
-        g.color = AppTheme.listBackground
-        g.fillRect(0, 0, width, height)
+        if (!xdm.app.skins.SkinManager.currentSkin.hasWallpaper()) {
+            g.color = AppTheme.listBackground
+            g.fillRect(0, 0, width, height)
+        }
         if (!selected && !hovered) return
         val g2 = g.create() as Graphics2D
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
         val x = 4.px
         // The row's bottom border is the gap between rows; keep the card off it.
         val h = height - 3.px
-        val arc = 12.px
+        val arc = xdm.app.skins.SkinStyleResolver.resolveCardArc(
+            xdm.app.skins.SkinRegion.DOWNLOAD_LIST, 12
+        ).px
         g2.color = if (selected) AppTheme.listSelectionBackground else AppTheme.listHoverBackground
         g2.fillRoundRect(x, 0, width - 2 * x, h, arc, arc)
         g2.dispose()

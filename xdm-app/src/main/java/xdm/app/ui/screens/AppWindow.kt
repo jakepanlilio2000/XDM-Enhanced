@@ -31,10 +31,17 @@ class AppWindow(image: Image, startHidden: Boolean = false) : JFrame(), ActionLi
     internal var listView: DownloadListView = createListView(MainListViewFilter(FilterState.All, null, ""))
     private lateinit var listContainer: JPanel
     private lateinit var rightPanel: JPanel
+    private lateinit var toolbarHolder: JPanel
     private lateinit var toolbar: DownloadToolBar
+    private lateinit var upstreamToolbar: AppToolBar
     internal lateinit var sidebar: CategorySidebar
+    private lateinit var upstreamSidebar: FilterListPanel
     private lateinit var statusBar: DownloadStatusBar
+    private lateinit var southPanel: JPanel
     private lateinit var splitPane: JSplitPane
+    private lateinit var titleBar: SkinnedTitleBar
+    private lateinit var mainMenuBar: JMenuBar
+    private var preShadeSize: Dimension? = null
     private var defaultDividerSize = 5
     private var chkSidebar: JCheckBoxMenuItem? = null
     private val updatePanel = UpdatePanel()
@@ -51,8 +58,13 @@ class AppWindow(image: Image, startHidden: Boolean = false) : JFrame(), ActionLi
     private var optModernCardsItem: JRadioButtonMenuItem? = null
 
     init {
-        title = XDM_WINDOW_TITLE
+        title = if (SkinManager.currentSkin.layoutConfig.chromeMode.equals("upstream", ignoreCase = true)) {
+            "Xtreme Download Manager"
+        } else {
+            XDM_WINDOW_TITLE
+        }
         iconImages = windowIconImages
+        SkinnedFrameChromeHelper.configurePreDisplay(this, SkinManager.currentSkin)
         val os = detectOS()
         if (os == OS.Windows) {
             getRootPane().putClientProperty("JRootPane.titleBarBackground", AppTheme.sidebarBackground)
@@ -149,10 +161,18 @@ class AppWindow(image: Image, startHidden: Boolean = false) : JFrame(), ActionLi
         contentPane = SkinBackgroundPanel(BorderLayout(), region = SkinRegion.MAIN_FRAME)
         createMainMenu()
 
+        titleBar = SkinnedTitleBar(this) { shaded -> applyWindowShade(shaded) }
+        add(titleBar, BorderLayout.NORTH)
+
         sidebar = CategorySidebar { state, category ->
             listView.filterStateChanged(state)
             listView.filterCategoryChanged(category)
         }
+
+        upstreamSidebar = FilterListPanel(
+            stateChanged = { listView.filterStateChanged(it) },
+            categoryChanged = { listView.filterCategoryChanged(it) }
+        )
 
         toolbar = DownloadToolBar(
             onSearch = { listView.searchTextChanged(it) },
@@ -172,6 +192,14 @@ class AppWindow(image: Image, startHidden: Boolean = false) : JFrame(), ActionLi
             onSettingsSaved = { applyListSelectionMode() }
         )
 
+        upstreamToolbar = AppToolBar(
+            searchCallback = { listView.searchTextChanged(it) },
+            buttonCallback = this,
+            sortCallback = { key, asc -> listView.sort(key, asc) },
+            settingsSavedCallback = { applyListSelectionMode() }
+        )
+        upstreamToolbar.setMultiSelectView(false)
+
         statusBar = DownloadStatusBar()
 
         wireListView()
@@ -188,14 +216,19 @@ class AppWindow(image: Image, startHidden: Boolean = false) : JFrame(), ActionLi
             add(listView.component)
         }
 
+        toolbarHolder = JPanel(BorderLayout()).apply {
+            isOpaque = false
+            add(toolbar, BorderLayout.CENTER)
+        }
+
         rightPanel = JPanel(BorderLayout()).apply {
-            add(toolbar, BorderLayout.NORTH)
+            add(toolbarHolder, BorderLayout.NORTH)
             add(listContainer, BorderLayout.CENTER)
             background = AppTheme.listBackground
         }
 
         val showSidebar = AppContext.config.showCategoriesSidebar
-        val initialLoc = AppContext.config.sidebarDividerLocation.takeIf { it > 50 } ?: 210.px
+        val initialLoc = AppContext.config.sidebarDividerLocation.takeIf { it > 50 } ?: SkinManager.currentSkin.sidebarWidth.px
         splitPane = JSplitPane(JSplitPane.HORIZONTAL_SPLIT).apply {
             border = MatteBorder(1, 0, 0, 0, AppTheme.sidebarBorder)
             defaultDividerSize = dividerSize
@@ -216,7 +249,7 @@ class AppWindow(image: Image, startHidden: Boolean = false) : JFrame(), ActionLi
 
         add(splitPane, BorderLayout.CENTER)
 
-        val southPanel = JPanel().apply {
+        southPanel = JPanel().apply {
             layout = BoxLayout(this, BoxLayout.Y_AXIS)
             add(statusBar)
             add(bannerStack.apply {
@@ -232,6 +265,7 @@ class AppWindow(image: Image, startHidden: Boolean = false) : JFrame(), ActionLi
             override fun windowClosing(e: WindowEvent) {
                 ThemeManager.removeThemeListener(themeChangeListener)
                 statusBar.dispose()
+                titleBar.stopStatsTicker()
             }
         })
         ThemeManager.addThemeListener(themeChangeListener)
@@ -240,22 +274,34 @@ class AppWindow(image: Image, startHidden: Boolean = false) : JFrame(), ActionLi
 
         TorrentUiBridge.syncSavedTorrents()
         TorrentUiBridge.applyTorrentConfig()
+
+        upstreamSidebar.countsFrom { listView.records }
+        updateTheme()
     }
+
+    private fun isUpstreamChrome(): Boolean =
+        SkinManager.currentSkin.layoutConfig.chromeMode.equals("upstream", ignoreCase = true)
+
+    private fun activeSidebarComponent(): Component =
+        if (isUpstreamChrome()) upstreamSidebar.component else sidebar
 
     private fun createListView(filter: MainListViewFilter): DownloadListView =
         when (AppContext.config.listSelectionMode) {
             ListSelectionMode.TABLE -> DownloadTableView(filter)
-            ListSelectionMode.CLASSIC -> ClassicListView(filter)
+            ListSelectionMode.CLASSIC -> if (isUpstreamChrome()) UpstreamClassicListView(filter) else ClassicListView(filter)
             ListSelectionMode.MODERN -> ModernListView(filter)
         }
 
     private fun wireListView() {
         listView.addRowsChangedListener {
             sidebar.scheduleRecount()
+            upstreamSidebar.scheduleRecount()
             toolbar.refreshGlobalStates()
+            titleBar.updateStats()
         }
         listView.bulkSelectionCallback = {
             toolbar.updateSelectionState(listView.selectedItems)
+            upstreamToolbar.setMultiSelectView(listView.selectedRowCount > 1)
         }
     }
 
@@ -273,7 +319,7 @@ class AppWindow(image: Image, startHidden: Boolean = false) : JFrame(), ActionLi
     internal fun applyListSelectionMode() {
         val wanted = when (AppContext.config.listSelectionMode) {
             ListSelectionMode.TABLE -> DownloadTableView::class
-            ListSelectionMode.CLASSIC -> ClassicListView::class
+            ListSelectionMode.CLASSIC -> if (isUpstreamChrome()) UpstreamClassicListView::class else ClassicListView::class
             ListSelectionMode.MODERN -> ModernListView::class
         }
         syncViewModeMenu()
@@ -287,29 +333,33 @@ class AppWindow(image: Image, startHidden: Boolean = false) : JFrame(), ActionLi
             listView.selectByIds(oldSelectedIds)
         }
         toolbar.updateSelectionState(listView.selectedItems)
+        upstreamToolbar.setMultiSelectView(listView.selectedRowCount > 1)
         listContainer.removeAll()
         listContainer.add(listView.component)
         listContainer.revalidate()
         listContainer.repaint()
         sidebar.scheduleRecount()
+        upstreamSidebar.countsFrom { listView.records }
     }
 
     fun setSidebarVisible(visible: Boolean) {
         val layout = SkinManager.currentSkin.layoutConfig
+        val activeSidebar = activeSidebarComponent()
         if (visible && !layout.sidebarPosition.equals("hidden", ignoreCase = true)) {
             if (layout.sidebarPosition.equals("right", ignoreCase = true)) {
                 splitPane.leftComponent = rightPanel
-                splitPane.rightComponent = sidebar
+                splitPane.rightComponent = activeSidebar
             } else {
-                splitPane.leftComponent = sidebar
+                splitPane.leftComponent = activeSidebar
                 splitPane.rightComponent = rightPanel
             }
-            sidebar.isVisible = true
-            val loc = AppContext.config.sidebarDividerLocation.takeIf { it > 50 } ?: 210.px
+            activeSidebar.isVisible = true
+            val defaultW = if (isUpstreamChrome()) 190.px else 210.px
+            val loc = AppContext.config.sidebarDividerLocation.takeIf { it > 50 } ?: defaultW
             splitPane.dividerSize = defaultDividerSize
             splitPane.dividerLocation = loc
             SwingUtilities.invokeLater {
-                if (AppContext.config.showCategoriesSidebar && (splitPane.leftComponent != null || splitPane.rightComponent == sidebar)) {
+                if (AppContext.config.showCategoriesSidebar && (splitPane.leftComponent != null || splitPane.rightComponent == activeSidebar)) {
                     splitPane.dividerLocation = loc
                 }
             }
@@ -334,7 +384,29 @@ class AppWindow(image: Image, startHidden: Boolean = false) : JFrame(), ActionLi
         splitPane.repaint()
     }
 
-    fun isSidebarVisible(): Boolean = AppContext.config.showCategoriesSidebar && (splitPane.leftComponent == sidebar || splitPane.rightComponent == sidebar)
+    fun isSidebarVisible(): Boolean {
+        val activeSidebar = activeSidebarComponent()
+        return AppContext.config.showCategoriesSidebar &&
+            (splitPane.leftComponent == activeSidebar || splitPane.rightComponent == activeSidebar)
+    }
+
+    fun applyWindowShade(shaded: Boolean) {
+        titleBar.setShadedState(shaded)
+        splitPane.isVisible = !shaded
+        southPanel.isVisible = !shaded
+        val cfg = SkinManager.currentSkin.windowConfig
+        if (shaded) {
+            if (preShadeSize == null) preShadeSize = size
+            val menuH = if (mainMenuBar.isVisible) mainMenuBar.preferredSize.height else 0
+            val shadeH = (cfg?.windowShadeHeight ?: 58).px + menuH + (contentPane.insets.top + contentPane.insets.bottom)
+            setSize(width, maxOf(shadeH, (cfg?.titleBarHeight ?: 34).px + 8))
+        } else {
+            preShadeSize?.let { setSize(it) }
+            preShadeSize = null
+        }
+        revalidate()
+        repaint()
+    }
 
     fun updateTheme() {
         val os = detectOS()
@@ -343,37 +415,62 @@ class AppWindow(image: Image, startHidden: Boolean = false) : JFrame(), ActionLi
         }
         val skin = SkinManager.currentSkin
         val layout = skin.layoutConfig
+        val winCfg = skin.windowConfig
+        val upstream = isUpstreamChrome()
 
-        // Toolbar position
+        title = winCfg?.titleText?.takeIf { it.isNotBlank() }
+            ?: if (upstream) "Xtreme Download Manager" else XDM_WINDOW_TITLE
+
+        mainMenuBar.isVisible = layout.showMenuBar
+        titleBar.updateFromSkin()
+        (contentPane as? JComponent)?.border = if ((winCfg?.frameBorderWidth ?: 0) > 0) SkinnedFrameBorder() else null
+
+        // Reset WindowShade automatically if skin stops defining customTitleBar
+        if (titleBar.isShaded && winCfg?.customTitleBar != true) {
+            applyWindowShade(false)
+        }
+
+        // Toolbar swap & position
+        val activeToolbarComp: Component = if (upstream) upstreamToolbar.component else toolbar
+        toolbarHolder.removeAll()
+        toolbarHolder.add(activeToolbarComp, BorderLayout.CENTER)
         when (layout.toolbarPosition.lowercase()) {
             "bottom" -> {
-                rightPanel.remove(toolbar)
-                rightPanel.add(toolbar, BorderLayout.SOUTH)
-                toolbar.isVisible = true
+                rightPanel.remove(toolbarHolder)
+                rightPanel.add(toolbarHolder, BorderLayout.SOUTH)
+                toolbarHolder.isVisible = true
             }
             "hidden" -> {
-                toolbar.isVisible = false
+                toolbarHolder.isVisible = false
             }
             else -> {
-                rightPanel.remove(toolbar)
-                rightPanel.add(toolbar, BorderLayout.NORTH)
-                toolbar.isVisible = true
+                rightPanel.remove(toolbarHolder)
+                rightPanel.add(toolbarHolder, BorderLayout.NORTH)
+                toolbarHolder.isVisible = true
             }
         }
+        rightPanel.border = if (upstream) ScaledEmptyBorder(7, 0, 0, 0) else null
         toolbar.setSearchVisible(layout.showSearchBar)
+        upstreamToolbar.setSearchVisible(layout.showSearchBar)
 
-        // Sidebar position
+        // Sidebar swap & position
+        val activeSidebar = activeSidebarComponent()
         val showSidebar = AppContext.config.showCategoriesSidebar && !layout.sidebarPosition.equals("hidden", ignoreCase = true)
         if (showSidebar) {
             if (layout.sidebarPosition.equals("right", ignoreCase = true)) {
                 splitPane.leftComponent = rightPanel
-                splitPane.rightComponent = sidebar
+                splitPane.rightComponent = activeSidebar
             } else {
-                splitPane.leftComponent = sidebar
+                splitPane.leftComponent = activeSidebar
                 splitPane.rightComponent = rightPanel
             }
+            defaultDividerSize = if (upstream) 1 else 5
             splitPane.dividerSize = defaultDividerSize
-            val loc = AppContext.config.sidebarDividerLocation.takeIf { it > 50 } ?: 210.px
+            val loc = if (upstream) {
+                skin.sidebarWidth.px
+            } else {
+                AppContext.config.sidebarDividerLocation.takeIf { it > 50 } ?: skin.sidebarWidth.px
+            }
             splitPane.dividerLocation = loc
         } else {
             splitPane.leftComponent = null
@@ -383,12 +480,21 @@ class AppWindow(image: Image, startHidden: Boolean = false) : JFrame(), ActionLi
 
         statusBar.isVisible = layout.showStatusBar
 
+        val hasWp = skin.hasWallpaper() || skin.hasRegionWallpaper(SkinRegion.MAIN_FRAME)
+        splitPane.isOpaque = !hasWp
+        rightPanel.isOpaque = !hasWp
+        listContainer.isOpaque = !hasWp
+
         splitPane.border = MatteBorder(1, 0, 0, 0, AppTheme.sidebarBorder)
         splitPane.background = AppTheme.listBackground
         listContainer.background = AppTheme.listBackground
         rightPanel.background = AppTheme.listBackground
+
+        applyListSelectionMode()
         sidebar.updateTheme()
+        upstreamSidebar.updateTheme()
         toolbar.updateTheme()
+        upstreamToolbar.updateTheme()
         statusBar.updateTheme()
         listView.updateTheme()
         revalidate()
@@ -397,6 +503,7 @@ class AppWindow(image: Image, startHidden: Boolean = false) : JFrame(), ActionLi
 
     override fun dispose() {
         ThemeManager.removeThemeListener(themeChangeListener)
+        titleBar.stopStatsTicker()
         super.dispose()
     }
 
@@ -418,10 +525,24 @@ class AppWindow(image: Image, startHidden: Boolean = false) : JFrame(), ActionLi
 
     override fun actionPerformed(e: ActionEvent) {
         Logger.info("XDM", "Command: ${e.actionCommand}")
+        val name = (e.source as? JComponent)?.name ?: e.actionCommand ?: return
+        when (name) {
+            "TOOL_DOWNLOAD", "MENU_ADD_URL" -> app.addDownload(null)
+            "TOOL_CLEAR" -> listView.clear()
+            "TOOL_DELETE" -> AppMenuHandler.deleteSelectedDownloads(listView.selectedItems, this)
+            "TOOL_SETTINGS" -> SingleWindows.show(SettingsWindow::class) {
+                SettingsWindow().apply {
+                    onSaved = { applyListSelectionMode() }
+                    setLocationRelativeTo(this@AppWindow)
+                    loadConfig()
+                }
+            }
+        }
     }
 
     private fun createMainMenu() {
         val bar = JMenuBar()
+        mainMenuBar = bar
 
         // 1. File Menu
         val fileMenu = JMenu("File").apply {
@@ -489,8 +610,8 @@ class AppWindow(image: Image, startHidden: Boolean = false) : JFrame(), ActionLi
             chkSidebar = chk
             val chkToolbar = JCheckBoxMenuItem("Show Toolbar", true).apply {
                 addActionListener {
-                    toolbar.isVisible = isSelected
-                    toolbar.revalidate()
+                    toolbarHolder.isVisible = isSelected
+                    toolbarHolder.revalidate()
                 }
             }
             val chkStatusBar = JCheckBoxMenuItem("Show Status Bar", true).apply {

@@ -65,11 +65,14 @@ class SkinEngineTest : DownloadManagerTestBase() {
         assertEquals(SkinManager.SKIN_ORIGINAL_XDM, classic.id)
         assertEquals("Original XDM", classic.name)
         assertTrue(classic.isBuiltIn)
-        assertEquals(0, classic.componentArc)
-        assertEquals(0, classic.buttonArc)
-        assertEquals(44, classic.rowHeight)
-        assertEquals(200, classic.sidebarWidth)
-        assertTrue(classic.useClassicIcons)
+        assertEquals(8, classic.componentArc)
+        assertEquals(8, classic.buttonArc)
+        assertEquals(52, classic.rowHeight)
+        assertEquals(190, classic.sidebarWidth)
+        assertFalse(classic.useClassicIcons)
+        assertEquals("upstream", classic.layoutConfig.chromeMode)
+        assertFalse(classic.layoutConfig.showStatusBar)
+        assertFalse(classic.layoutConfig.showMenuBar)
         assertNotNull(classic.attributionNotice)
         assertTrue(classic.attributionNotice!!.contains("Subhra Das Gupta"))
         assertTrue(classic.attributionNotice!!.contains("Independent fork preset"))
@@ -84,15 +87,15 @@ class SkinEngineTest : DownloadManagerTestBase() {
             }
             SkinManager.addSkinListener(listener)
             try {
-                // Switch to classic XDM skin
+                // Switch to classic XDM skin (1:1 upstream subhra74/xdm)
                 val applied = SkinManager.applySkin(SkinManager.SKIN_ORIGINAL_XDM, saveConfig = false)
                 assertTrue(applied, "Applying classic XDM skin should succeed")
                 assertEquals(SkinManager.SKIN_ORIGINAL_XDM, SkinManager.currentSkin.id)
                 assertEquals(SkinManager.SKIN_ORIGINAL_XDM, notifiedSkin?.id)
-                assertEquals(0, UIManager.getInt("Component.arc"))
-                assertEquals(0, UIManager.getInt("Button.arc"))
-                assertEquals(44, UIManager.getInt("XDM.skin.rowHeight"))
-                assertTrue(UIManager.getBoolean("XDM.skin.useClassicIcons"))
+                assertEquals(8, UIManager.getInt("Component.arc"))
+                assertEquals(8, UIManager.getInt("Button.arc"))
+                assertEquals(52, UIManager.getInt("XDM.skin.rowHeight"))
+                assertFalse(UIManager.getBoolean("XDM.skin.useClassicIcons"))
 
                 // Switch back to enhanced skin
                 val appliedEnhanced = SkinManager.applySkin(SkinManager.SKIN_ENHANCED, saveConfig = false)
@@ -155,28 +158,21 @@ class SkinEngineTest : DownloadManagerTestBase() {
             assertEquals(compLight, resolvedCompLight)
         }
 
-        // Classic icons loading
-        val catIcon = classic.getCategoryIcon("CAT_DOCUMENTS", 18)
+        // Classic bitmap icons remain available directly via ClassicIconLoader
+        val catIcon = ClassicIconLoader.loadIcon("document", 18)
         assertNotNull(catIcon, "Classic category icon should resolve")
         assertEquals(18, catIcon?.iconWidth)
 
-        val toolAdd = classic.getToolbarIcon("ADD_URL", 24)
+        val toolAdd = ClassicIconLoader.loadIcon("tool_add", 24)
         assertNotNull(toolAdd, "Classic toolbar icon should resolve")
         assertEquals(24, toolAdd?.iconWidth)
 
-        val toolResume = classic.getToolbarIcon("RESUME", 24)
-        assertNotNull(toolResume, "Classic resume icon should resolve")
+        assertNotNull(ClassicIconLoader.loadIcon("tool_resume", 24))
+        assertNotNull(ClassicIconLoader.loadIcon("tool_pause", 24))
 
-        val toolPause = classic.getToolbarIcon("PAUSE", 24)
-        assertNotNull(toolPause, "Classic pause icon should resolve")
-
-        // Non-existent or unknown action returns null safely without exception
-        assertNull(classic.getToolbarIcon("UNKNOWN_ACTION_XYZ", 24))
+        // Upstream Original XDM delegates to RemixIcons (null override)
+        assertNull(classic.getToolbarIcon("ADD_URL", 24))
         assertNull(ClassicIconLoader.loadIcon("non_existent_glyph_12345", 24))
-
-        // Torrents and Queues aliases
-        assertNotNull(classic.getCategoryIcon("torrents", 18))
-        assertNotNull(classic.getCategoryIcon("queues", 18))
     }
 
     @Test
@@ -249,14 +245,28 @@ class SkinEngineTest : DownloadManagerTestBase() {
         runOnEdt {
             SkinManager.applySkin(SkinManager.SKIN_ORIGINAL_XDM, saveConfig = false)
             ThemeManager.applyTheme("dark", null, 100, saveConfig = false)
-            assertEquals(0, UIManager.getInt("Component.arc"))
-            assertEquals(0, UIManager.getInt("Button.arc"))
-            assertEquals(0, UIManager.getInt("TextComponent.arc"))
-            assertEquals(0, UIManager.getInt("ProgressBar.arc"))
-            assertEquals(0, UIManager.getInt("CheckBox.arc"))
-            assertEquals(0, UIManager.getInt("TabbedPane.tabArc"))
-            assertEquals(0, UIManager.getInt("ScrollBar.thumbArc"))
-            assertEquals(44, UIManager.getInt("XDM.skin.rowHeight"))
+            assertEquals(8, UIManager.getInt("Component.arc"))
+            assertEquals(8, UIManager.getInt("Button.arc"))
+            assertEquals(8, UIManager.getInt("PopupMenu.arc"))
+            assertEquals(8, UIManager.getInt("ToolTip.arc"))
+            assertEquals(52, UIManager.getInt("XDM.skin.rowHeight"))
+            assertEquals(190, UIManager.getInt("XDM.skin.sidebarWidth"))
+            assertEquals(Color(0x1E, 0x1E, 0x1E), UIManager.getColor("XDM.list.background"))
+            assertEquals(Color(0x28, 0x28, 0x28), UIManager.getColor("XDM.sidebar.background"))
+            assertEquals(Color(0x1E, 0x34, 0x54), UIManager.getColor("XDM.list.selectionBackground"))
+
+            val prevMode = AppContext.config.listSelectionMode
+            AppContext.config.listSelectionMode = xdm.app.ListSelectionMode.CLASSIC
+            val win = xdm.app.ui.screens.AppWindow(xdm.app.utils.logoImage(256), startHidden = true)
+            try {
+                assertEquals("Xtreme Download Manager", win.title)
+                assertFalse(win.jMenuBar.isVisible, "Upstream Original XDM hides menu bar")
+                assertTrue(win.listView is xdm.app.ui.components.UpstreamClassicListView, "Upstream Original XDM uses UpstreamClassicListView")
+            } finally {
+                win.dispose()
+                AppContext.config.listSelectionMode = prevMode
+                SkinManager.applySkin(SkinManager.SKIN_ENHANCED, saveConfig = false)
+            }
         }
     }
 

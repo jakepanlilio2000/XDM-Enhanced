@@ -41,37 +41,76 @@ class SkinPreviewCard(private var skin: Skin = SkinManager.currentSkin) : JCompo
             val arc = (skin.componentArc * 1.5).toInt().coerceIn(4, 16).px
             val accent = ThemeManager.currentAccent ?: (if (isDark) skin.defaultDarkAccent else skin.defaultLightAccent)
 
+            val winCfg = skin.windowConfig
+            val widCfg = skin.widgetsConfig
+            val outerStroke = (winCfg?.frameBorderWidth ?: 0).coerceIn(0, 6)
+
             // Outer Card Background
-            val cardBg = if (isDark) Color(0x18, 0x1A, 0x20) else Color(0xFA, 0xFA, 0xFB)
-            val cardBorder = if (isDark) Color(0x2D, 0x31, 0x39) else Color(0xD8, 0xDC, 0xE2)
+            val cardBg = if (skin.id == SkinManager.SKIN_ORIGINAL_XDM) {
+                if (isDark) Color(0x1E, 0x1E, 0x1E) else Color(0xFF, 0xFF, 0xFF)
+            } else {
+                if (isDark) Color(0x18, 0x1A, 0x20) else Color(0xFA, 0xFA, 0xFB)
+            }
+            val cardBorder = (if (isDark) winCfg?.frameBorderDark else winCfg?.frameBorderLight)
+                ?.let { ThemeManager.parseHexColor(it) }
+                ?: if (isDark) Color(0x2D, 0x31, 0x39) else Color(0xD8, 0xDC, 0xE2)
             g2.color = cardBg
             g2.fill(RoundRectangle2D.Float(0f, 0f, w.toFloat() - 1, h.toFloat() - 1, arc.toFloat(), arc.toFloat()))
             skin.paintWallpaper(g2, w, h, isDark)
             g2.color = cardBorder
+            if (outerStroke > 1) {
+                g2.stroke = BasicStroke(outerStroke.toFloat())
+            }
             g2.draw(RoundRectangle2D.Float(0f, 0f, w.toFloat() - 1, h.toFloat() - 1, arc.toFloat(), arc.toFloat()))
+            g2.stroke = BasicStroke(1f)
 
             // Window Header (Chrome)
             val headerH = 26.px
-            val headerBg = if (isDark) Color(0x20, 0x23, 0x2B) else Color(0xEE, 0xF0, 0xF4)
-            g2.color = headerBg
+            val gradStart = (if (isDark) winCfg?.titleBarGradientStartDark else winCfg?.titleBarGradientStartLight)
+                ?.let { ThemeManager.parseHexColor(it) }
+            val gradEnd = (if (isDark) winCfg?.titleBarGradientEndDark else winCfg?.titleBarGradientEndLight)
+                ?.let { ThemeManager.parseHexColor(it) }
+            val headerBg = (if (isDark) winCfg?.titleBarBackgroundDark else winCfg?.titleBarBackgroundLight)
+                ?.let { ThemeManager.parseHexColor(it) }
+                ?: if (skin.id == SkinManager.SKIN_ORIGINAL_XDM) {
+                    if (isDark) Color(0x28, 0x28, 0x28) else Color(0xF5, 0xF6, 0xF8)
+                } else {
+                    if (isDark) Color(0x20, 0x23, 0x2B) else Color(0xEE, 0xF0, 0xF4)
+                }
+            if (gradStart != null && gradEnd != null) {
+                g2.paint = GradientPaint(0f, 0f, gradStart, w.toFloat(), 0f, gradEnd)
+            } else {
+                g2.color = headerBg
+            }
             g2.fill(RoundRectangle2D.Float(0f, 0f, w.toFloat() - 1, headerH.toFloat(), arc.toFloat(), arc.toFloat()))
             g2.fillRect(0, headerH - 4.px, w - 1, 4.px)
 
-            // Mac window dots / classic title
+            // Control style preview dots/blocks
+            val ctrlStyle = winCfg?.controlButtonsStyle ?: "mac"
             val dotY = 13.px
-            g2.color = Color(0xFF, 0x5F, 0x56)
-            g2.fillOval(10.px, dotY - 4.px, 8.px, 8.px)
-            g2.color = Color(0xFF, 0xBD, 0x2E)
-            g2.fillOval(22.px, dotY - 4.px, 8.px, 8.px)
-            g2.color = Color(0x27, 0xC9, 0x3F)
-            g2.fillOval(34.px, dotY - 4.px, 8.px, 8.px)
+            if (ctrlStyle.equals("beveled", true)) {
+                g2.color = Color(0x5A, 0x62, 0x76)
+                g2.fillRect(8.px, dotY - 4.px, 8.px, 8.px)
+                g2.fillRect(19.px, dotY - 4.px, 8.px, 8.px)
+                g2.fillRect(30.px, dotY - 4.px, 8.px, 8.px)
+            } else {
+                g2.color = Color(0xFF, 0x5F, 0x56)
+                g2.fillOval(10.px, dotY - 4.px, 8.px, 8.px)
+                g2.color = Color(0xFF, 0xBD, 0x2E)
+                g2.fillOval(22.px, dotY - 4.px, 8.px, 8.px)
+                g2.color = Color(0x27, 0xC9, 0x3F)
+                g2.fillOval(34.px, dotY - 4.px, 8.px, 8.px)
+            }
 
             val baseFont = font ?: UIManager.getFont("Label.font") ?: Font(Font.SANS_SERIF, Font.PLAIN, 12)
 
             // Header title
-            g2.color = if (isDark) Color(0xEC, 0xED, 0xEF) else Color(0x18, 0x18, 0x1B)
+            val titleCol = (if (isDark) winCfg?.titleBarForegroundDark else winCfg?.titleBarForegroundLight)
+                ?.let { ThemeManager.parseHexColor(it) }
+                ?: if (isDark) Color(0xEC, 0xED, 0xEF) else Color(0x18, 0x18, 0x1B)
+            g2.color = titleCol
             g2.font = baseFont.deriveFont(Font.BOLD, 10f.px)
-            val title = "${skin.name} Preview"
+            val title = winCfg?.titleText?.takeIf { it.isNotBlank() } ?: "${skin.name} Preview"
             g2.drawString(title, 48.px, 17.px)
 
             // Active badge if active
@@ -88,7 +127,7 @@ class SkinPreviewCard(private var skin: Skin = SkinManager.currentSkin) : JCompo
             // Sidebar on the left
             val sidebarW = 74.px
             val sidebarBg = if (skin.id == SkinManager.SKIN_ORIGINAL_XDM) {
-                if (isDark) Color(0x1A, 0x1B, 0x1F) else Color(0xDF, 0xE1, 0xE5)
+                if (isDark) Color(0x28, 0x28, 0x28) else Color(0xF5, 0xF6, 0xF8)
             } else {
                 if (isDark) Color(0x16, 0x17, 0x1B) else Color(0xF5, 0xF6, 0xF8)
             }

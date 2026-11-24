@@ -17,6 +17,7 @@ import java.awt.Component
 import java.awt.Cursor
 import java.awt.Dimension
 import java.awt.Font
+import java.awt.Graphics
 import java.awt.Rectangle
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
@@ -37,7 +38,14 @@ class FilterListPanel(
     private val root: JPanel
     private val catFilterModel = DefaultListModel<FilterItem>()
     private val catFilterList: JList<FilterItem>
+    private val stateFilterModel = DefaultListModel<FilterItem>()
     private val stateFilterList: JList<FilterItem>
+    private val box: FilterBox
+    private val secLibrary: JLabel
+    private val secTypes: JLabel
+    private val stayInTouchLabel: JLabel
+    private val stayInTouchIcon: JLabel
+    private val footerContainer: JComponent
 
     private var stateCounts = emptyMap<FilterState, Int>()
 
@@ -52,40 +60,26 @@ class FilterListPanel(
     private var shownCategories = emptyList<DownloadCategory>()
 
     init {
-        val stateFilterModel = DefaultListModel<FilterItem>()
         stateFilterList = sidebarList(stateFilterModel)
-        stateFilterModel.addElement(
-            FilterItem.State(
-                FilterState.All, text("CAT_ALL"),
-                makeIcon(RemixIcon.ARROW_DOWN_CIRCLE_LINE, false),
-                makeIcon(RemixIcon.ARROW_DOWN_CIRCLE_FILL, true)
-            )
-        )
-        stateFilterModel.addElement(
-            FilterItem.State(
-                FilterState.Incomplete,
-                text("CAT_INCOMPLETE"),
-                makeIcon(RemixIcon.PROGRESS_2_LINE, false),
-                makeIcon(RemixIcon.PROGRESS_2_FILL, true)
-            )
-        )
-        stateFilterModel.addElement(
-            FilterItem.State(
-                FilterState.Completed,
-                text("CAT_FINISHED"),
-                makeIcon(RemixIcon.CHECKBOX_CIRCLE_LINE, false),
-                makeIcon(RemixIcon.CHECKBOX_CIRCLE_FILL, true)
-            )
-        )
+        fillStateItems()
 
         fillCategories()
         catFilterList = sidebarList(catFilterModel)
 
-        val box = FilterBox().apply {
-            add(sectionLabel(text("CAT_SECTION_LIBRARY")))
+        secLibrary = sectionLabel(text("CAT_SECTION_LIBRARY"))
+        secTypes = sectionLabel(text("CAT_SECTION_TYPES"))
+        stayInTouchLabel = JLabel(text("SIDEBAR_STAY_IN_TOUCH")).apply {
+            font = font.deriveFont(Font.BOLD, font.size2D - 1f)
+            foreground = AppTheme.sidebarForeground
+        }
+        stayInTouchIcon = JLabel(createIcon(RemixIcon.USER_HEART_FILL, 16, AppTheme.accent))
+        footerContainer = stayInTouchLink()
+
+        box = FilterBox().apply {
+            add(secLibrary)
             add(stateFilterList)
             add(Box.createVerticalStrut(14.px))
-            add(sectionLabel(text("CAT_SECTION_TYPES")))
+            add(secTypes)
             add(catFilterList)
             border = ScaledEmptyBorder(14, 2, 14, 2)
             isOpaque = true
@@ -94,19 +88,22 @@ class FilterListPanel(
 
         jsp = JScrollPane(box).apply {
             border = BorderFactory.createEmptyBorder()
-            // The rows never fill the sidebar's height, so the viewport has to carry the
-            // same colour as the panel -- otherwise the strip below the last row shows the
-            // scroll pane's own background instead.
             isOpaque = true
             background = AppTheme.sidebarBackground
             viewport.isOpaque = true
             viewport.background = AppTheme.sidebarBackground
         }
 
-        // The "Stay in touch" link stays pinned below the lists rather than scrolling with them.
-        root = JPanel(BorderLayout()).apply {
+        root = object : JPanel(BorderLayout()) {
+            override fun paintComponent(g: Graphics) {
+                val painted = xdm.app.skins.SkinStyleResolver.paintRegionBackground(
+                    g, width, height, xdm.app.skins.SkinRegion.SIDEBAR
+                )
+                if (!painted) super.paintComponent(g)
+            }
+        }.apply {
             add(jsp, BorderLayout.CENTER)
-            add(stayInTouchLink(), BorderLayout.SOUTH)
+            add(footerContainer, BorderLayout.SOUTH)
             border = MatteBorder(0, 0, 0, 1, AppTheme.sidebarBorder)
             background = AppTheme.sidebarBackground
         }
@@ -175,6 +172,61 @@ class FilterListPanel(
     private fun countOf(item: FilterItem): Int? = when (item) {
         is FilterItem.State -> stateCounts[item.state]
         is FilterItem.Category -> categoryCounts[item.category?.id]
+    }
+
+    private fun fillStateItems() {
+        val sel = stateFilterList.selectedIndex.takeIf { it >= 0 } ?: 0
+        stateFilterModel.clear()
+        stateFilterModel.addElement(
+            FilterItem.State(
+                FilterState.All, text("CAT_ALL"),
+                makeIcon(RemixIcon.ARROW_DOWN_CIRCLE_LINE, false),
+                makeIcon(RemixIcon.ARROW_DOWN_CIRCLE_FILL, true)
+            )
+        )
+        stateFilterModel.addElement(
+            FilterItem.State(
+                FilterState.Incomplete,
+                text("CAT_INCOMPLETE"),
+                makeIcon(RemixIcon.PROGRESS_2_LINE, false),
+                makeIcon(RemixIcon.PROGRESS_2_FILL, true)
+            )
+        )
+        stateFilterModel.addElement(
+            FilterItem.State(
+                FilterState.Completed,
+                text("CAT_FINISHED"),
+                makeIcon(RemixIcon.CHECKBOX_CIRCLE_LINE, false),
+                makeIcon(RemixIcon.CHECKBOX_CIRCLE_FILL, true)
+            )
+        )
+        stateFilterList.selectedIndex = sel.coerceIn(0, stateFilterModel.size() - 1)
+    }
+
+    fun updateTheme() {
+        val hasWp = xdm.app.skins.SkinManager.currentSkin.hasWallpaper() ||
+            xdm.app.skins.SkinManager.currentSkin.hasRegionWallpaper(xdm.app.skins.SkinRegion.SIDEBAR)
+        box.isOpaque = !hasWp
+        jsp.isOpaque = !hasWp
+        jsp.viewport.isOpaque = !hasWp
+        box.background = AppTheme.sidebarBackground
+        jsp.background = AppTheme.sidebarBackground
+        jsp.viewport.background = AppTheme.sidebarBackground
+        root.background = AppTheme.sidebarBackground
+        root.border = MatteBorder(0, 0, 0, 1, AppTheme.sidebarBorder)
+        secLibrary.foreground = AppTheme.sidebarSection
+        secTypes.foreground = AppTheme.sidebarSection
+        stayInTouchLabel.foreground = AppTheme.sidebarForeground
+        stayInTouchIcon.icon = createIcon(RemixIcon.USER_HEART_FILL, 16, AppTheme.accent)
+        fillStateItems()
+        val prevCat = (catFilterList.selectedValue as? FilterItem.Category)?.category?.id
+        fillCategories()
+        val idx = (0 until catFilterModel.size())
+            .firstOrNull { (catFilterModel[it] as FilterItem.Category).category?.id == prevCat } ?: 0
+        catFilterList.selectedIndex = idx
+        recount()
+        root.revalidate()
+        root.repaint()
     }
 
     private fun fillCategories() {
@@ -258,16 +310,13 @@ class FilterListPanel(
      * The label truncates with an ellipsis instead of widening the sidebar.
      */
     private fun stayInTouchLink(): JComponent {
-        val label = JLabel(text("SIDEBAR_STAY_IN_TOUCH")).apply {
-            font = font.deriveFont(Font.BOLD, font.size2D - 1f)
-            foreground = AppTheme.sidebarForeground
-        }
+        val label = stayInTouchLabel
         val card = JPanel(BorderLayout(8.px, 0)).apply {
             isOpaque = false
             border = ScaledEmptyBorder(9, 8, 9, 10)
             cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
             toolTipText = SUPPORT_URL
-            add(JLabel(createIcon(RemixIcon.USER_HEART_FILL, 16, AppTheme.accent)), BorderLayout.WEST)
+            add(stayInTouchIcon, BorderLayout.WEST)
             add(label, BorderLayout.CENTER)
             addMouseListener(object : MouseAdapter() {
                 override fun mouseClicked(e: MouseEvent) {

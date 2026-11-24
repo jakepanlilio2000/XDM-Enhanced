@@ -4,7 +4,7 @@
       "updates": [
         {
           "version": "1.1.4",
-          "update_link": "https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.1.0/XDM-Enhanced-Extension-Firefox-v1.1.0.xpi",
+          "update_link": "https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.2.0/XDM-Enhanced-Extension-Firefox-v1.2.0.xpi",
           "applications": {
             "gecko": {
               "strict_min_version": "109.0"

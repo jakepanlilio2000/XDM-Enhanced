@@ -38,6 +38,30 @@ class CustomSkin(
     override val useClassicIcons: Boolean = manifest.icons.toolbar.isNotEmpty()
 
     override val layoutConfig: SkinLayoutConfig = manifest.layout
+    override val windowConfig: SkinWindowConfig? = manifest.window
+    override val widgetsConfig: SkinWidgetsConfig? = manifest.widgets
+
+    override fun getWindowControlIcon(actionKey: String, size: Int): Icon? {
+        val icons = manifest.window?.controlIcons ?: return null
+        val relPath = when (actionKey.lowercase()) {
+            "minimize", "min" -> icons.minimize
+            "maximize", "max" -> icons.maximize
+            "restore" -> icons.restore
+            "shade", "windowshade" -> icons.shade
+            "close" -> icons.close
+            else -> null
+        } ?: return null
+        return loadCachedIcon(relPath, size)
+    }
+
+    override fun paintWallpaperConfigSurface(
+        g: Graphics,
+        width: Int,
+        height: Int,
+        config: SkinWallpaperConfig,
+        isDark: Boolean,
+        scope: String
+    ): Boolean = paintWallpaperConfig(g, width, height, config, isDark, scope)
 
     override val defaultDarkAccent: Color =
         ThemeManager.parseHexColor(manifest.accents.dark) ?: Color(0x3B, 0x82, 0xF6)
@@ -81,7 +105,10 @@ class CustomSkin(
 
     override fun getCategoryIcon(categoryId: String?, size: Int): Icon? {
         if (categoryId.isNullOrBlank()) return null
-        val relPath = manifest.icons.categories[categoryId] ?: return null
+        val alias = CATEGORY_ICON_ALIASES[categoryId.uppercase()]
+        val relPath = manifest.icons.categories[categoryId]
+            ?: (alias?.let { manifest.icons.categories[it] })
+            ?: return null
         return loadCachedIcon(relPath, size)
     }
 
@@ -275,18 +302,24 @@ class CustomSkin(
         }
         colors.sidebarBackground?.let { ThemeManager.parseHexColor(it) }?.let {
             UIManager.put("XDM.sidebar.background", it)
+            UIManager.put("Tree.background", it)
         }
         colors.sidebarBorder?.let { ThemeManager.parseHexColor(it) }?.let {
             UIManager.put("XDM.sidebar.borderColor", it)
         }
         colors.sidebarForeground?.let { ThemeManager.parseHexColor(it) }?.let {
             UIManager.put("XDM.sidebar.foreground", it)
+            UIManager.put("Tree.foreground", it)
         }
         colors.sidebarSelectedForeground?.let { ThemeManager.parseHexColor(it) }?.let {
             UIManager.put("XDM.sidebar.selectedForeground", it)
+            UIManager.put("Tree.selectionForeground", it)
+            UIManager.put("Tree.selectionInactiveForeground", it)
         }
         colors.sidebarSelectionBackground?.let { ThemeManager.parseHexColor(it) }?.let {
             UIManager.put("XDM.sidebar.selectionBackground", it)
+            UIManager.put("Tree.selectionBackground", it)
+            UIManager.put("Tree.selectionInactiveBackground", it)
         }
         colors.sidebarHoverBackground?.let { ThemeManager.parseHexColor(it) }?.let {
             UIManager.put("XDM.sidebar.hoverBackground", it)
@@ -410,6 +443,15 @@ class CustomSkin(
 
     companion object {
         private val json = Json { ignoreUnknownKeys = true; isLenient = true }
+        private val CATEGORY_ICON_ALIASES = mapOf(
+            "CAT_DOCUMENTS" to "documents",
+            "CAT_COMPRESSED" to "compressed",
+            "CAT_MUSIC" to "music",
+            "CAT_VIDEOS" to "video",
+            "CAT_PROGRAMS" to "programs",
+            "CAT_IMAGES" to "images",
+            "CAT_TORRENTS" to "torrents"
+        )
 
         fun loadFromDir(skinDir: File): CustomSkin? {
             val manifestFile = File(skinDir, "skin.json")

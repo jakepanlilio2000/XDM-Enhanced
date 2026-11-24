@@ -45,18 +45,17 @@ XDM Enhanced is engineered from the ground up for maximum download throughput, d
 
 ---
 
-## 4. Full-App Custom Skin Engine
+## 4. Full-App Custom Skin Engine (Schema v3)
 
 - **Dual Built-in Presets:**
-  - **XDM Enhanced:** Modern FlatLaf theme with responsive light/dark palettes, rounded buttons, and emerald/purple accent swatches.
-  - **Original XDM:** Authentic classic look replicating original XDM visual aesthetics for legacy fans.
-- **Declarative Skin Packages (`.xdmskin`):**
-  - Portable ZIP archives containing `skin.json`, custom toolbar icons, category SVGs, and window backgrounds.
-  - Hardened with Zip Slip path-traversal protection and strict security limits preventing executable payloads.
-- **Background Wallpaper Customization:**
-  - Custom background images and colors for main windows, sidebars, transfer tables, and dialogs.
-  - Supports image scaling, tiling, centering, and adjustable opacity overlays.
-- **Modal Legibility Preservation:** Dialog backdrops automatically maintain contrast and legibility regardless of chosen wallpaper.
+  - **XDM Enhanced:** Modern FlatLaf theme with responsive light/dark palettes, rounded buttons, and emerald/purple/blue/amber accent swatches.
+  - **Original XDM (`classic_xdm`):** 1:1 visual and layout parity with [`subhra74/xdm`](https://github.com/subhra74/xdm) (`AppToolBar`, `FilterListPanel`, upstream classic row layout, FlatMac Dark/Light palettes).
+- **Schema v3 Custom Window Chrome & Widgets (`.xdmskin`):**
+  - Custom titlebars with gradient fills, header textures, alignment options, live speed/transfer ticker (`LcdStatsTicker`), and toggleable compact **WindowShade** collapse.
+  - Custom outer frame borders (`SkinnedFrameBorder`), custom control sprites (`mac`, `beveled`, `anime`, `steampunk`, `minimal`, plus PNG overrides), custom progress meters (`segmented_led`, `brass_gauge`, `striped_candy`, `gradient_glow`), custom button bevels (`beveled_3d`, `riveted_brass`, `neon_outline`, `pill_glow`), and optional CRT scanline overlays.
+  - 6 validated sample packages shipped in `sample-skins/`: `retro-hifi`, `anime-sakura`, `steampunk-brass`, `modern-aurora`, `synthwave-outrun`, and `cyber-neon`.
+- **Background Wallpaper & Modal Legibility Preservation:**
+  - Custom background images and colors for main windows, sidebars, transfer tables, and dialogs with luminance contrast protection.
 - **Live Hot-Reloading:** Switch skins on the fly without restarting the application.
 
 ---
@@ -87,7 +86,7 @@ XDM Enhanced is engineered from the ground up for maximum download throughput, d
 
 ## Current Operating Parameters & Boundaries
 
-In **XDM Enhanced v1.1.0**, users should take note of the following operating parameters:
+In **XDM Enhanced v1.2.0**, users should take note of the following operating parameters:
 
 1. **yt-dlp Binary Path:** The `ytdlp-downloader.xdmplugin` requires a pre-installed `yt-dlp` executable on the host system. The executable path must be configured in Settings > Plugins.
 2. **Relocated Executable Repair:** If you move the portable XDM folder to a new directory or drive letter, run **Settings > Browser > Repair Integration** to update Windows protocol handler and native messaging paths.

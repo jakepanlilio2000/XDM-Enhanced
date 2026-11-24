@@ -1,4 +1,4 @@
-# XDM Enhanced — Custom Skin Development SDK & Specification (Schema Version 2)
+# XDM Enhanced — Custom Skin Development SDK & Specification (Schema Version 3)
 
 Welcome to the **XDM Enhanced Skin Development SDK**. This guide provides complete documentation for modders, UI designers, and theme developers to create, test, package, and distribute custom visual skins for **XDM Enhanced**.
 
@@ -105,7 +105,8 @@ my-skin.xdmskin
 ### Schema Versioning & Compatibility
 
 - **`schemaVersion: 1` (Legacy):** Base skin model supporting global colors, geometry, wallpapers, and icons. Fully backward-compatible.
-- **`schemaVersion: 2` (Current):** Introduces component-level and regional modal styling via the `regions` block, providing granular control over all 13 application UI zones. If `schemaVersion` is omitted, the engine defaults to `1`.
+- **`schemaVersion: 2` (Regional Styling):** Introduces component-level and regional modal styling via the `regions` block, providing granular control over all 13 application UI zones.
+- **`schemaVersion: 3` (Custom Window & Widget Chrome):** Adds `layout.chromeMode` (`"enhanced"`, `"upstream"`, `"custom"`), `layout.showMenuBar`, custom window chrome & TitleBar / WindowShade toggle / chassis bezel / control button sprites (`window`), and custom progress-bar / 3D beveled button / scanline widgets (`widgets`). If `schemaVersion` is omitted, the engine defaults to `1`.
 
 ### Full Example Manifest
 
@@ -281,7 +282,7 @@ my-skin.xdmskin
 
 | Field | Type | Required | Description |
 | :--- | :---: | :---: | :--- |
-| `schemaVersion` | Integer | No | Schema revision: `1` (legacy base) or `2` (full-UI regional styling). Defaults to `1`. |
+| `schemaVersion` | Integer | No | Schema revision: `1` (base), `2` (regional UI), or `3` (Winamp window & widget chrome). Defaults to `1`. |
 | `id` | String | **Yes** | Unique identifier matching `^[a-z0-9_-]{3,32}$`. Built-ins (`enhanced`, `classic_xdm`) are reserved. |
 | `name` | String | **Yes** | Human-readable theme display name (1 to 64 chars). |
 | `version` | String | **Yes** | Semantic version string (e.g., `1.0.0`). |
@@ -299,6 +300,8 @@ my-skin.xdmskin
 | `font` | Object | No | Bundled TrueType or OpenType font definition. |
 | `icons` | Object | No | Relative paths to category and toolbar icon replacements. |
 | `regions` | Object | No | Schema 2 regional overrides for all 13 UI zones. |
+| `window` | Object | No | Schema 3 custom titlebar, compact shade toggle, chassis bevel border, LCD stats ticker, and control buttons. |
+| `widgets` | Object | No | Schema 3 progress bar styles (`segmented_led`, `brass_gauge`, `striped_candy`, `gradient_glow`), button bevels (`beveled_3d`, `riveted_brass`, `neon_outline`, `pill_glow`), and scanlines. |
 | `uiDefaults` | Object | No | Arbitrary FlatLaf UI property overrides. |
 
 ---
@@ -375,14 +378,12 @@ flowchart TD
 XDM Enhanced includes two production-grade built-in skins with distinct design identities:
 
 ### Original XDM Skin (`classic_xdm`)
-- **Design Philosophy:** Faithful tribute to the classic Xtreme Download Manager UI.
+- **Design Philosophy:** 1:1 faithful visual recreation of upstream [`subhra74/xdm`](https://github.com/subhra74/xdm) (Xtreme Download Manager).
 - **Visual Attributes:**
-  - Strict **zero-arc corners** (`cornerArc = 0`, `buttonArc = 0`, `progressBarArc = 0`) across all frames, modals, and buttons.
-  - Classic industrial color palette: `#2B2B2B` window background, `#1E1E1E` sidebar background, and `#007ACC` classic blue accents.
-  - Original toolbar button heights and rectangular tab geometry.
+  - Switches main chrome to `chromeMode: "upstream"`: `FilterListPanel` (`LIBRARY` / `FILE TYPES` / `Stay in touch`), `AppToolBar` (`+ New`, `Clear`, `Sort`, `Settings`, `Search`, hamburger menu), upstream compact `DownloadRowPanel` rows (`RowWashPanel` selection card), hidden menu bar and status bar, and window title `"Xtreme Download Manager"`.
+  - Upstream FlatMac Dark (`#282828` sidebar / `#1E1E1E` list / `#1E3454` selection / `#6E9BFF` accent) and Light (`#F5F6F8` / `#FFFFFF` / `#D4DFF8` / `#3B6FE0`) palettes with RemixIcon glyphs and `8px` corners.
 - **Asset Provenance:**
-  - Classic toolbar and category icons are preserved from original upstream XDM (GPL-3.0-or-later) and loaded from `xdm.app.skins.BuiltInClassicXdmSkin`.
-  - Zero proprietary or non-free assets.
+  - Uses standard RemixIcon vector glyphs and upstream FlatMac palette tokens (GPL-3.0-or-later). Classic XDM bitmap icons remain available cleanly in `ClassicIconLoader` for custom skins.
 
 ### XDM Enhanced Skin (`enhanced`)
 - **Design Philosophy:** Modern, ergonomic macOS-inspired FlatMac interface.
@@ -477,9 +478,9 @@ XDM Enhanced enforces strict automated verification when installing or parsing s
    - Documentation: `.txt`, `.md`
 5. **Manifest Constraints:**
    - `id`: Must match `^[a-z0-9_-]{3,32}$`. Reserved IDs (`enhanced`, `classic_xdm`) cannot be overwritten.
-   - `schemaVersion`: Must be `1` or `2`.
-   - Numeric constraints: Arcs clamped between `0` and `48` px; padding between `0` and `64` px; dimensions between `20` and `800` px.
-   - Hex colors: Must match `#RRGGBB` format.
+   - `schemaVersion`: Must be `1`, `2`, or `3`.
+   - Numeric constraints: Arcs clamped between `0` and `48` px; padding between `0` and `64` px; dimensions between `20` and `800` px; `window.titleBarHeight` between `20` and `72` px; `window.frameBorderWidth` between `0` and `12` px.
+   - Hex colors: Must match `#RRGGBB` or `#AARRGGBB` format.
 
 ---
 
@@ -586,8 +587,12 @@ zip -r ../my-custom-skin.xdmskin ./*
 
 ---
 
-## 13. Sample Skin: Cyber Neon
+## 13. Sample Skins Reference Library
 
-The complete working reference implementation for Schema Version 2 is available in the repository:
-- Unpacked Source: [`sample-skins/cyber-neon/`](../sample-skins/cyber-neon/)
-- Packaged Binary: [`sample-skins/cyber-neon.xdmskin`](../sample-skins/cyber-neon.xdmskin)
+The repository includes 6 complete, validated sample skins under [`sample-skins/`](../sample-skins/):
+- [`retro-hifi`](../sample-skins/retro-hifi.xdmskin) — Retro Hi-Fi audio deck aesthetic with brushed metallic bevel frame, compact shade bar, green phosphor LCD stats ticker, and segmented LED meters (Schema v3).
+- [`anime-sakura`](../sample-skins/anime-sakura.xdmskin) — Cherry blossom twilight anime theme with pastel petals, glowing card borders, blossom window buttons, and candy-striped progress (Schema v3).
+- [`steampunk-brass`](../sample-skins/steampunk-brass.xdmskin) — Victorian clockwork mahogany & riveted brass bezel with amber pressure-tube progress gauges and gear blueprints (Schema v3).
+- [`modern-aurora`](../sample-skins/modern-aurora.xdmskin) — Clean Nordic glass workspace with minimal chrome and aurora ribbons (Schema v3).
+- [`synthwave-outrun`](../sample-skins/synthwave-outrun.xdmskin) — 1986 retro ultraviolet horizon laser-grid, CRT scanlines, and neon progress glow (Schema v3).
+- [`cyber-neon`](../sample-skins/cyber-neon.xdmskin) — Reference Schema v2 cyberpunk skin covering all 13 UI region slots.

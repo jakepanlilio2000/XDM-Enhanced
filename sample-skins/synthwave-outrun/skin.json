@@ -1,0 +1,130 @@
+        {
+          "schemaVersion": 3,
+          "id": "synthwave-outrun",
+          "name": "Synthwave Outrun 1986",
+          "version": "1.2.0",
+          "author": "XDM Enhanced Team",
+          "description": "80s neon sunset theme with horizon laser grid backdrop, ultraviolet chrome gradient header, CRT scanline texture, neon button outlines, and sunset progress glow.",
+          "minAppVersion": "1.2.0",
+          "license": "GPL-3.0-or-later",
+          "homepage": "https://github.com/jakepanlilio2000/XDM-Enhanced",
+          "geometry": {
+            "componentArc": 8,
+            "buttonArc": 8,
+            "rowHeight": 52,
+            "sidebarWidth": 204
+          },
+          "accents": {
+            "dark": "#FF2A85",
+            "light": "#DB2777"
+          },
+          "colors": {
+            "dark": {
+              "windowBackground": "#120826",
+      "panelBackground": "#1A0C36",
+      "sidebarBackground": "#0E061E",
+      "sidebarBorder": "#581C87",
+      "sidebarForeground": "#F5D0FE",
+      "sidebarSelectedForeground": "#00E5FF",
+      "sidebarSelectionBackground": "#3B125E",
+      "sidebarHoverBackground": "#260E42",
+      "listBackground": "#100721",
+      "listTitleForeground": "#FDF4FF",
+      "listSelectionBackground": "#3B125E",
+      "listHoverBackground": "#210C3A"
+            },
+            "light": {
+              "windowBackground": "#FDF2F8",
+      "panelBackground": "#FFFFFF",
+      "sidebarBackground": "#F5E8FF",
+      "sidebarBorder": "#E9D5FF",
+      "sidebarForeground": "#3B0764",
+      "sidebarSelectedForeground": "#C026D3",
+      "sidebarSelectionBackground": "#F3E8FF",
+      "sidebarHoverBackground": "#FCE7F3",
+      "listBackground": "#FFFFFF",
+      "listTitleForeground": "#3B0764",
+      "listSelectionBackground": "#FCE7F3",
+      "listHoverBackground": "#FAF5FF"
+            }
+          },
+          "wallpaper": {
+            "dark": "backgrounds/synthwave-outrun-dark.png",
+            "light": "backgrounds/synthwave-outrun-light.png",
+            "mode": "fill",
+            "opacity": 0.25
+          },
+          "layout": {
+            "toolbarPosition": "top",
+"sidebarPosition": "left",
+"showStatusBar": true,
+"showSearchBar": true,
+"showMenuBar": false,
+"chromeMode": "custom"
+          },
+          "window": {
+            "customTitleBar": true,
+"hideNativeTitleBar": true,
+"titleBarHeight": 34,
+"titleText": "XDM // OUTRUN 1986",
+"titleAlignment": "left",
+"showAppIcon": true,
+"showWindowShadeButton": true,
+"windowShadeHeight": 64,
+"showStatsTicker": true,
+"controlButtonsStyle": "mac",
+"titleBarGradientStartDark": "#3B0764",
+"titleBarGradientEndDark": "#9D174D",
+"titleBarGradientStartLight": "#FBCFE8",
+"titleBarGradientEndLight": "#E9D5FF",
+"titleBarForegroundDark": "#FDF4FF",
+"titleBarForegroundLight": "#3B0764",
+"frameBorderWidth": 3,
+"frameCornerArc": 8,
+"frameBorderDark": "#A21CAF",
+"frameBorderLight": "#EC4899",
+"frameHighlightDark": "#00E5FF",
+"frameHighlightLight": "#FFFFFF",
+"frameShadowDark": "#1E0536",
+"frameShadowLight": "#86198F"
+          },
+          "widgets": {
+            "progressBarStyle": "gradient_glow",
+"progressTrackDark": "#1D0F38",
+"progressTrackLight": "#F5D0FE",
+"progressFillStartDark": "#FF2A85",
+"progressFillEndDark": "#00E5FF",
+"progressFillStartLight": "#DB2777",
+"progressFillEndLight": "#0284C7",
+"progressSegments": 18,
+"buttonBevelStyle": "neon_outline",
+"buttonSurfaceDark": "#240E42",
+"buttonSurfaceLight": "#FDF2F8",
+"buttonHighlightDark": "#FF2A85",
+"buttonShadowDark": "#120624",
+"buttonHighlightLight": "#C026D3",
+"buttonShadowLight": "#F5D0FE",
+"showScanlines": true,
+"scanlineOpacity": 0.06
+          },
+          "icons": {
+            "categories": {
+              "documents": "icons/categories/documents.png",
+              "compressed": "icons/categories/compressed.png",
+              "music": "icons/categories/music.png",
+              "video": "icons/categories/videos.png",
+              "videos": "icons/categories/videos.png",
+              "programs": "icons/categories/programs.png",
+              "images": "icons/categories/images.png",
+              "torrents": "icons/categories/torrents.png",
+              "all": "icons/categories/all.png"
+            },
+            "toolbar": {
+              "ADD_URL": "icons/toolbar/add.png",
+              "RESUME": "icons/toolbar/resume.png",
+              "STOP": "icons/toolbar/pause.png",
+              "DELETE": "icons/toolbar/delete.png",
+              "SETTINGS": "icons/toolbar/settings.png"
+            }
+          }
+        }

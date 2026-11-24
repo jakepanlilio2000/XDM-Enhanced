@@ -107,29 +107,29 @@ class FullUiSkinContractTest : DownloadManagerTestBase() {
         val classic = BuiltInClassicXdmSkin()
         assertEquals(SkinManager.SKIN_ORIGINAL_XDM, classic.id)
         assertTrue(classic.isBuiltIn)
-        assertEquals(0, classic.componentArc)
-        assertEquals(0, classic.buttonArc)
-        assertEquals(44, classic.rowHeight)
-        assertEquals(200, classic.sidebarWidth)
-        assertTrue(classic.useClassicIcons)
+        assertEquals(8, classic.componentArc)
+        assertEquals(8, classic.buttonArc)
+        assertEquals(52, classic.rowHeight)
+        assertEquals(190, classic.sidebarWidth)
+        assertFalse(classic.useClassicIcons)
+        assertEquals("upstream", classic.layoutConfig.chromeMode)
+        assertFalse(classic.layoutConfig.showStatusBar)
+        assertFalse(classic.layoutConfig.showMenuBar)
 
         for (region in SkinRegion.values()) {
             val regCfg = classic.getRegionConfig(region)
             assertNotNull(regCfg, "BuiltInClassicXdmSkin must define config for region ${region.slotId}")
-            assertEquals(0, regCfg!!.cornerArc, "Region ${region.slotId} must have cornerArc 0")
-            if (regCfg.buttonArc != null) {
-                assertEquals(0, regCfg.buttonArc, "Region ${region.slotId} must have buttonArc 0")
-            }
         }
 
-        // Apply and verify FlatLaf UIManager tokens
+        // Apply and verify exact upstream subhra74/xdm FlatLaf UIManager tokens
         classic.applyCustomDefaults(isDark = true)
-        assertEquals(0, UIManager.getInt("Component.arc"))
-        assertEquals(0, UIManager.getInt("Button.arc"))
-        assertEquals(0, UIManager.getInt("PopupMenu.arc"))
-        assertEquals(0, UIManager.getInt("ToolTip.arc"))
-        assertEquals(Color(0x14, 0x15, 0x18), UIManager.getColor("XDM.list.background"))
-        assertEquals(Color(0x1A, 0x1B, 0x1F), UIManager.getColor("OptionPane.background"))
+        assertEquals(8, UIManager.getInt("Component.arc"))
+        assertEquals(8, UIManager.getInt("Button.arc"))
+        assertEquals(8, UIManager.getInt("PopupMenu.arc"))
+        assertEquals(8, UIManager.getInt("ToolTip.arc"))
+        assertEquals(Color(0x1E, 0x1E, 0x1E), UIManager.getColor("XDM.list.background"))
+        assertEquals(Color(0x28, 0x28, 0x28), UIManager.getColor("XDM.sidebar.background"))
+        assertEquals(Color(0x28, 0x28, 0x28), UIManager.getColor("OptionPane.background"))
     }
 
     @Test
@@ -413,6 +413,8 @@ class FullUiSkinContractTest : DownloadManagerTestBase() {
 
     @Test
     fun testAboutDialogLiveButtonArcUpdate() {
+        val squareZip = createMockSkinPackage(id = "square-about", name = "Square About", version = "1.0.0", componentArc = 0)
+        SkinManager.installSkin(squareZip)
         runOnEdt {
             val dialog = AboutDialog(null)
             try {
@@ -420,10 +422,11 @@ class FullUiSkinContractTest : DownloadManagerTestBase() {
                 SkinManager.applySkin(SkinManager.SKIN_ENHANCED, saveConfig = false)
                 assertEquals("arc: 8", dialog.btnClose.getClientProperty(FlatClientProperties.STYLE))
 
-                // Under Classic XDM skin: button arc should be 0
-                SkinManager.applySkin(SkinManager.SKIN_ORIGINAL_XDM, saveConfig = false)
+                // Under zero-arc retro skin: button arc should be 0
+                SkinManager.applySkin("square-about", saveConfig = false)
                 assertEquals("arc: 0", dialog.btnClose.getClientProperty(FlatClientProperties.STYLE))
             } finally {
+                SkinManager.applySkin(SkinManager.SKIN_ENHANCED, saveConfig = false)
                 dialog.dispose()
             }
         }
@@ -431,6 +434,8 @@ class FullUiSkinContractTest : DownloadManagerTestBase() {
 
     @Test
     fun testProgressWindowLiveUpdatesTabbedPaneArc() {
+        val squareZip = createMockSkinPackage(id = "square-progress", name = "Square Progress", version = "1.0.0", componentArc = 0)
+        SkinManager.installSkin(squareZip)
         val rec = DbRecord(
             id = 7777L,
             size = 100L,
@@ -448,15 +453,16 @@ class FullUiSkinContractTest : DownloadManagerTestBase() {
         runOnEdt {
             val prog = ProgressWindow(rec.id)
             try {
-                // Classic XDM skin forces tabArc: 0
-                SkinManager.applySkin(SkinManager.SKIN_ORIGINAL_XDM, saveConfig = false)
+                // Zero-arc skin forces tabArc: 0
+                SkinManager.applySkin("square-progress", saveConfig = false)
                 assertEquals("tabArc: 0", prog.tabbedPane.getClientProperty(FlatClientProperties.STYLE))
 
-                // Enhanced skin forces tabArc: 12 (or >= 8)
+                // Enhanced skin forces tabArc: 10 (or >= 8)
                 SkinManager.applySkin(SkinManager.SKIN_ENHANCED, saveConfig = false)
                 val enhancedArc = SkinStyleResolver.resolveCornerArc(SkinRegion.PROGRESS_MODAL)
                 assertEquals("tabArc: $enhancedArc", prog.tabbedPane.getClientProperty(FlatClientProperties.STYLE))
             } finally {
+                SkinManager.applySkin(SkinManager.SKIN_ENHANCED, saveConfig = false)
                 prog.dispose()
             }
         }
@@ -475,8 +481,10 @@ class FullUiSkinContractTest : DownloadManagerTestBase() {
 
     @Test
     fun testModalButtonArcsUpdateOnAllDialogs() {
+        val squareZip = createMockSkinPackage(id = "square-modals", name = "Square Modals", version = "1.0.0", componentArc = 0)
+        SkinManager.installSkin(squareZip)
         runOnEdt {
-            SkinManager.applySkin(SkinManager.SKIN_ORIGINAL_XDM, saveConfig = false)
+            SkinManager.applySkin("square-modals", saveConfig = false)
 
             val dwn = NewDownloadWindow()
             try {
@@ -501,7 +509,48 @@ class FullUiSkinContractTest : DownloadManagerTestBase() {
                 assertEquals(0, SkinStyleResolver.resolveButtonArc(SkinRegion.TORRENT_MODAL))
                 assertEquals(0, torr.btnStart.getClientProperty("Button.arc"))
             } finally {
+                SkinManager.applySkin(SkinManager.SKIN_ENHANCED, saveConfig = false)
                 torr.dispose()
+            }
+        }
+    }
+
+    @Test
+    fun testCustomWindowChromeWindowShadeAndWidgets() {
+        val repoRoot = File("..").canonicalFile.let {
+            if (File(it, "pom.xml").exists()) it else File(".").canonicalFile
+        }
+        val retroArchive = File(repoRoot, "sample-skins/retro-hifi.xdmskin")
+        if (!retroArchive.exists()) return
+        val skin = SkinManager.installSkin(retroArchive)
+        runOnEdt {
+            SkinManager.applySkin(skin.id, saveConfig = false)
+            ThemeManager.applyTheme("dark", null, 100, saveConfig = false)
+            val appWin = AppWindow(logoImage(256), startHidden = true)
+            try {
+                assertTrue(appWin.isUndecorated, "Custom chrome skin with hideNativeTitleBar must configure undecorated frame")
+                assertTrue((appWin.contentPane as javax.swing.JComponent).border is xdm.app.ui.components.SkinnedFrameBorder)
+                assertEquals("XDM ENHANCED // HI-FI CONSOLE", appWin.title)
+
+                // Verify segmented_led ProgressBarUI paints safely
+                val pb = javax.swing.JProgressBar(0, 100).apply {
+                    value = 65
+                    setSize(220, 14)
+                }
+                val img = BufferedImage(220, 14, BufferedImage.TYPE_INT_ARGB)
+                val g = img.createGraphics()
+                pb.paint(g)
+                g.dispose()
+
+                // Verify WindowShade collapses and restores height
+                appWin.setSize(900, 560)
+                appWin.applyWindowShade(true)
+                assertTrue(appWin.height < 140, "WindowShade must collapse window height (was ${appWin.height})")
+                appWin.applyWindowShade(false)
+                assertEquals(560, appWin.height, "Unshading must restore original height")
+            } finally {
+                appWin.dispose()
+                SkinManager.applySkin(SkinManager.SKIN_ENHANCED, saveConfig = false)
             }
         }
     }

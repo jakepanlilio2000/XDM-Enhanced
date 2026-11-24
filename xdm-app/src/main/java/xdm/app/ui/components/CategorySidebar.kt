@@ -252,17 +252,20 @@ class CategorySidebar(
     }
 
     fun updateTheme() {
+        val skin = SkinManager.currentSkin
+        val isDark = com.formdev.flatlaf.FlatLaf.isLafDark()
+        val hasWp = skin.hasRegionWallpaper(SkinRegion.SIDEBAR, isDark) || skin.hasWallpaper(isDark)
+        isOpaque = !hasWp
         background = AppTheme.sidebarBackground
         border = BorderFactory.createMatteBorder(0, 0, 0, 1, AppTheme.sidebarBorder)
+        tree.isOpaque = !hasWp
         tree.background = AppTheme.sidebarBackground
 
         fun setIcon(node: DefaultMutableTreeNode, icon: Icon) {
             (node.userObject as? SidebarNodeData)?.icon = icon
         }
 
-        val isDark = com.formdev.flatlaf.FlatLaf.isLafDark()
         val accent = AppTheme.accent
-        val skin = SkinManager.currentSkin
 
         fun catIcon(catId: String, fallbackIcon: RemixIcon, fallbackColor: Color): Icon {
             return skin.getCategoryIcon(catId, 18.px) ?: FontIcon(
@@ -360,6 +363,9 @@ class CategorySidebar(
             row: Int,
             hasFocus: Boolean
         ): Component {
+            setTextSelectionColor(AppTheme.sidebarSelectedForeground)
+            setTextNonSelectionColor(AppTheme.sidebarForeground)
+            setBackgroundSelectionColor(AppTheme.sidebarSelection)
             val defaultComp = super.getTreeCellRendererComponent(tree, value, sel, expanded, leaf, row, hasFocus) as JLabel
             val node = value as? DefaultMutableTreeNode
             val data = node?.userObject as? SidebarNodeData
@@ -367,6 +373,7 @@ class CategorySidebar(
             if (data != null) {
                 defaultComp.text = data.title
                 defaultComp.icon = data.icon
+                defaultComp.foreground = if (sel) AppTheme.sidebarSelectedForeground else AppTheme.sidebarForeground
                 countBadge.text = "${data.count}"
                 countBadge.foreground = if (sel) AppTheme.sidebarSelectedCount else AppTheme.sidebarCount
 

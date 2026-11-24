@@ -116,6 +116,9 @@ class DownloadStatusBar : JPanel(BorderLayout()) {
     }
 
     fun updateTheme() {
+        val skin = xdm.app.skins.SkinManager.currentSkin
+        val hasWp = skin.hasWallpaper() || skin.hasRegionWallpaper(xdm.app.skins.SkinRegion.TOOLBAR)
+        isOpaque = !hasWp
         background = AppTheme.sidebarBackground
         border = BorderFactory.createMatteBorder(1, 0, 0, 0, AppTheme.sidebarBorder)
         separators.forEach { it.foreground = AppTheme.sidebarBorder }
@@ -125,6 +128,13 @@ class DownloadStatusBar : JPanel(BorderLayout()) {
         lblDisk.foreground = UIManager.getColor("Label.disabledForeground")
         updateMetrics()
         repaint()
+    }
+
+    override fun paintComponent(g: java.awt.Graphics) {
+        val painted = xdm.app.skins.SkinStyleResolver.paintRegionBackground(
+            g, width, height, xdm.app.skins.SkinRegion.MAIN_FRAME
+        )
+        if (!painted) super.paintComponent(g)
     }
 
     fun updateMetrics() {

@@ -24,7 +24,7 @@ Welcome to the internal technical documentation directory of **XDM Enhanced**. T
 
 Working examples are included directly in the source tree to accelerate your development:
 
-- **Reference Skin Package:** [`sample-skins/cyber-neon.xdmskin`](../sample-skins/cyber-neon.xdmskin) — Demonstrates dark theme swatches, custom title bar, rounded card borders, and custom category icons.
+- **Reference Skin Packages:** [`sample-skins/`](../sample-skins/) — Includes 6 validated sample skins (`anime-sakura`, `modern-aurora`, `steampunk-brass`, `retro-hifi`, `synthwave-outrun`, `cyber-neon`) demonstrating custom titlebars, compact WindowShade mode, beveled borders, custom progress bars, wallpapers, and custom icons.
 - **Reference Checksum Plugin:** [`sample-plugins/checksum-verifier.xdmplugin`](../sample-plugins/checksum-verifier.xdmplugin) — Demonstrates post-download file integrity verification (MD5, SHA-1, SHA-256) via event bus hooks.
 - **Reference yt-dlp Download Provider:** [`sample-plugins/ytdlp-downloader.xdmplugin`](../sample-plugins/ytdlp-downloader.xdmplugin) — Demonstrates external CLI integration, process argument hardening, and custom download provider registration with visible tasks.
 - **Reference Proxy Profile Provider:** [`sample-plugins/proxy-provider.xdmplugin`](../sample-plugins/proxy-provider.xdmplugin) — Demonstrates scoped SOCKS5/HTTP proxy resolution with fail-closed policies and credential redaction.
@@ -37,7 +37,7 @@ Working examples are included directly in the source tree to accelerate your dev
 
 - **Official Project Website:** [https://jakepanlilio2000.github.io/XDM-Enhanced/](https://jakepanlilio2000.github.io/XDM-Enhanced/) *(Source in [`website/`](../website/))*
 - **Community Wiki:** [https://github.com/jakepanlilio2000/XDM-Enhanced/wiki](https://github.com/jakepanlilio2000/XDM-Enhanced/wiki) *(Staged in [`wiki/`](../wiki/))*
-- **Latest Stable Release:** [GitHub Releases v1.1.0](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/tag/v1.1.0)
+- **Latest Stable Release:** [GitHub Releases v1.2.0](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/tag/v1.2.0)
 - **Contribution Guidelines:** [CONTRIBUTING.md](../CONTRIBUTING.md)
 - **Issue & Bug Tracker:** [GitHub Issues](https://github.com/jakepanlilio2000/XDM-Enhanced/issues)
 - **Upstream Attribution:** [README.UPSTREAM.md](../README.UPSTREAM.md)

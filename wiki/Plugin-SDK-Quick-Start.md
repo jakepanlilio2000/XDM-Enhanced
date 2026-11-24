@@ -8,7 +8,7 @@ Learn how to build, compile, and package a decoupled third-party plugin for **XD
 
 - Liberica JDK 25 or OpenJDK 25 (or JDK 8+ for plugin compilation).
 - Apache Maven 3.9+.
-- Public plugin API dependency: `xdm-plugin-api-1.1.0.jar` (available in local Maven repository or repository builds).
+- Public plugin API dependency: `xdm-plugin-api-1.2.0.jar` (available in local Maven repository or repository builds).
 
 ---
 
@@ -37,7 +37,7 @@ Create a new Maven project with `pom.xml`:
         <dependency>
             <groupId>xdm</groupId>
             <artifactId>xdm-plugin-api</artifactId>
-            <version>1.1.0</version>
+            <version>1.2.0</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>

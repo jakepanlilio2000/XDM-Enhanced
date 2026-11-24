@@ -6,9 +6,9 @@ Download verified releases, native installers, standalone archives, browser comp
   <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
     <div>
       <span class="badge-pill badge-verified">Active Release: Stable</span>
-      <h3 style="margin: 0.25rem 0;">Version: v1.1.0 (Plugin SDK v2 &amp; Upstream Sync)</h3>
+      <h3 style="margin: 0.25rem 0;">Version: v1.2.0 (Custom Window Chrome, 5 Sample Skins &amp; 1:1 Original XDM)</h3>
       <p style="margin: 0; color: var(--vp-c-text-2); font-size: 0.9rem;">
-        Published on <strong>November 24, 2026</strong>. Graduates Modular Plugin SDK v2, multi-platform installers, HLS playlist capture &amp; muxer fixes, and networking/accessibility hardening.
+        Published on <strong>November 24, 2026</strong>. Introduces Skin Schema v3 custom window chrome and widgets, 5 new sample <code>.xdmskin</code> packages, and 1:1 <code>subhra74/xdm</code> Original XDM parity with full Plugin SDK v2 compatibility.
       </p>
     </div>
     <div style="display: flex; gap: 0.5rem; align-items: center;">
@@ -19,12 +19,12 @@ Download verified releases, native installers, standalone archives, browser comp
 
 > [!NOTE]
 > **Release Channels:**
-> - **Stable Channel (`v1.1.0`):** Recommended for all users. Graduates Modular Plugin SDK v2, macOS DMGs, Linux native packages, Windows MSI/NSIS/Portable builds, and upstream media/network bugfixes.
-> - **Previous Stable (`v1.0.2`):** Remains available on [GitHub Releases](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/tag/v1.0.2) for historical fallback.
+> - **Stable Channel (`v1.2.0`):** Recommended for all users. Introduces Skin Schema v3 custom chrome &amp; widgets, 6 sample `.xdmskin` themes, 1:1 Original XDM UI parity, and all `v1.1.0` Modular Plugin SDK v2 &amp; upstream fixes.
+> - **Previous Stable (`v1.1.0` / `v1.0.2`):** Remain available on [GitHub Releases](https://github.com/jakepanlilio2000/XDM-Enhanced/releases).
 
 ---
 
-## 1. Desktop Application Packages (`v1.1.0`)
+## 1. Desktop Application Packages (`v1.2.0`)
 
 <div class="feature-grid">
   <div class="download-card primary-card">
@@ -38,7 +38,7 @@ Download verified releases, native installers, standalone archives, browser comp
       </ul>
     </div>
     <div style="margin-top: 1.25rem;">
-      <a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.1.0/XDM-Enhanced-Setup-v1.1.0-win-x64.exe" class="btn-primary" style="width: 100%; box-sizing: border-box;">Download Setup .EXE</a>
+      <a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.2.0/XDM-Enhanced-Setup-v1.2.0-win-x64.exe" class="btn-primary" style="width: 100%; box-sizing: border-box;">Download Setup .EXE</a>
     </div>
   </div>
 
@@ -53,7 +53,7 @@ Download verified releases, native installers, standalone archives, browser comp
       </ul>
     </div>
     <div style="margin-top: 1.25rem;">
-      <a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.1.0/XDM-Enhanced-v1.1.0-windows-x64.zip" class="btn-secondary" style="width: 100%; box-sizing: border-box;">Download Portable .ZIP</a>
+      <a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.2.0/XDM-Enhanced-v1.2.0-windows-x64.zip" class="btn-secondary" style="width: 100%; box-sizing: border-box;">Download Portable .ZIP</a>
     </div>
   </div>
 
@@ -63,12 +63,12 @@ Download verified releases, native installers, standalone archives, browser comp
       <h3 style="margin-top: 0.75rem;">Windows MSI Installers</h3>
       <p>Standard Windows Installer packages for managed IT enterprise deployments, Copilot+ ARM64 PCs, and silent distribution.</p>
       <ul style="font-size: 0.85rem; color: var(--vp-c-text-2); padding-left: 1.25rem; margin-top: 0.5rem;">
-        <li><a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.1.0/xdm-1.1.0-x64.msi">Download x64 MSI</a></li>
-        <li><a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.1.0/xdm-1.1.0-arm64.msi">Download ARM64 MSI</a></li>
+        <li><a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.2.0/xdm-1.2.0-x64.msi">Download x64 MSI</a></li>
+        <li><a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.2.0/xdm-1.2.0-arm64.msi">Download ARM64 MSI</a></li>
       </ul>
     </div>
     <div style="margin-top: 1.25rem;">
-      <a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.1.0/xdm-1.1.0-x64.msi" class="btn-secondary" style="width: 100%; box-sizing: border-box;">Download x64 MSI</a>
+      <a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.2.0/xdm-1.2.0-x64.msi" class="btn-secondary" style="width: 100%; box-sizing: border-box;">Download x64 MSI</a>
     </div>
   </div>
 
@@ -78,12 +78,12 @@ Download verified releases, native installers, standalone archives, browser comp
       <h3 style="margin-top: 0.75rem;">macOS Disk Image (DMG)</h3>
       <p>Native macOS application bundle with embedded runtime and system integration for Apple Silicon (M-series) and Intel Macs.</p>
       <ul style="font-size: 0.85rem; color: var(--vp-c-text-2); padding-left: 1.25rem; margin-top: 0.5rem;">
-        <li><a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.1.0/xdm-app-1.1.0-arm64.dmg">Apple Silicon DMG (M1-M4)</a></li>
-        <li><a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.1.0/xdm-app-1.1.0-x64.dmg">Intel x64 DMG</a></li>
+        <li><a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.2.0/xdm-app-1.2.0-arm64.dmg">Apple Silicon DMG (M1-M4)</a></li>
+        <li><a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.2.0/xdm-app-1.2.0-x64.dmg">Intel x64 DMG</a></li>
       </ul>
     </div>
     <div style="margin-top: 1.25rem;">
-      <a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.1.0/xdm-app-1.1.0-arm64.dmg" class="btn-secondary" style="width: 100%; box-sizing: border-box;">Download Apple Silicon DMG</a>
+      <a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.2.0/xdm-app-1.2.0-arm64.dmg" class="btn-secondary" style="width: 100%; box-sizing: border-box;">Download Apple Silicon DMG</a>
     </div>
   </div>
 
@@ -93,14 +93,14 @@ Download verified releases, native installers, standalone archives, browser comp
       <h3 style="margin-top: 0.75rem;">Linux Native Packages</h3>
       <p>Tailored packages with desktop integration, start menu icons, and bundled JRE for all major Linux distributions.</p>
       <ul style="font-size: 0.85rem; color: var(--vp-c-text-2); padding-left: 1.25rem; margin-top: 0.5rem;">
-        <li>Debian / Ubuntu: <a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.1.0/xdm-app_1.1.0_amd64.deb">amd64</a> | <a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.1.0/xdm-app_1.1.0_arm64.deb">arm64</a></li>
-        <li>Fedora / RHEL: <a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.1.0/xdm-app-1.1.0-1.x86_64.rpm">x86_64</a> | <a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.1.0/xdm-app-1.1.0-1.aarch64.rpm">aarch64</a></li>
-        <li>Arch / Manjaro: <a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.1.0/xdm-app-1.1.0-1-x86_64.pkg.tar.zst">x86_64</a> | <a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.1.0/xdm-app-1.1.0-1-aarch64.pkg.tar.zst">aarch64</a></li>
-        <li>Portable Tarball: <a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.1.0/xdm-app-1.1.0-linux-x64.tar.gz">x64</a> | <a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.1.0/xdm-app-1.1.0-linux-arm64.tar.gz">arm64</a></li>
+        <li>Debian / Ubuntu: <a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.2.0/xdm-app_1.2.0_amd64.deb">amd64</a> | <a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.2.0/xdm-app_1.2.0_arm64.deb">arm64</a></li>
+        <li>Fedora / RHEL: <a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.2.0/xdm-app-1.2.0-1.x86_64.rpm">x86_64</a> | <a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.2.0/xdm-app-1.2.0-1.aarch64.rpm">aarch64</a></li>
+        <li>Arch / Manjaro: <a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.2.0/xdm-app-1.2.0-1-x86_64.pkg.tar.zst">x86_64</a> | <a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.2.0/xdm-app-1.2.0-1-aarch64.pkg.tar.zst">aarch64</a></li>
+        <li>Portable Tarball: <a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.2.0/xdm-app-1.2.0-linux-x64.tar.gz">x64</a> | <a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.2.0/xdm-app-1.2.0-linux-arm64.tar.gz">arm64</a></li>
       </ul>
     </div>
     <div style="margin-top: 1.25rem;">
-      <a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.1.0/xdm-app_1.1.0_amd64.deb" class="btn-secondary" style="width: 100%; box-sizing: border-box;">Download Debian/Ubuntu .DEB</a>
+      <a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.2.0/xdm-app_1.2.0_amd64.deb" class="btn-secondary" style="width: 100%; box-sizing: border-box;">Download Debian/Ubuntu .DEB</a>
     </div>
   </div>
 
@@ -115,7 +115,7 @@ Download verified releases, native installers, standalone archives, browser comp
       </ul>
     </div>
     <div style="margin-top: 1.25rem;">
-      <a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.1.0/xdm-app-1.1.0.jar" class="btn-secondary" style="width: 100%; box-sizing: border-box;">Download Standalone .JAR</a>
+      <a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.2.0/xdm-app-1.2.0.jar" class="btn-secondary" style="width: 100%; box-sizing: border-box;">Download Standalone .JAR</a>
     </div>
   </div>
 </div>
@@ -134,7 +134,7 @@ Install the companion browser extension to enable automatic link capturing and t
       <p>Compatible with Google Chrome, Microsoft Edge, Brave, Opera, Vivaldi, and other Chromium-based browsers.</p>
     </div>
     <div style="margin-top: 1rem;">
-      <a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.1.0/XDM-Enhanced-Extension-Chromium-v1.1.0.zip" class="btn-secondary" style="width: 100%; box-sizing: border-box;">Download Extension (.ZIP)</a>
+      <a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.2.0/XDM-Enhanced-Extension-Chromium-v1.2.0.zip" class="btn-secondary" style="width: 100%; box-sizing: border-box;">Download Extension (.ZIP)</a>
       <div style="margin-top: 0.5rem; text-align: center;">
         <a href="/extensions" style="font-size: 0.85rem; color: var(--vp-c-brand-1);">Installation Guide &rarr;</a>
       </div>
@@ -148,7 +148,7 @@ Install the companion browser extension to enable automatic link capturing and t
       <p>Native Firefox add-on package (Manifest V2) supporting Firefox 109+, LibreWolf, Floorp, Waterfox, and Firefox ESR.</p>
     </div>
     <div style="margin-top: 1rem;">
-      <a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.1.0/XDM-Enhanced-Extension-Firefox-v1.1.0.xpi" class="btn-secondary" style="width: 100%; box-sizing: border-box;">Download Add-on (.XPI)</a>
+      <a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.2.0/XDM-Enhanced-Extension-Firefox-v1.2.0.xpi" class="btn-secondary" style="width: 100%; box-sizing: border-box;">Download Add-on (.XPI)</a>
       <div style="margin-top: 0.5rem; text-align: center;">
         <a href="/extensions" style="font-size: 0.85rem; color: var(--vp-c-brand-1);">Installation Guide &rarr;</a>
       </div>
@@ -162,20 +162,29 @@ Install the companion browser extension to enable automatic link capturing and t
 
 | Package Name | File Type | Description | Download |
 |:---|:---:|:---|:---:|
-| **Plugin API v2 (`xdm-plugin-api`)** | `.jar` | Public Java SPI specification 2.0.0 (`xdm-plugin-api:1.1.0`) for building decoupled plugins. | [Download](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.1.0/xdm-plugin-api-1.1.0.jar) |
-| **yt-dlp Downloader Plugin** | `.xdmplugin` | Official download provider integrating authorized yt-dlp media extraction. | [Download](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.1.0/ytdlp-downloader.xdmplugin) |
-| **Proxy Profile Provider** | `.xdmplugin` | Network provider demonstrating scoped SOCKS5/HTTP proxy profile management. | [Download](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.1.0/proxy-provider.xdmplugin) |
-| **VPN Telemetry Client** | `.xdmplugin` | Non-privileged VPN client status monitoring and pause policy integration. | [Download](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.1.0/vpn-status.xdmplugin) |
-| **UI &amp; Alerts Notification Plugin** | `.xdmplugin` | Demonstrates UI tabs, toast notifications, status pills, and theme observation. | [Download](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.1.0/ui-notification.xdmplugin) |
-| **Reference SDK v2 Plugin** | `.xdmplugin` | Complete sample plugin demonstrating typed EventTopics and lifecycle methods. | [Download](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.1.0/v2-sample-plugin.xdmplugin) |
-| **Checksum Verifier Plugin** | `.xdmplugin` | Automated cryptographic post-download verification (MD5, SHA-1, SHA-256). | [Download](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.1.0/checksum-verifier.xdmplugin) |
-| **Cyber Neon Skin** | `.xdmskin` | Verified custom FlatLaf skin package with neon cyan accents. | [Download](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.1.0/cyber-neon.xdmskin) |
+| **Plugin API v2 (`xdm-plugin-api`)** | `.jar` | Public Java SPI specification 2.0.0 (API 1.1.0, `1.2.0` Maven artifact) for building decoupled plugins. | [Download](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.2.0/xdm-plugin-api-1.2.0.jar) |
+| **yt-dlp Downloader Plugin** | `.xdmplugin` | Official download provider integrating authorized yt-dlp media extraction. | [Download](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.2.0/ytdlp-downloader.xdmplugin) |
+| **Proxy Profile Provider** | `.xdmplugin` | Network provider demonstrating scoped SOCKS5/HTTP proxy profile management. | [Download](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.2.0/proxy-provider.xdmplugin) |
+| **VPN Telemetry Client** | `.xdmplugin` | Non-privileged VPN client status monitoring and pause policy integration. | [Download](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.2.0/vpn-status.xdmplugin) |
+| **UI &amp; Alerts Notification Plugin** | `.xdmplugin` | Demonstrates UI tabs, toast notifications, status pills, and theme observation. | [Download](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.2.0/ui-notification.xdmplugin) |
+| **Reference SDK v2 Plugin** | `.xdmplugin` | Complete sample plugin demonstrating typed EventTopics and lifecycle methods. | [Download](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.2.0/v2-sample-plugin.xdmplugin) |
+| **Checksum Verifier Plugin** | `.xdmplugin` | Automated cryptographic post-download verification (MD5, SHA-1, SHA-256). | [Download](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.2.0/checksum-verifier.xdmplugin) |
+| **Retro Hi-Fi Console Skin** | `.xdmskin` | Schema v3 deck chrome with LCD ticker, WindowShade toggle, LED bars, and scanlines. | [Download](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.2.0/retro-hifi.xdmskin) |
+| **Anime Sakura Studio Skin** | `.xdmskin` | Schema v3 cherry-blossom anime theme in dark &amp; light palettes with candy meters. | [Download](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.2.0/anime-sakura.xdmskin) |
+| **Steampunk Brass Works Skin** | `.xdmskin` | Schema v3 mahogany &amp; riveted brass bezel theme with pressure-gauge progress bars. | [Download](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.2.0/steampunk-brass.xdmskin) |
+| **Modern Aurora Frost Skin** | `.xdmskin` | Schema v3 centered frameless workspace with minimal controls and aurora glow bars. | [Download](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.2.0/modern-aurora.xdmskin) |
+| **Synthwave Outrun 1986 Skin** | `.xdmskin` | Schema v3 ultraviolet sunset laser grid with neon button outlines and scanlines. | [Download](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.2.0/synthwave-outrun.xdmskin) |
+| **Cyber Neon Skin** | `.xdmskin` | Verified Schema v2 custom skin package styling all 13 UI region slots. | [Download](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.2.0/cyber-neon.xdmskin) |
 
 ---
 
-## 4. SHA-256 Checksums (`v1.1.0`)
+## 4. SHA-256 Checksums (`v1.2.0` &amp; `v1.1.0`)
 
-Verify downloaded binaries against the cryptographic hashes published in [`SHA256SUMS.txt`](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.1.0/SHA256SUMS.txt) on the `v1.1.0` GitHub Release:
+Verify `v1.2.0` release assets against [`SHA256SUMS.txt`](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.2.0/SHA256SUMS.txt) on the `v1.2.0` GitHub Release.
+
+### Historical Verified Checksums (`v1.1.0`)
+
+[`SHA256SUMS.txt`](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.1.0/SHA256SUMS.txt) on the `v1.1.0` GitHub Release:
 
 <table class="checksum-table">
   <thead>
@@ -264,10 +273,10 @@ Verify downloaded binaries against the cryptographic hashes published in [`SHA25
 
 ```powershell
 # On Windows (PowerShell)
-Get-FileHash -Algorithm SHA256 .\XDM-Enhanced-Setup-v1.1.0-win-x64.exe
+Get-FileHash -Algorithm SHA256 .\XDM-Enhanced-Setup-v1.2.0-win-x64.exe
 
 # On Linux / macOS (Terminal)
-sha256sum XDM-Enhanced-Setup-v1.1.0-win-x64.exe
+sha256sum XDM-Enhanced-Setup-v1.2.0-win-x64.exe
 ```
 
 ---
