@@ -73,7 +73,8 @@ interface IAppInstance {
      */
     fun showFatalError(message: String)
 
-    fun showDownloadCompleteWindow(id: Long, folder: String, fileName: String, fileSize: Long)
+    /** [note]: one line under the details about how the download was saved, when it wasn't the usual way. */
+    fun showDownloadCompleteWindow(id: Long, folder: String, fileName: String, fileSize: Long, note: String? = null)
 
     /**
      * Posts a quiet "<file> download finished" system notification instead of the full dialog. A click
@@ -274,12 +275,12 @@ open class AppInstance : IAppInstance {
         }
     }
 
-    override fun showDownloadCompleteWindow(id: Long, folder: String, fileName: String, fileSize: Long) {
+    override fun showDownloadCompleteWindow(id: Long, folder: String, fileName: String, fileSize: Long, note: String?) {
         runOnUIThread {
             // Checksums only make sense for a file fetched from one URL as-is.
             val source = if (AppContext.db.getById(id)?.downloadType == DownloadType.Http) ChecksumPanel.sourceOf(id) else null
             val sourceUrl = AppContext.taskInfoDB.getHttpTask(id)?.url ?: AppContext.taskInfoDB.getTorrentTask(id)?.sourceUri ?: AppContext.db.getById(id)?.fileName
-            DownloadCompleteWindow().apply { setDetails(fileName, folder, fileSize, source, sourceUrl) }.isVisible = true
+            DownloadCompleteWindow().apply { setDetails(fileName, folder, fileSize, source, sourceUrl, note) }.isVisible = true
         }
     }
 
@@ -367,25 +368,12 @@ open class AppInstance : IAppInstance {
             }
         }
 
-        if (AppContext.config.startDownloadAutomatically) {
-            val name = FileUtils.sanitizeFileName(fileName) ?: "video"
-            val tracker = AppContext.videoTracker
-            val http = tracker.getHttpVideo(vid)
-            val hls = tracker.getHlsVideo(vid)
-            val dash = tracker.getDashVideo(vid)
-            val subtitle = tracker.getSubtitle(vid)
-            val url = http?.url ?: subtitle?.task?.url ?: hls?.url ?: dash?.url
-            val origin = http?.origin ?: subtitle?.task?.origin ?: hls?.origin ?: dash?.origin
-            val (categoryId, targetFolder) = DesktopCaptureHost.destination(name, url, origin)
-            val segments = AppContext.config.maxSegments
-            val convertToSrt = AppContext.config.saveSubtitlesAsSrt
-            AppContext.downloader.addVideoDownload(
-                vid, name, categoryId, targetFolder, segments, null, convertToSrt
-            )
-        } else {
-            SwingUtilities.invokeLater {
-                showNewVideoDownloadWindowInternal(vid, fileName, fileSize, contentType)
-            }
+        // "Start download immediately" covers videos too: start with the dialog's preselection.
+        if (AppContext.config.startDownloadAutomatically && VideoDownloadDefaults.startWithoutDialog(vid, fileName)) {
+            return
+        }
+        SwingUtilities.invokeLater {
+            showNewVideoDownloadWindowInternal(vid, fileName, fileSize, contentType)
         }
     }
 

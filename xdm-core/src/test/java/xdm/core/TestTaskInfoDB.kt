@@ -67,6 +67,17 @@ class TestTaskInfoDB : HttpDownloadTestBase() {
     }
 
     @Test
+    fun http_roundTripKeepsSourceLink() {
+        val task = httpTask(4).copy(sourceUrl = "https://site.example/get?id=7", sourceCookie = "session=abc")
+        db().saveHttpTask(task)
+        val loaded = db().getHttpTask(4)!!
+        assertEquals("https://site.example/get?id=7", loaded.sourceUrl, "source link survives a restart")
+        assertEquals("session=abc", loaded.sourceCookie, "source cookies survive a restart")
+        db().saveHttpTask(httpTask(5))
+        assertEquals(null, db().getHttpTask(5)!!.sourceUrl, "no source link when there was no redirect")
+    }
+
+    @Test
     fun http_roundTripKeepsConvertToSrt() {
         val task = httpTask(2).copy(convertToSrt = true)
         db().saveHttpTask(task)
@@ -92,12 +103,28 @@ class TestTaskInfoDB : HttpDownloadTestBase() {
     }
 
     @Test
+    fun hls_keepOriginalFormatIsSavedAndOffByDefault() {
+        val task = HlsDownloadTaskInfo(
+            id = 4, fileName = "t.ts", tempDir = "/tmp/t", respectFileName = false, cookie = null, headers = null,
+            origin = null, categoryId = null, targetFolder = "/downloads", maxPiece = 0, authInfo = null,
+            url = "https://cdn.example.com/v.m3u8", audioUrl = null, independent = false,
+        )
+        db().saveHlsTask(task)
+        assertEquals(false, db().getHlsTask(4)!!.keepOriginalFormat, "off unless chosen")
+        db().saveHlsTask(task.copy(keepOriginalFormat = true))
+        assertEquals(true, db().getHlsTask(4)!!.keepOriginalFormat, "kept as chosen")
+    }
+
+    @Test
     fun dash_roundTripKeepsCookieHeadersOriginAndFolder() {
         val task = DashDownloadTaskInfo(
             id = 3, fileName = "d.mp4", tempDir = "/tmp/d", respectFileName = false,
             cookie = "cf=2", headers = headers, origin = "https://example.com/dash",
-            categoryId = null, targetFolder = "/downloads",            maxPiece = 0, authInfo = null,
-            videoSegments = listOf(DashSegment("https://cdn.example.com/v1.m4s".toHttpUrl(), Pair(0L, 99L))),
+            categoryId = null, targetFolder = "/downloads", maxPiece = 0, authInfo = null,
+            videoSegments = listOf(
+                DashSegment("https://cdn.example.com/init.mp4".toHttpUrl(), null, init = true),
+                DashSegment("https://cdn.example.com/v1.m4s".toHttpUrl(), Pair(0L, 99L), duration = 2.002),
+            ),
             audioSegments = listOf(DashSegment("https://cdn.example.com/a1.m4s".toHttpUrl(), null)),
             url = "https://cdn.example.com/manifest.mpd", audioMime = "audio/mp4", videoMime = "video/mp4",
             subtitles = listOf(
@@ -200,6 +227,21 @@ class TestTaskInfoDB : HttpDownloadTestBase() {
         assertEquals(ctx.cookie, c.cookie)
         assertEquals(longUrl, c.chunks[0].url)
         assertEquals(ctx.chunks[0].keyUrl, c.chunks[0].keyUrl)
+    }
+
+    @Test
+    fun hlsState_keepsTheMuxedContainer() {
+        val host = host()
+        fun ctx(container: String?) = HlsTaskContext(
+            id = 8, chunks = arrayListOf(), httpClient = CountingHttpClient(), downloadHost = host,
+            tempFileName = "h.tmp", tempFolder = tmpDir.absolutePath, url = "https://cdn.example.com/i.m3u8",
+            audioUrl = null, independent = false, encrypted = false, muxedContainer = container,
+        )
+        for (container in listOf("mkv", null)) {
+            saveState(ctx(container), work.absolutePath)
+            val c = loadHlsState(8, work.absolutePath, CountingHttpClient(), host).getOrThrow()
+            assertEquals(container, c.muxedContainer, "a commit retried after a restart names the file after it")
+        }
     }
 
     @Test

@@ -18,11 +18,25 @@ import xdm.core.storage.StorageFile
 import xdm.core.storage.prepareForWriting
 import xdm.core.util.FileUtils
 import xdm.core.util.Logger
+import xdm.core.util.DownloadClock
+import xdm.core.util.ManifestUtils
 import xdm.core.util.ManifestUtils.downloadManifestAsFile
+import xdm.core.util.PartRetry
+import xdm.core.util.RetryDecision
+import xdm.core.util.RetryPolicy
+import xdm.core.util.Trouble
+import xdm.core.network.http.HttpResponse
 import xdm.core.util.getFileExtFromUrl
 import xdm.core.util.isOutOfSpace
 import java.io.File
+import xdm.core.downloaders.AssemblyNote
+import xdm.core.downloaders.CommitResult
+import xdm.core.media.muxer.OutputKind
+import xdm.core.media.muxer.SegmentInfo
+import xdm.core.media.muxer.impl.SegmentProbe
 import java.io.IOException
+import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -39,6 +53,8 @@ abstract class StreamingDownloaderTask(
     maxPiece: Int = 0,
     /** The subtitle picked for this download, saved beside the video as SRT; its segments are [SUBS_TAG] chunks. */
     private val subtitle: SubtitleTrack? = null,
+    /** Keep TS as `.ts` instead of remuxing ([Muxer.setKeepOriginalFormat]). */
+    private val keepOriginalFormat: Boolean = false,
 ) : DownloaderTask {
     protected val executorService: ExecutorService =
         Executors.newFixedThreadPool(maxPiece.takeIf { it > 0 } ?: config.maxSegments)
@@ -64,7 +80,67 @@ abstract class StreamingDownloaderTask(
     /** Pass to manifest/key downloads so a TLS verification failure is remembered. */
     protected val recordFetchError: (Throwable) -> Unit = { if (isTlsVerificationError(it)) tlsFailure.set(true) }
 
-    private fun setupError(fallback: DownloadError) = if (tlsFailure.get()) DownloadError.TlsError else fallback
+    /** Set when a manifest or key fetch gave up on a busy server, so the setup failure says so. */
+    private val busyFailure = AtomicBoolean(false)
+
+    private fun setupError(fallback: DownloadError) = when {
+        tlsFailure.get() -> DownloadError.TlsError
+        busyFailure.get() -> DownloadError.ServerBusy
+        else -> fallback
+    }
+
+    /** When the download last received data: segments keep asking while it does (see [RetryPolicy]). */
+    protected val clock = DownloadClock()
+
+    /** Segments waiting to ask again, by id, with the wall-clock time their wait ends. */
+    private val waits = ConcurrentHashMap<Long, Long>()
+
+    /** The error of the segment that failed last; reported when the failed segments disagree. */
+    @Volatile
+    private var lastFailure: DownloadError? = null
+
+    /**
+     * Fetches a playlist or key, a lone request with nothing else running: a busy server and network errors are
+     * asked again by [RetryPolicy]'s rules (the run start counts as data, so a busy server gets the full budget);
+     * a refusal or a missing file fails at once unless it says when to come back (Retry-After).
+     */
+    protected fun <T : Any> fetchWithRetry(
+        what: String,
+        fetch: (onErrorResponse: (HttpResponse) -> Unit, onError: (Throwable) -> Unit) -> T?,
+    ): T? {
+        val retry = PartRetry(clock, config.maxRetries)
+        while (!context.stopFlag.get()) {
+            var code = 0
+            var retryAfter: Long? = null
+            var authenticate: String? = null
+            var failure: Throwable? = null
+            val result = fetch({ r ->
+                code = r.statusCode
+                retryAfter = RetryPolicy.retryAfterMs(r.getHeader("Retry-After"))
+                authenticate = r.getHeader("WWW-Authenticate")
+            }, { failure = it; recordFetchError(it) })
+            if (result != null || context.stopFlag.get()) return result
+            val f = failure
+            val trouble = when {
+                code != 0 -> RetryPolicy.classify(code, authenticate, retryAfter != null)
+                f == null || f is ManifestUtils.ManifestTooLargeException || isTlsVerificationError(f) -> null
+                else -> Trouble.Network
+            }
+            if (trouble != Trouble.Server && trouble != Trouble.Network) return null
+            when (val d = retry.next(trouble, retryAfter)) {
+                is RetryDecision.GiveUp -> {
+                    if (d.error == DownloadError.ServerBusy) busyFailure.set(true)
+                    Logger.error("XDM", "$what: gave up, ${d.error}")
+                    return null
+                }
+                is RetryDecision.Wait -> {
+                    Logger.info("XDM", "$what: ${if (code != 0) code else f?.message}, again in ${d.ms} ms")
+                    if (!RetryPolicy.sleep(d.ms) { context.stopFlag.get() }) return null
+                }
+            }
+        }
+        return null
+    }
 
     abstract fun initDownload(): DownloadStatusInfo.InitInfo?
     abstract fun fileExt(): String
@@ -157,6 +233,8 @@ abstract class StreamingDownloaderTask(
         val finished = context.chunks.filter { it.status.get() == ChunkStatus.Finished }
         if (finished.isEmpty()) return null
         if (context.completed.get() && outputFile().exists) return null
+        // The segments were moved into a playlist folder that wasn't published yet: the next assembly publishes it.
+        if (PlaylistFolder(context.tempFolder).isBuilt) return null
         return if (finished.any { !File(getChunkTempFileName(it)).isFile }) DownloadError.DiskSpaceError else null
     }
 
@@ -182,6 +260,7 @@ abstract class StreamingDownloaderTask(
 
     private fun download() {
         try {
+            clock.startRun()
             context.downloadHost.onDownloadActivated(context.id)
             if (!context.init.get()) {
                 val initInfo = initDownload()
@@ -240,9 +319,12 @@ abstract class StreamingDownloaderTask(
             saveContext()
             if (context.stopFlag.get()) return
             // A subtitle is extra: a failed one is left out, it never fails the video.
-            context.chunks.find { it.tag != SUBS_TAG && it.status.get() != ChunkStatus.Finished }?.let {
-                Logger.error("XDM", "Not all chunks downloaded successfully")
-                var error = it.error.get() ?: DownloadError.InternalError
+            val unfinished = context.chunks.filter { it.tag != SUBS_TAG && it.status.get() != ChunkStatus.Finished }
+            if (unfinished.isNotEmpty()) {
+                Logger.error("XDM", "${unfinished.size} segments not downloaded")
+                // All failed the same way: that is the reason; otherwise the one that failed last.
+                val errors = unfinished.mapNotNull { it.error.get() }.distinct()
+                var error = errors.singleOrNull() ?: lastFailure ?: errors.firstOrNull() ?: DownloadError.InternalError
                 // A refusal is only an expiry if the link worked before; otherwise it never did.
                 val anyProgress = context.chunks.any { c -> c.status.get() == ChunkStatus.Finished || c.downloaded.get() > 0 }
                 if (error == DownloadError.LinkExpired && !anyProgress) error = DownloadError.InvalidResponse
@@ -256,11 +338,32 @@ abstract class StreamingDownloaderTask(
         }
     }
 
+    /**
+     * All chunks are downloaded: sends their final state at once (the once-a-second updates may have missed
+     * the last ones), so the window's table shows every slot finished, and keeps it, while assembling.
+     */
+    private fun reportFinished() {
+        synchronized(this) {
+            progressTracker.finish(context.chunks)
+            prgInfo.apply {
+                this.progress = 100
+                this.downloaded = context.chunks.sumOf { it.downloaded.get() }
+                this.speed = 0f
+                this.eta = 0
+                this.segments = progressTracker.segmentData
+            }
+        }
+        context.downloadHost.onDownloadProgress(prgInfo)
+    }
+
     private fun assemble() {
         if (context.stopFlag.get()) return
+        reportFinished()
         context.assembling.set(true)
         context.downloadHost.onAssembleStart(context.id)
         val tmpFile = outputFile()
+        // A previous run built the playlist folder (nothing else could keep the download) but didn't publish it.
+        if (PlaylistFolder(context.tempFolder).isBuilt) { publishPlaylistFolder(); return }
         // A previous run muxed successfully but the commit failed: only retry the commit.
         val alreadyMuxed = context.completed.get() && tmpFile.exists
         if (!alreadyMuxed) {
@@ -283,6 +386,8 @@ abstract class StreamingDownloaderTask(
                 context.downloadHost.onDownloadFailed(context.id, DownloadError.OutputWriteError)
                 return
             }
+            muxer.setSegmentInfo(segmentInfo())
+            muxer.setKeepOriginalFormat(keepOriginalFormat)
             val ret = if (context.hasSeparateStreams) {
                 assembleStreams(tmpFile)
             } else {
@@ -290,17 +395,27 @@ abstract class StreamingDownloaderTask(
             }
             if (context.stopFlag.get()) return
             if (!ret) {
-                val error = if (isOutOfSpace(assembleError ?: muxer.lastError)) DownloadError.DiskSpaceError
-                else DownloadError.MuxError
-                context.downloadHost.onDownloadFailed(context.id, error)
+                // A full disk pauses (the next start tries again); anything else keeps the download as files.
+                if (isOutOfSpace(assembleError ?: muxer.lastError)) {
+                    context.downloadHost.onDownloadFailed(context.id, DownloadError.DiskSpaceError)
+                } else {
+                    keepAsFiles(tmpFile)
+                }
                 return
+            }
+            // The container written may not be the part file's (MuxContainer): the published name follows it.
+            context.muxedContainer = muxer.outputContainer
+            note = when (muxer.outputKind) {
+                OutputKind.TS_FALLBACK -> AssemblyNote.TS_FALLBACK
+                OutputKind.AS_IS -> AssemblyNote.AS_IS
+                OutputKind.REMUXED -> null
             }
         } else {
             Logger.info("XDM", "Output already muxed, retrying commit: $tmpFile")
         }
         throttle.disable()
         Logger.info("Committing to final file")
-        when (val res = context.downloadHost.commitOutputFile(context.id, tmpFile, downloadType())) {
+        when (val res = context.downloadHost.commitOutputFile(context.id, tmpFile, downloadType(), context.muxedContainer)) {
             is CommitResult.Failed -> {
                 // Cancelled only by a stop, which reports the pause itself.
                 if (context.stopFlag.get() || res.error == DownloadError.Cancelled) return
@@ -320,7 +435,8 @@ abstract class StreamingDownloaderTask(
                         context.id,
                         context.downloadHost.storage.folder(res.outputDir).length(res.fileName),
                         res.fileName,
-                        res.outputDir
+                        res.outputDir,
+                        note = note,
                     )
                 )
             }
@@ -424,6 +540,110 @@ abstract class StreamingDownloaderTask(
         }
     }
 
+    /** How this assembly kept the download when it wasn't the usual remux (for the completion note). */
+    private var note: AssemblyNote? = null
+
+    /** What the muxer's fallbacks need to know about each segment file. */
+    private fun segmentInfo(): Map<String, SegmentInfo> =
+        context.chunks.filter { it.tag != SUBS_TAG }.associate { getChunkTempFileName(it) to SegmentInfo(it.duration, it.discontinuity, it.init) }
+
+    private fun segments(tag: String?): List<PlaylistFolder.Segment> =
+        context.chunks.filter { it.tag != SUBS_TAG && (tag == null || it.tag == tag) }
+            .map { PlaylistFolder.Segment(File(getChunkTempFileName(it)), it.duration, it.discontinuity, it.init) }
+
+    /**
+     * The remux and its one-file fallbacks failed: the download is kept rather than lost. HLS-playable
+     * segments (TS, fMP4, packed audio) become a playlist folder; anything else is published as files side
+     * by side. Only when even that fails does the download end in [DownloadError.MuxError], segments kept.
+     */
+    private fun keepAsFiles(tmpFile: StorageFile) {
+        Logger.info("XDM", "Remux failed (${assembleError ?: muxer.lastError}); keeping the download as files")
+        val video = segments(if (context.hasSeparateStreams) "VIDEO" else null)
+        val audio = if (context.hasSeparateStreams) segments("AUDIO") else emptyList()
+        val folder = PlaylistFolder(context.tempFolder)
+        if (folder.canCarry(video + audio) && folder.build(video, audio)) {
+            publishPlaylistFolder()
+            return
+        }
+        if (context.stopFlag.get()) return
+        if (publishSideBySide(tmpFile, video, audio)) return
+        context.downloadHost.onDownloadFailed(context.id, DownloadError.MuxError)
+    }
+
+    private fun publishPlaylistFolder() {
+        val folder = PlaylistFolder(context.tempFolder)
+        val size = folder.dir.listFiles()?.sumOf { it.length() } ?: 0L
+        when (val res = context.downloadHost.commitOutputFolder(context.id, folder.dir.path, PlaylistFolder.ENTRY, downloadType())) {
+            is CommitResult.Failed -> {
+                if (context.stopFlag.get() || res.error == DownloadError.Cancelled) return
+                Logger.error("XDM", "Publishing the playlist folder failed: ${res.error}; the segments stay in ${folder.dir}")
+                context.downloadHost.onDownloadFailed(context.id, res.error)
+            }
+            is CommitResult.Success -> {
+                saveContext()
+                saveSubtitle(res.outputDir, res.fileName)
+                cleanup()
+                Logger.info("XDM", "Saved as a playlist folder: ${res.outputDir} ${res.fileName}")
+                context.downloadHost.onDownloadSuccess(
+                    DownloadStatusInfo.FinalInfo(context.id, size, res.fileName, res.outputDir, note = AssemblyNote.PLAYLIST_FOLDER)
+                )
+            }
+        }
+    }
+
+    /**
+     * Files no playlist can carry: each track (or, for one list that can't be joined, each part) as its
+     * own file — the first is the download's output, the others are published beside it.
+     */
+    private fun publishSideBySide(tmpFile: StorageFile, video: List<PlaylistFolder.Segment>, audio: List<PlaylistFolder.Segment>): Boolean {
+        val groups: List<Pair<List<File>, String>> = if (audio.isNotEmpty()) {
+            listOf(video.map { it.file } to "", audio.map { it.file } to "audio")
+        } else video.mapIndexed { i, s -> listOf(s.file) to if (i == 0) "" else "part${i + 1}" }
+        if (groups.isEmpty() || groups.any { it.first.isEmpty() }) return false
+        // Only media: bytes nothing recognises (an error page, a damaged download) aren't published as files.
+        if (groups.any { (files, _) -> SegmentProbe.foreign(files[0].path) == null && SegmentProbe.locate(files[0].path) == null }) return false
+        return try {
+            joinInto(groups[0].first, tmpFile)
+            val res = context.downloadHost.commitOutputFile(context.id, tmpFile, downloadType(), extensionOf(groups[0].first[0]))
+            if (res !is CommitResult.Success) return false
+            val others = ArrayList<String>()
+            var allPublished = true
+            for ((files, suffix) in groups.drop(1)) {
+                val joined = File(context.tempFolder, "side-$suffix.${extensionOf(files[0])}")
+                joined.outputStream().use { out -> for (f in files) f.inputStream().use { it.copyTo(out) } }
+                context.downloadHost.commitSidecar(context.id, joined.path, res.outputDir, res.fileName, suffix)?.let { others.add(it) }
+                    ?: run { allPublished = false; Logger.error("XDM", "Couldn't publish $joined beside ${res.fileName}; it stays in ${context.tempFolder}") }
+            }
+            saveContext()
+            // What couldn't be published beside the output stays in the temp folder rather than being deleted.
+            if (allPublished) cleanup()
+            Logger.info("XDM", "Saved as separate files: ${res.fileName} + $others")
+            context.downloadHost.onDownloadSuccess(
+                DownloadStatusInfo.FinalInfo(
+                    context.id, context.downloadHost.storage.folder(res.outputDir).length(res.fileName), res.fileName, res.outputDir,
+                    note = AssemblyNote.SEPARATE_FILES, noteDetail = others.joinToString(", "),
+                )
+            )
+            true
+        } catch (e: Exception) {
+            Logger.error("XDM", "Publishing the files side by side failed", e)
+            false
+        }
+    }
+
+    private fun joinInto(files: List<File>, out: StorageFile) {
+        out.open(create = true).use { handle ->
+            handle.setLength(0)
+            val buf = ByteArray(256 * 1024)
+            for (f in files) f.inputStream().use { input ->
+                while (true) { val n = input.read(buf); if (n <= 0) break; handle.write(buf, 0, n) }
+            }
+            handle.force()
+        }
+    }
+
+    private fun extensionOf(f: File): String = SegmentProbe.extensionOf(f.path)
+
     private fun cleanup() {
         Logger.info("XDM", "Cleaning up temp files")
         try {
@@ -442,17 +662,41 @@ abstract class StreamingDownloaderTask(
      * is not read here: a media playlist can list a very large number of segments, so the caller streams
      * it (see [readManifestLines]) and must call [discardManifest] when done. A file that arrives after
      * the caller has discarded [manifestFile] (it stopped waiting) is deleted here instead.
+     *
+     * [saved] is the playlist's text as the browser received it, when it was captured with it. A finished
+     * playlist (`#EXT-X-ENDLIST`) is taken from it without a fetch: the link may work only once. A live
+     * or growing one is fetched for its current state, and the saved text is used only if that fails.
      */
     protected fun loadManifest(
-        url: String, manifestFile: AtomicReference<File?>, latch: CountDownLatch, error: AtomicBoolean
+        url: String, manifestFile: AtomicReference<File?>, latch: CountDownLatch, error: AtomicBoolean,
+        saved: ByteArray? = null,
     ) {
+        if (saved != null && isFinishedPlaylist(saved)) {
+            try {
+                Logger.info("XDM", "Playlist from the capture, not fetched: $url")
+                handOver(writeManifestFile(saved), manifestFile)
+            } catch (ex: IOException) {
+                Logger.error("XDM", "Error writing the captured playlist", ex)
+                error.set(true)
+            } finally {
+                latch.countDown()
+            }
+            return
+        }
         executorService.submit {
             try {
-                downloadManifestAsFile(
-                    context.httpClient, url, context.headers, context.cookie, context.stopFlag, recordFetchError
-                )?.let { path ->
-                    val file = File(path)
-                    if (!manifestFile.compareAndSet(null, file)) deleteManifestFile(file)
+                val path = fetchWithRetry("Playlist") { onErrorResponse, onError ->
+                    downloadManifestAsFile(
+                        context.httpClient, url, context.headers, context.cookie, context.stopFlag, onError,
+                        onErrorResponse = onErrorResponse,
+                    )
+                }
+                when {
+                    path != null -> handOver(File(path), manifestFile)
+                    saved != null && !context.stopFlag.get() -> {
+                        Logger.info("XDM", "Playlist fetch failed, using the text from the capture: $url")
+                        handOver(writeManifestFile(saved), manifestFile)
+                    }
                 }
             } catch (ex: Exception) {
                 Logger.error("XDM", "Error downloading manifest", ex)
@@ -462,6 +706,26 @@ abstract class StreamingDownloaderTask(
             }
         }
     }
+
+    private fun handOver(file: File, manifestFile: AtomicReference<File?>) {
+        if (!manifestFile.compareAndSet(null, file)) deleteManifestFile(file)
+    }
+
+    /** [text] in a temp file, as [downloadManifestAsFile] leaves a fetched playlist. */
+    private fun writeManifestFile(text: ByteArray): File {
+        val file = File.createTempFile(UUID.randomUUID().toString(), ".m3u8")
+        try {
+            file.writeBytes(text)
+        } catch (ex: IOException) {
+            file.delete()
+            throw ex
+        }
+        return file
+    }
+
+    /** Whether the playlist [text] is complete (`#EXT-X-ENDLIST`): a video on demand, not a live stream. */
+    private fun isFinishedPlaylist(text: ByteArray): Boolean =
+        String(text, Charsets.UTF_8).lineSequence().any { it.trim() == "#EXT-X-ENDLIST" }
 
     /** Runs [block] over the lines of the manifest in [manifestFile], streaming and closing the file. */
     protected fun <T> readManifestLines(manifestFile: AtomicReference<File?>, block: (Iterator<String>) -> T): T {
@@ -495,8 +759,12 @@ abstract class StreamingDownloaderTask(
                 this.segments = progressTracker.segmentData
             }
             context.downloaded.addAndGet(downloaded)
+            // Data came in: the download is not waiting on the server any more.
+            if (prgInfo.retryAt != 0L) {
+                prgInfo.retryAt = 0
+                context.downloadHost.onDownloadProgress(prgInfo)
+            }
             if (update) {
-                Logger.info("Progress $prgInfo")
                 context.downloadHost.onDownloadProgress(prgInfo)
             }
             val now = System.currentTimeMillis()
@@ -509,26 +777,31 @@ abstract class StreamingDownloaderTask(
     }
 
     private fun onChunkComplete(pc: StreamingChunk, latch: CountDownLatch) {
-        Logger.info("onChunkComplete")
         latch.countDown()
         synchronized(this) {
-            Logger.info("onChunkComplete in - $pc")
             if (context.stopFlag.get()) return
             if (pc.status.get() == ChunkStatus.Finished) {
                 context.pieceCompletedCount.addAndGet(1)
-                Logger.info("total completed ${context.pieceCompletedCount.get()} of ${context.chunks.size}")
-//                val pc2 = context.chunks.find { it.status.get() == ChunkStatus.Failed }
-//                if (pc2 != null) {
-//                    val pg = createPieceGrabber(pc2, latch)
-//                    executorService.submit(pg)
-//                } else {
-//                    latch.countDown()
-//                }
-            } else {
-                Logger.info("Chunk failed- $pc")
-//                latch.countDown()
+            } else if (pc.status.get() == ChunkStatus.Failed) {
+                lastFailure = pc.error.get()
             }
             saveContext()
+        }
+    }
+
+    /**
+     * A segment starts ([until] > 0) or stops waiting to ask again. While the whole download is stalled, the
+     * progress says when the next attempt is due ([DownloadStatusInfo.ProgressInfo.retryAt]).
+     */
+    private fun onChunkWait(pc: StreamingChunk, until: Long) {
+        if (until > 0) waits[pc.id] = until else waits.remove(pc.id)
+        synchronized(this) {
+            if (context.stopFlag.get()) return
+            val at = if (clock.stalled()) waits.values.minOrNull() ?: 0L else 0L
+            if (at != prgInfo.retryAt && (at != 0L || until > 0)) {
+                prgInfo.retryAt = at
+                context.downloadHost.onDownloadProgress(prgInfo)
+            }
         }
     }
 
@@ -542,6 +815,8 @@ abstract class StreamingDownloaderTask(
         progressCallback = this::onChunkProgress,
         fileNameCallback = this::getChunkTempFileName,
         maxRetries = config.maxRetries,
+        clock = clock,
+        waitCallback = this::onChunkWait,
     ) { p ->
         onChunkComplete(p, latch)
     }

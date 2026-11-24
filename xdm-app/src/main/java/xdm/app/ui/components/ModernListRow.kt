@@ -186,6 +186,7 @@ class ModernListRow(
     }
 
     private fun updateLabelText(ent: DbRecord, isSelected: Boolean) {
+        row.selected = isSelected
         // In selection mode the tile turns accent so the white check boxes stay visible.
         if (isSelected || table.selectedRowCount > 0) {
             iconBadge.background = AppTheme.accent

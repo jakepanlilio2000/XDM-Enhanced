@@ -13,6 +13,7 @@ import xdm.core.downloaders.web.streaming.downloader.HlsTaskContext
 import xdm.core.downloaders.web.streaming.downloader.SUBS_TAG
 import xdm.core.downloaders.web.streaming.downloader.StreamingChunk
 import xdm.core.downloaders.web.streaming.downloader.StreamingDownloaderTask
+import xdm.core.downloaders.web.streaming.manifest.hls.HlsMediaSegment
 import xdm.core.downloaders.web.streaming.manifest.hls.HlsParser
 import xdm.core.downloaders.web.streaming.manifest.hls.HlsPlaylist
 import xdm.core.media.muxer.Muxer
@@ -90,7 +91,7 @@ class HlsDownloaderTask : StreamingDownloaderTask {
         config: CoreConfig
     ) : super(
         makeContext(taskInfo, http, host, configDir), configDir, muxer, config, taskInfo.maxPiece,
-        taskInfo.subtitles.firstOrNull()
+        taskInfo.subtitles.firstOrNull(), taskInfo.keepOriginalFormat
     ) {
         subtitleUrl = taskInfo.subtitles.firstOrNull()?.playlistUrl
     }
@@ -110,12 +111,14 @@ class HlsDownloaderTask : StreamingDownloaderTask {
         val audioManifest = AtomicReference<File?>()
         val subtitleManifest = AtomicReference<File?>()
         val error = AtomicBoolean(false)
-        loadManifest(hlsContext.url, videoManifest, latch, error)
+        // The playlists' text as the browser received them, when captured with it: the links may work only once.
+        val saved = HlsPlaylistStore.load(context.id, configDir)
+        loadManifest(hlsContext.url, videoManifest, latch, error, saved[hlsContext.url])
         if (context.hasSeparateStreams) {
-            loadManifest(hlsContext.audioUrl!!, audioManifest, latch, error)
+            loadManifest(hlsContext.audioUrl!!, audioManifest, latch, error, saved[hlsContext.audioUrl!!])
         }
         // Its own error flag: a subtitle that can't be fetched only goes missing.
-        subtitleUrl?.let { loadManifest(it, subtitleManifest, latch, AtomicBoolean(false)) }
+        subtitleUrl?.let { loadManifest(it, subtitleManifest, latch, AtomicBoolean(false), saved[it]) }
         try {
             if (!awaitUnlessStopped(latch)) return null
             val (videoPlaylist, audioPlaylist) = parseManifest(videoManifest, audioManifest)
@@ -135,6 +138,8 @@ class HlsDownloaderTask : StreamingDownloaderTask {
                 context.discontinuous = true
             }
             context.chunks.ensureCapacity(videoPlaylist.mediaSegments.size + (audioPlaylist?.mediaSegments?.size ?: 0))
+            val videoSections = sectionNumbers(videoPlaylist.mediaSegments)
+            val audioSections = audioPlaylist?.let { sectionNumbers(it.mediaSegments) } ?: IntArray(0)
             context.chunks.addAll(videoPlaylist.mediaSegments.mapIndexed { index, ms ->
                 StreamingChunk(
                     id = CoreUtils.uniqueId(),
@@ -147,7 +152,10 @@ class HlsDownloaderTask : StreamingDownloaderTask {
                     tag = "VIDEO",
                     error = AtomicReference(null),
                     fileHandle = AtomicReference(null),
-                    encrypted = ms.encrypted
+                    encrypted = ms.encrypted,
+                    duration = ms.duration,
+                    discontinuity = videoSections[index],
+                    init = ms.init,
                 )
             })
             val count = videoPlaylist.mediaSegments.size
@@ -164,7 +172,10 @@ class HlsDownloaderTask : StreamingDownloaderTask {
                         tag = "AUDIO",
                         error = AtomicReference(null),
                         fileHandle = AtomicReference(null),
-                        encrypted = ms.encrypted
+                        encrypted = ms.encrypted,
+                        duration = ms.duration,
+                        discontinuity = audioSections[index],
+                        init = ms.init,
                     )
                 })
             }
@@ -233,6 +244,12 @@ class HlsDownloaderTask : StreamingDownloaderTask {
 
     override fun hasDiscontinuity() = (context as HlsTaskContext).discontinuous
 
+    /** Each segment's timeline section: the number of `EXT-X-DISCONTINUITY` markers up to and including it. */
+    private fun sectionNumbers(segments: List<HlsMediaSegment>): IntArray {
+        var n = 0
+        return IntArray(segments.size) { i -> if (segments[i].discontinuity) n++; n }
+    }
+
     private fun parseManifest(
         videoManifest: AtomicReference<File?>, audioManifest: AtomicReference<File?>
     ): Pair<HlsPlaylist, HlsPlaylist?> {
@@ -269,11 +286,12 @@ class HlsDownloaderTask : StreamingDownloaderTask {
             executorService.submit {
                 try {
                     if (!error.get() && !context.stopFlag.get()) {
-                        Logger.info("Header names: ${hlsContext.headers?.keys}")
-                        val bytes = downloadManifestBytes(
-                            context.httpClient, keyUrl, hlsContext.headers, hlsContext.cookie, context.stopFlag,
-                            recordFetchError, maxBytes = MAX_KEY_BYTES
-                        )
+                        val bytes = fetchWithRetry("Key") { onErrorResponse, onError ->
+                            downloadManifestBytes(
+                                context.httpClient, keyUrl, hlsContext.headers, hlsContext.cookie, context.stopFlag,
+                                onError, maxBytes = MAX_KEY_BYTES, onErrorResponse = onErrorResponse,
+                            )
+                        }
                         when {
                             bytes == null -> throw IOException("Unable to download key: $keyUrl")
                             bytes.size != 16 -> throw IOException("Invalid key size ${bytes.size}: $keyUrl")

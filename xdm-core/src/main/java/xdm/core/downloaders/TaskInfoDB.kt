@@ -32,12 +32,15 @@ private const val F_TYPE = 11
 
 private const val HTTP_KNOWN_FILE_SIZE = 20
 private const val HTTP_CONVERT_TO_SRT = 21
+private const val HTTP_SOURCE_URL = 22
+private const val HTTP_SOURCE_COOKIE = 23
 
 private const val HLS_AUDIO_URL = 20
 private const val HLS_AUDIO_ONLY = 21
 private const val HLS_TEMP_DIR = 22
 private const val HLS_INDEPENDENT = 23
 private const val HLS_SUBTITLE = 24
+private const val HLS_KEEP_ORIGINAL = 25
 
 private const val DASH_TEMP_DIR = 20
 private const val DASH_AUDIO_SEGMENT = 21
@@ -81,6 +84,8 @@ private const val ITEM_AUDIO_URL = 6
 private const val SEG_URL = 1
 private const val SEG_RANGE_START = 2
 private const val SEG_RANGE_END = 3
+private const val SEG_DURATION = 4
+private const val SEG_INIT = 5
 
 // SubtitleTrack.
 private const val SUB_NAME = 1
@@ -135,6 +140,9 @@ private fun TagReader.headers(): HeaderMap {
 private fun TagWriter.dashSegment(no: Int, seg: DashSegment) = message(no) {
     string(SEG_URL, seg.url.toString())
     seg.range?.let { long(SEG_RANGE_START, it.first); long(SEG_RANGE_END, it.second) }
+    // Milliseconds: the tagged format has no floating-point type.
+    if (seg.duration > 0) long(SEG_DURATION, Math.round(seg.duration * 1000))
+    if (seg.init) long(SEG_INIT, 1)
 }
 
 private fun TagReader.dashSegment(): DashSegment {
@@ -142,16 +150,20 @@ private fun TagReader.dashSegment(): DashSegment {
     var url = ""
     var start: Long? = null
     var end: Long? = null
+    var durationMs = 0L
+    var init = false
     while (true) {
         when (r.next()) {
             -1 -> break
             SEG_URL -> url = r.string()
             SEG_RANGE_START -> start = r.long()
             SEG_RANGE_END -> end = r.long()
+            SEG_DURATION -> durationMs = r.long()
+            SEG_INIT -> init = r.long() != 0L
             else -> r.skip()
         }
     }
-    return DashSegment(url.toHttpUrl(), if (start != null && end != null) Pair(start, end) else null)
+    return DashSegment(url.toHttpUrl(), if (start != null && end != null) Pair(start, end) else null, durationMs / 1000.0, init)
 }
 
 private fun TagWriter.subtitle(no: Int, track: SubtitleTrack) = message(no) {
@@ -265,6 +277,8 @@ class TaskInfoDB(private val configDir: String) {
             val c = CommonFields()
             var knownFileSize: Long? = null
             var convertToSrt = false
+            var sourceUrl: String? = null
+            var sourceCookie: String? = null
             while (true) {
                 val no = r.next()
                 if (no == -1) break
@@ -272,6 +286,8 @@ class TaskInfoDB(private val configDir: String) {
                 when (no) {
                     HTTP_KNOWN_FILE_SIZE -> knownFileSize = r.long()
                     HTTP_CONVERT_TO_SRT -> convertToSrt = r.bool()
+                    HTTP_SOURCE_URL -> sourceUrl = r.string()
+                    HTTP_SOURCE_COOKIE -> sourceCookie = r.string()
                     else -> r.skip()
                 }
             }
@@ -290,6 +306,8 @@ class TaskInfoDB(private val configDir: String) {
                 authInfo = null,
                 knownFileSize = knownFileSize,
                 convertToSrt = convertToSrt,
+                sourceUrl = sourceUrl,
+                sourceCookie = sourceCookie,
             )
         }
         return null
@@ -303,6 +321,7 @@ class TaskInfoDB(private val configDir: String) {
             var audioOnly = false
             var tempDir = ""
             var independent = false
+            var keepOriginal = false
             val subtitles = ArrayList<SubtitleTrack>()
             while (true) {
                 val no = r.next()
@@ -314,6 +333,7 @@ class TaskInfoDB(private val configDir: String) {
                     HLS_TEMP_DIR -> tempDir = r.string()
                     HLS_INDEPENDENT -> independent = r.bool()
                     HLS_SUBTITLE -> subtitles.add(r.subtitle())
+                    HLS_KEEP_ORIGINAL -> keepOriginal = r.bool()
                     else -> r.skip()
                 }
             }
@@ -335,6 +355,7 @@ class TaskInfoDB(private val configDir: String) {
                 tempDir = tempDir,
                 independent = independent,
                 subtitles = subtitles,
+                keepOriginalFormat = keepOriginal,
             )
         }
         return null
@@ -399,6 +420,8 @@ class TaskInfoDB(private val configDir: String) {
                 )
                 task.knownFileSize?.let { long(HTTP_KNOWN_FILE_SIZE, it) }
                 if (task.convertToSrt) bool(HTTP_CONVERT_TO_SRT, true)
+                task.sourceUrl?.let { string(HTTP_SOURCE_URL, it) }
+                task.sourceCookie?.let { string(HTTP_SOURCE_COOKIE, it) }
             }
         }.onFailure { Logger.error("XDM", "Error saving task info ${task.id}", it) }.isSuccess
 
@@ -415,6 +438,7 @@ class TaskInfoDB(private val configDir: String) {
                 string(HLS_TEMP_DIR, task.tempDir)
                 bool(HLS_INDEPENDENT, task.independent)
                 task.subtitles.forEach { subtitle(HLS_SUBTITLE, it) }
+                bool(HLS_KEEP_ORIGINAL, task.keepOriginalFormat)
             }
         }.onFailure { Logger.error("XDM", "Error saving task info ${task.id}", it) }
     }
@@ -666,6 +690,7 @@ class TaskInfoDB(private val configDir: String) {
             }
         }.onFailure { Logger.error("XDM", "Error saving plugin task info ${task.id}", it) }.isSuccess
 
+    @Synchronized
     fun deleteRecord(id: Long) {
         SensitiveHeaders.forget(id)
         File(configDir, "task-$id.info").delete()

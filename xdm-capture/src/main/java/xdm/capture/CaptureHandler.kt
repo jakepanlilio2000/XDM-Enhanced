@@ -51,7 +51,7 @@ object CaptureHandler {
      * [manifestBody] is the manifest text when the sender already has it (the Android page script
      * reads it from the player's own response); without it the manifest is fetched here.
      */
-    fun onMedia(msg: ExtensionMessage, manifestBody: String? = null) {
+    fun onMedia(msg: ExtensionMessage, manifestBody: String? = msg.manifestBody) {
         logMessage(msg)
         removeBlockedHeaders(msg)
         VideoHelper.processMediaMessage(msg, manifestBody)
@@ -148,6 +148,8 @@ object CaptureHandler {
         val origin = msg.referer ?: msg.tabUrl
         // Used as is when the download starts without a dialog; the dialog resolves it again itself.
         val (categoryId, targetFolder) = CaptureContext.host.destination(fileName, msg.url, origin)
+        // The link the browser was redirected from; the file's own URL is no source link.
+        val sourceUrl = msg.sourceUrl?.trim()?.takeIf { it.isNotEmpty() && it != msg.url }
         return HttpDownloadTaskInfo(
             id = CoreUtils.uniqueId(),
             url = msg.url!!,
@@ -162,6 +164,9 @@ object CaptureHandler {
             authInfo = null,
             knownFileSize = msg.fileSize ?: getContentLength(respHeaders),
             etag = getHeader("etag", respHeaders),
+            sourceUrl = sourceUrl,
+            // Only with the link they belong to.
+            sourceCookie = msg.sourceCookie?.takeIf { sourceUrl != null && it.isNotBlank() },
         )
     }
 }

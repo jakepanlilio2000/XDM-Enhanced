@@ -4,7 +4,32 @@ Detailed changelog and binary checksum records for all published releases of **X
 
 ---
 
-## [1.1.0-beta.1] — 2026-11-20 (Plugin SDK v2 Beta Preview)
+## [1.1.0] — 2026-11-24 (Latest Stable Release)
+
+First stable release of the `1.1.x` line — graduating the **Modular Plugin SDK v2** (`xdm-plugin-api:1.1.0`, Specification 2.0.0) and syncing upstream core media muxing, HLS playlist capture, link refresh, IPv4 networking, and desktop accessibility fixes.
+
+### Highlights & Key Improvements
+
+- **Plugin SDK v2 Graduation & Bridge Fix (`xdm-plugin-api:1.1.0`):**
+  - Stabilized the decoupled public SPI framework (`XdmPlugin`, `PluginDownloadEngine`, `ProxyProvider`, `VpnStatusProvider`, `PostDownloadProcessor`, `EventTopics`, `Registration`) with classloader isolation (`PluginFilteringClassLoader`), quarantine trust prompts, and `--safe-mode` / `--no-plugins` recovery flags.
+  - Fixed a signed ID collision in `PluginDownloadBridge.submitPluginTask` where negative values from `CoreUtils.uniqueId()` could violate the `< 0` error-return convention expected by plugins such as `ytdlp-downloader`.
+- **Media Muxing & Streaming Improvements:**
+  - Ported upstream `xdm-core` muxer and codec handling fixes (Ogg, TS, MKV, MP4/ISO, AAC/Opus/FLAC/AC3/Vorbis, container commit paths).
+  - Added browser extension captured HLS playlist body capture & caching (`hls-hook.js` / `hls-relay.js` in Chromium MV3 and `readPlaylistBody` in Firefox MV2) backed by `HlsPlaylistStore` and `PlaylistTextCache`.
+  - Added the **Save streams as MP4** setting across settings UI, config persistence, and new video download dialogs.
+- **Link Refresh, Source Tracking & Retry Resilience:**
+  - Preserved `sourceUrl` and `sourceCookie` across captured downloads, New Download / Link Refresh dialogs, and `LinkRefresher`, with UI copy-page hints in `RefreshLinkWindow` and completion notes in `DownloadCompleteWindow`.
+  - Surfaced server-busy retry ETAs (`retryAt`) in `ProgressWindow` and `HttpDownloader` / `RetryPolicy`.
+- **Networking, Platform & Accessibility Hardening:**
+  - Added early `Force IPv4` startup setting (`preferIPv4Stack`), `AssistiveTech` sanitization at startup (`jdk.accessibility`), XDG Desktop Portal `keepAwake` inhibition and `gdbus` shutdown fallback on Linux, and Dark/Light theme row & contrast refinements.
+
+### Published Assets & Checksums (`v1.1.0`)
+
+Verify all release binaries against [`SHA256SUMS.txt`](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.1.0/SHA256SUMS.txt) on the [GitHub Release](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/tag/v1.1.0). *(Verified per-file CI SHA-256 checksums are synced here once the `v1.1.0` build workflow publishes artifacts.)*
+
+---
+
+## [1.1.0-beta.1] — 2026-11-20 (Archived Beta Preview)
 
 Beta Preview Release of **XDM Enhanced** — introducing the **Modular Plugin SDK v2**, a modern, extensible service provider framework that empowers developers to build native download engines, proxy profile providers, VPN client integration listeners, and custom UI views—while preserving complete backward compatibility with all legacy v1 plugins and maintaining an honest, transparent security trust model.
 
@@ -147,7 +172,7 @@ Beta Preview Release of **XDM Enhanced** — introducing the **Modular Plugin SD
 
 ---
 
-## [1.0.2] — 2026-11-20 (Latest Stable Release)
+## [1.0.2] — 2026-11-20 (Previous Stable Release)
 
 ### Highlights & Key Improvements
 

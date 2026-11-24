@@ -2,6 +2,7 @@ package xdm.app.ui.screens.settings
 
 import xdm.app.AppContext
 import xdm.app.I8N
+import xdm.app.ui.components.MessageBox
 import xdm.app.utils.VolumeHints
 import xdm.app.utils.chooseFile
 import xdm.app.utils.scaledInsets
@@ -12,6 +13,7 @@ import javax.swing.Box
 import javax.swing.BoxLayout
 import javax.swing.JComponent
 import javax.swing.JTextField
+import javax.swing.SwingUtilities
 
 /**
  * Where files land: the two folders every download passes through, and the category rules
@@ -96,14 +98,31 @@ class FoldersPanel : SettingsPanel() {
         refreshVolumeHint()
     }
 
+    /**
+     * When the default download folder was changed, offers to move the categories whose folder sits
+     * inside the old one (the built-ins start there) to the same place inside the new one. Asked before
+     * anything is written, so a No leaves the categories as they are and only the default changes.
+     * EDT; modal, owned by the settings window.
+     */
+    fun confirmCategoryFolderMoves() {
+        val oldBase = AppContext.config.defaultDownloadFolder
+        val newBase = txtDwnDir.text.trim()
+        if (newBase.isBlank()) return
+        val moves = categorySection.folderMoves(oldBase, newBase)
+        if (moves.isEmpty()) return
+        val list = moves.entries.joinToString("\n") { (id, folder) -> "${categorySection.nameOf(id)}  →  $folder" }
+        val yes = MessageBox.confirm(
+            SwingUtilities.getWindowAncestor(this),
+            I8N.text("TITLE_CAT_FOLDERS_MOVE"),
+            I8N.text("MSG_CAT_FOLDERS_MOVE").format(list),
+        )
+        if (yes) categorySection.applyFolderMoves(moves)
+    }
+
     fun save() {
         val config = AppContext.config
-        val oldDefault = config.defaultDownloadFolder
         val newDefault = txtDwnDir.text.trim()
         val newTemp = txtTmpDir.text.trim()
-        if (newDefault.isNotBlank() && oldDefault != newDefault) {
-            categorySection.updateDefaultBaseFolder(oldDefault, newDefault)
-        }
         categorySection.save()
         if (newDefault.isNotBlank()) {
             config.defaultDownloadFolder = newDefault

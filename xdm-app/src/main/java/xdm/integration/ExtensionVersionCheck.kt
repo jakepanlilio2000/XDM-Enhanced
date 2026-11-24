@@ -19,26 +19,30 @@ internal object ExtensionVersionCheck {
     private const val MIN_FIREFOX_VERSION = "1.1"
 
     /**
+     * Resolves whether headers/origin represent Firefox (`true`) or Chromium (`false`), or `null`
+     * when the request is not from a recognized browser extension.
+     */
+    private fun detectFirefoxFamily(header: String?, origin: String?): Boolean? {
+        if (!header.isNullOrBlank()) {
+            return when (header.substringBefore('/').trim().lowercase()) {
+                "firefox" -> true
+                "chrome" -> false
+                else -> null
+            }
+        }
+        return when (origin?.substringBefore("://")?.lowercase()) {
+            "moz-extension" -> true
+            "chrome-extension" -> false
+            else -> null
+        }
+    }
+
+    /**
      * Identifies which browser family an extension request is coming from based on headers,
      * regardless of whether the extension is outdated.
      */
     fun detectBrowser(header: String?, origin: String?, userAgent: String?): Browser? {
-        val firefox: Boolean
-        if (!header.isNullOrBlank()) {
-            val family = header.substringBefore('/').trim().lowercase()
-            firefox = when (family) {
-                "firefox" -> true
-                "chrome" -> false
-                else -> return null
-            }
-        } else {
-            val scheme = origin?.substringBefore("://")?.lowercase() ?: return null
-            firefox = when (scheme) {
-                "moz-extension" -> true
-                "chrome-extension" -> false
-                else -> return null
-            }
-        }
+        val firefox = detectFirefoxFamily(header, origin) ?: return null
         return when {
             firefox -> Browser.FIREFOX
             userAgent?.contains("Edg/") == true -> Browser.EDGE
@@ -53,24 +57,11 @@ internal object ExtensionVersionCheck {
      * told apart by its user agent so the update opens Edge's own page.
      */
     fun outdatedBrowser(header: String?, origin: String?, userAgent: String?): Browser? {
-        val firefox: Boolean
+        val firefox = detectFirefoxFamily(header, origin) ?: return null
         if (!header.isNullOrBlank()) {
-            val family = header.substringBefore('/').trim().lowercase()
             val version = header.substringAfter('/', "").trim()
-            firefox = when (family) {
-                "firefox" -> true
-                "chrome" -> false
-                else -> return null
-            }
             if (!isOlder(version, if (firefox) MIN_FIREFOX_VERSION else MIN_CHROME_VERSION)) {
                 return null
-            }
-        } else {
-            val scheme = origin?.substringBefore("://")?.lowercase() ?: return null
-            firefox = when (scheme) {
-                "moz-extension" -> true
-                "chrome-extension" -> false
-                else -> return null
             }
         }
         return when {

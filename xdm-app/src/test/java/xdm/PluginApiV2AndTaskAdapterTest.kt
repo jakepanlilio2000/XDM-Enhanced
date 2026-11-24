@@ -353,6 +353,13 @@ class PluginApiV2AndTaskAdapterTest : DownloadManagerTestBase() {
         PluginDownloadBridge.deleteTask(taskId, fromDisk = false)
         assertNull(AppContext.db.getById(taskId), "Task should be removed from database on delete")
         assertNull(AppContext.downloader.store.getById(taskId), "Task should be removed from store on delete")
+        assertNull(AppContext.taskInfoDB.getPluginTask(taskId), "Task metadata should be removed from taskInfoDB on delete")
+
+        // 8. Late progress / FINISHED callbacks arriving after delete must be ignored
+        listeners.forEach { it.onProgress(progressEvent) }
+        listeners.forEach { it.onProgress(completeEvent) }
+        assertNull(AppContext.db.getById(taskId), "Late progress after delete must not recreate DB record")
+        assertNull(AppContext.taskInfoDB.getPluginTask(taskId), "Late FINISHED after delete must not recreate taskInfoDB")
     }
 
     @Test

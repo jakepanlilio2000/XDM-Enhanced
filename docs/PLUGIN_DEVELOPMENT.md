@@ -32,7 +32,7 @@ Plugins compile against the public `xdm-plugin-api` artifact with `provided` sco
         <dependency>
             <groupId>xdm</groupId>
             <artifactId>xdm-plugin-api</artifactId>
-            <version>1.0.2</version>
+            <version>1.1.0</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>
@@ -156,7 +156,7 @@ The `plugin.json` file must reside in the root of the `.xdmplugin` or `.jar` arc
   "description": "Clear explanation of what the plugin does.",
   "license": "GPL-3.0-or-later",
   "homepage": "https://example.com/plugin",
-  "minAppVersion": "1.1.0-beta.1",
+  "minAppVersion": "1.1.0",
   "minApiVersion": "1.1.0",
   "maxApiVersion": "2.0.0",
   "apiCompatibility": ">=1.1.0 <2.0.0",

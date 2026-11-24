@@ -27,7 +27,7 @@ cd XDM-Enhanced
 
 ## 3. Compiling with Apache Maven
 
-XDM Enhanced is a multi-module Maven project. The root `pom.xml` orchestrates compilation across `xdm-plugin-api`, `xdm-core`, `xdm-manager`, and `xdm-app`.
+XDM Enhanced is a multi-module Maven project. The root `pom.xml` orchestrates compilation across `xdm-plugin-api`, `xdm-core`, `xdm-capture`, `xdm-torrent`, `xdm-manager`, and `xdm-app`.
 
 ```bash
 # Full clean compilation and automated unit testing
@@ -38,8 +38,8 @@ mvn clean package -DskipTests
 ```
 
 ### Generated Build Artifacts:
-- **Executable Desktop Application:** `xdm-app/target/xdm-app-1.0.2.jar`
-- **Standalone Plugin Developer API:** `xdm-plugin-api/target/xdm-plugin-api-1.0.2.jar`
+- **Executable Desktop Application:** `xdm-app/target/xdm-app-1.1.0.jar`
+- **Standalone Plugin Developer API:** `xdm-plugin-api/target/xdm-plugin-api-1.1.0.jar`
 
 ---
 
@@ -48,12 +48,12 @@ mvn clean package -DskipTests
 Launch the desktop client directly from the compiled target output:
 
 ```bash
-java -jar xdm-app/target/xdm-app-1.0.2.jar
+java -jar xdm-app/target/xdm-app-1.1.0.jar
 ```
 
 To enable verbose debug logging to stdout:
 ```bash
-java -Dxdm.debug=true -jar xdm-app/target/xdm-app-1.0.2.jar
+java -Dxdm.debug=true -jar xdm-app/target/xdm-app-1.1.0.jar
 ```
 
 ---

@@ -10,11 +10,11 @@ hero:
     alt: XDM Enhanced Logo
   actions:
     - theme: brand
-      text: Download v1.0.2 (Stable)
+      text: Download v1.1.0 (Stable)
       link: /downloads
     - theme: alt
-      text: Try v1.1.0-beta.1 (Preview)
-      link: /downloads#beta-preview
+      text: Release Notes
+      link: /releases
     - theme: alt
       text: Documentation & Guides
       link: /docs/
@@ -46,10 +46,10 @@ features:
 <div class="card-box" style="margin: 2rem 0; border-left: 4px solid var(--vp-c-brand-1);">
   <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
     <div>
-      <span class="badge-pill badge-verified">Latest Preview</span>
-      <strong style="margin-left: 0.5rem; font-size: 1.05rem;">XDM Enhanced v1.1.0-beta.1 is Released</strong>
+      <span class="badge-pill badge-verified">Latest Stable</span>
+      <strong style="margin-left: 0.5rem; font-size: 1.05rem;">XDM Enhanced v1.1.0 is Released</strong>
       <p style="margin: 0.25rem 0 0 0; color: var(--vp-c-text-2); font-size: 0.9rem;">
-        Introducing Modular Plugin SDK v2, expanded multi-platform binaries (macOS DMGs, Linux native packages, Windows ARM64 MSI), quarantine trust security, and disaster recovery mode. Stable v1.0.2 remains available.
+        Graduating the Modular Plugin SDK v2, multi-platform binaries (Windows NSIS/MSI, macOS DMGs, Linux packages), HLS playlist hook &amp; muxer fixes, source-page link refresh, early IPv4 networking, and assistive-technology startup hardening.
       </p>
     </div>
     <div style="display: flex; gap: 0.75rem;">
@@ -88,7 +88,7 @@ XDM Enhanced is built on a high-performance modular Java runtime bundled nativel
       <p>Modern NSIS installer with bundled Liberica JDK runtime, system tray integration, start menu shortcuts, and auto-registration.</p>
     </div>
     <div style="margin-top: 1.25rem;">
-      <a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.0.2/XDM-Enhanced-Setup-v1.0.2-win-x64.exe" class="btn-primary" style="width: 100%; box-sizing: border-box;">Download Setup .EXE (64.0 MB)</a>
+      <a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.1.0/XDM-Enhanced-Setup-v1.1.0-win-x64.exe" class="btn-primary" style="width: 100%; box-sizing: border-box;">Download Setup .EXE</a>
       <div style="margin-top: 0.5rem; text-align: center; font-size: 0.8rem; color: var(--vp-c-text-3);">
         Supports Windows 10 & 11 (64-bit)
       </div>
@@ -102,7 +102,7 @@ XDM Enhanced is built on a high-performance modular Java runtime bundled nativel
       <p>Fully standalone portable archive. Unpack and run without administrative privileges or registry writes. All settings stay local.</p>
     </div>
     <div style="margin-top: 1.25rem;">
-      <a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.0.2/XDM-Enhanced-v1.0.2-windows-x64.zip" class="btn-secondary" style="width: 100%; box-sizing: border-box;">Download Portable .ZIP (74.8 MB)</a>
+      <a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.1.0/XDM-Enhanced-v1.1.0-windows-x64.zip" class="btn-secondary" style="width: 100%; box-sizing: border-box;">Download Portable .ZIP</a>
       <div style="margin-top: 0.5rem; text-align: center; font-size: 0.8rem; color: var(--vp-c-text-3);">
         Zero installation footprint
       </div>
@@ -116,7 +116,7 @@ XDM Enhanced is built on a high-performance modular Java runtime bundled nativel
       <p>Platform-agnostic executable JAR for Linux, macOS, and BSD systems with an existing 64-bit Java 25 runtime.</p>
     </div>
     <div style="margin-top: 1.25rem;">
-      <a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.0.2/xdm-app-1.0.2.jar" class="btn-secondary" style="width: 100%; box-sizing: border-box;">Download App .JAR (95.1 MB)</a>
+      <a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.1.0/xdm-app-1.1.0.jar" class="btn-secondary" style="width: 100%; box-sizing: border-box;">Download App .JAR</a>
       <div style="margin-top: 0.5rem; text-align: center; font-size: 0.8rem; color: var(--vp-c-text-3);">
         Requires 64-bit Java 25
       </div>

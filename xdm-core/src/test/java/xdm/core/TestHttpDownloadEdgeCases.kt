@@ -68,7 +68,7 @@ class TestHttpDownloadEdgeCases : HttpDownloadTestBase() {
         awaitSuccess(host)
         val elapsed = System.currentTimeMillis() - start
         assertDownloaded(host, bytes)
-        // 2MB at 512 KB/s ~= 4s; assert it clearly took real throttling time (never instant).
+        // 2MB at 512 KB/s ~= 4s (minus initial buffer warm-up before first tick); assert real throttling.
         assertTrue(elapsed >= 1800, "expected throttled download, took only ${elapsed}ms")
     }
 }

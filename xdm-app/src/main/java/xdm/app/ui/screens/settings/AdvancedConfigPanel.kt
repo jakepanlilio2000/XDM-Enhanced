@@ -56,6 +56,7 @@ class AdvancedConfigPanel : SettingsPanel() {
     internal val tglSwingChooser = SettingsToggle()
     internal val rowWayland = settingsRow(I8N.text("MSG_WAYLAND"), I8N.text("MSG_WAYLAND_SUB"), tglWayland)
     internal val rowSwingChooser = settingsRow(I8N.text("MSG_SWING_CHOOSER"), I8N.text("MSG_SWING_CHOOSER_SUB"), tglSwingChooser)
+    private val tglForceIpv4 = SettingsToggle()
     private val tglSkipDupManifests = SettingsToggle()
 
     private val postDownloadSection = PostDownloadRulesSection()
@@ -89,6 +90,8 @@ class AdvancedConfigPanel : SettingsPanel() {
                 settingsRow(I8N.text("MSG_COMPLETION_ACTION"), I8N.text("MSG_COMPLETION_ACTION_SUB"), cmbCompletionAction),
                 rowWayland,
                 rowSwingChooser,
+                settingsRow(I8N.text("MSG_FORCE_IPV4"), I8N.text("MSG_FORCE_IPV4_SUB"), tglForceIpv4),
+                settingsRow(I8N.text("MSG_LOGS"), I8N.text("MSG_LOGS_SUB"), settingsButton(I8N.text("MSG_LOGS_OPEN")) { openLogs() }),
             )
         )
         add(settingsGap())
@@ -151,6 +154,15 @@ class AdvancedConfigPanel : SettingsPanel() {
         btnBrowse.isEnabled = tglVirusScan.isSelected
     }
 
+    /** Opens the folder with this and the last few launches' logs, for a bug report. */
+    private fun openLogs() {
+        val dir = xdm.core.util.Logger.logFolder ?: return
+        // The current launch's log is buffered: write it out so the file the user opens is complete.
+        xdm.core.util.Logger.flush()
+        runCatching { xdm.app.utils.openFolderExternal(null, dir.absolutePath) }
+            .onFailure { xdm.core.util.Logger.error("Could not open the logs folder $dir", it) }
+    }
+
     fun load() {
         val config = AppContext.config
         val currentAction = config.completionAction
@@ -179,6 +191,7 @@ class AdvancedConfigPanel : SettingsPanel() {
         tglSwingChooser.isEnabled = linux
         applyTooltip(rowSwingChooser, chooserTip)
         tglSwingChooser.toolTipText = chooserTip
+        tglForceIpv4.isSelected = config.forceIpv4
         tglSkipDupManifests.isSelected = config.skipDuplicateManifests
         postDownloadSection.load()
         tglMarkDownloads.isSelected = config.markDownloadedFiles
@@ -205,6 +218,7 @@ class AdvancedConfigPanel : SettingsPanel() {
         if (detectOS() == OS.Linux) {
             config.swingFileChooser = tglSwingChooser.isSelected
         }
+        config.forceIpv4 = tglForceIpv4.isSelected
         config.skipDuplicateManifests = tglSkipDupManifests.isSelected
         postDownloadSection.save()
         config.markDownloadedFiles = tglMarkDownloads.isSelected

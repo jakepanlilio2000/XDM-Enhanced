@@ -676,6 +676,24 @@ SETTINGS_SEC_CLIPBOARD=Clipboard Monitoring
 LBL_MONITOR_CLIPBOARD=Monitor copied download links
 LBL_MONITOR_CLIPBOARD_SUB=Automatically detect copied download URLs and prepare the download modal. Unrelated clipboard text is never stored or transmitted.
 LBL_UNKNOWN_SIZE=Unknown size
+ND_SAVE_AS_MP4=Save as MP4 where possible
+ND_SAVE_AS_MP4_TIP=Off: a TS stream is saved as .ts, as it is. Streams that can't go into MP4 are saved as MKV.
+ND_PLAYLIST_CAPTURED_HINT=Ready: XDM has this video's playlist from the page
+ERR_SERVER_BUSY=The server is busy. Try again later.
+STAT_RETRY_AT=Server busy, retrying at %s
+CD_NOTE_TS=Saved as .ts so that no stream is left out
+CD_NOTE_AS_IS=Saved as downloaded: it couldn't be converted
+CD_NOTE_PLAYLIST=Saved as a playlist folder: play it with VLC
+CD_NOTE_SEPARATE=Saved as separate files, also %s
+REF_COPY_PAGE_HINT=Or copy the page address and open it in the browser where you found the download (the one with the XDM extension):
+TITLE_CAT_FOLDERS_MOVE=Category folders
+MSG_CAT_FOLDERS_MOVE=The download folder has changed. These categories still save into folders inside the old one:\n\n%s\n\nMove them into the new download folder? Files already downloaded stay where they are.
+MSG_FORCE_IPV4=Use IPv4 only
+MSG_FORCE_IPV4_SUB=Connects over IPv4 even when a server also has an IPv6 address. Try it if downloads stall or fail on a network with broken IPv6. Takes effect after a restart.
+MSG_LOGS=Log files
+MSG_LOGS_SUB=XDM keeps a log of each of its last five launches. Attach them to a bug report
+MSG_LOGS_OPEN=Open folder
+
 
 
 

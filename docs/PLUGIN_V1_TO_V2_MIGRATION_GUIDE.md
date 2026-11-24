@@ -11,8 +11,8 @@ Legacy v1 plugins **continue to function without modification**. The host applic
 
 ### Version Numbering Explained
 - **Public Plugin API Specification:** `2.0.0` (tracks semantic changes in `xdm-plugin-api`).
-- **Host Application Runtime API:** `1.1.0` (the minimum API runtime provided by XDM Enhanced `v1.1.0-beta.1`).
-- **Application Release Version:** `v1.1.0-beta.1` (the host desktop application milestone).
+- **Host Application Runtime API:** `1.1.0` (the minimum API runtime provided by XDM Enhanced `v1.1.0`).
+- **Application Release Version:** `v1.1.0` (the host desktop application release).
 
 ---
 
@@ -35,13 +35,13 @@ Legacy v1 plugins **continue to function without modification**. The host applic
 ## 3. Migration Step-by-Step
 
 ### Step 1: Update Maven Dependency
-Update your plugin's `pom.xml` to depend on `xdm-plugin-api` version `1.0.2` (or newer) with `provided` scope:
+Update your plugin's `pom.xml` to depend on `xdm-plugin-api` version `1.1.0` (or compatible) with `provided` scope:
 
 ```xml
 <dependency>
     <groupId>xdm</groupId>
     <artifactId>xdm-plugin-api</artifactId>
-    <version>1.0.2</version>
+    <version>1.1.0</version>
     <scope>provided</scope>
 </dependency>
 ```
@@ -143,7 +143,7 @@ If your plugin invokes external helper binaries:
 ## 4. Verification & Testing Checklist
 
 Before distributing your migrated plugin:
-- [ ] Compiles cleanly against `xdm-plugin-api:1.0.2` with zero host app dependencies.
+- [ ] Compiles cleanly against `xdm-plugin-api:1.1.0` with zero host app dependencies.
 - [ ] Declares all requested capabilities in `plugin.json` (`capabilities` array).
 - [ ] Declares appropriate `minApiVersion: "1.1.0"`.
 - [ ] Handles rapid enable/disable cycles without leaking background threads or listeners.

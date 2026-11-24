@@ -165,8 +165,10 @@ object DownloadTableRenderers {
             } else {
                 val status = value as? RecordStatus
                 if (status != null) {
+                    val retryAt = rec?.retryAt ?: 0L
+                    val isRetry = status == RecordStatus.DOWNLOADING && retryAt > System.currentTimeMillis()
                     text = when (status) {
-                        RecordStatus.DOWNLOADING -> "Downloading"
+                        RecordStatus.DOWNLOADING -> if (isRetry) xdm.app.ui.screens.retryAtText(retryAt) else "Downloading"
                         RecordStatus.FINISHED -> "Finished"
                         RecordStatus.PAUSED -> "Paused"
                         RecordStatus.ERROR -> "Error"
@@ -176,11 +178,12 @@ object DownloadTableRenderers {
                     }
                     if (!isSelected) {
                         val isDark = com.formdev.flatlaf.FlatLaf.isLafDark()
-                        foreground = when (status) {
-                            RecordStatus.FINISHED -> if (isDark) Color(63, 185, 80) else Color(26, 127, 55)
-                            RecordStatus.DOWNLOADING -> AppTheme.accent
-                            RecordStatus.PAUSED -> AppTheme.pausedForeground
-                            RecordStatus.ERROR -> AppTheme.failedForeground
+                        foreground = when {
+                            isRetry -> AppTheme.pausedForeground
+                            status == RecordStatus.FINISHED -> if (isDark) Color(63, 185, 80) else Color(26, 127, 55)
+                            status == RecordStatus.DOWNLOADING -> AppTheme.accent
+                            status == RecordStatus.PAUSED -> AppTheme.pausedForeground
+                            status == RecordStatus.ERROR -> AppTheme.failedForeground
                             else -> table.foreground
                         }
                     } else {

@@ -78,6 +78,7 @@ class HttpClientImpl @JvmOverloads constructor(
             .dns(dns)
             .fastFallback(true)
             .protocols(listOf(Protocol.HTTP_1_1))
+            .addNetworkInterceptor(HostFirst)
             .connectTimeout(30, TimeUnit.SECONDS).readTimeout(readTimeoutSeconds.toLong(), TimeUnit.SECONDS).retryOnConnectionFailure(false)
             .apply {
                 if (blockedReason != null) {
@@ -274,10 +275,13 @@ class HttpClientImpl @JvmOverloads constructor(
             val finalUrl = response.request.url.toUri().toASCIIString()
             val redirected = response.priorResponse?.isRedirect ?: false
 
+            // Only answers that are not data: a segmented download makes thousands of requests.
             // Set-Cookie values are session credentials; log that they came, not what they are.
-            Logger.info(response.headers.joinToString("\n") { (name, value) ->
-                if (name.equals("Set-Cookie", ignoreCase = true)) "$name: <redacted>" else "$name: $value"
-            })
+            if (response.code !in 200..299) {
+                Logger.info("HTTP ${response.code} ${request.url.host}\n" + response.headers.joinToString("\n") { (name, value) ->
+                    if (name.equals("Set-Cookie", ignoreCase = true)) "$name: <redacted>" else "$name: $value"
+                })
+            }
 
             HttpResponseImpl(
                 contentDisposition = response.headers.get("Content-Disposition"),
@@ -358,4 +362,21 @@ private fun decodeBasic(header: String?): BasicCredentials? {
     val colon = decoded.indexOf(':')
     if (colon < 0) return null
     return BasicCredentials(decoded.substring(0, colon), decoded.substring(colon + 1))
+}
+
+/**
+ * Writes `Host` as the first header after the request line, as browsers and curl do. OkHttp adds it after
+ * the caller's headers, and some servers refuse such a request (HTTP 410). Running as a network interceptor
+ * handles redirects so each host gets its own `Host` first while keeping all other headers in order.
+ */
+internal object HostFirst : Interceptor {
+    override fun intercept(chain: Interceptor.Chain): Response {
+        val request = chain.request()
+        val headers = request.headers
+        val index = (0 until headers.size).firstOrNull { headers.name(it).equals("Host", ignoreCase = true) }
+        if (index == null || index == 0) return chain.proceed(request)
+        val reordered = Headers.Builder().addUnsafeNonAscii(headers.name(index), headers.value(index))
+        for (i in 0 until headers.size) if (i != index) reordered.addUnsafeNonAscii(headers.name(i), headers.value(i))
+        return chain.proceed(request.newBuilder().headers(reordered.build()).build())
+    }
 }

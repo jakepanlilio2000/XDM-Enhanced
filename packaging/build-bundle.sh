@@ -28,6 +28,8 @@ cd "$PROJECT_ROOT"
 # jdk.localedata alone adds ~15 MB; pass --with-locales if you need non-English
 # date/number formatting (UI translations come from the app's own bundles and
 # do NOT need it).
+# jdk.accessibility is linked on Windows only (build-bundle.ps1): it holds the Java
+# Access Bridge there. On macOS and Linux it has no assistive technology in it.
 # --------------------------------------------------------------------------
 MODULES="java.desktop,java.logging,jdk.crypto.ec,jdk.unsupported"
 
@@ -307,7 +309,7 @@ JAR_PATH="$PROJECT_ROOT/xdm-app/target/$MAIN_JAR"
 
 APP_VERSION="$(sed -n 's/.*"currentVersion"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' \
   xdm-app/src/main/resources/app-version.json | head -1)"
-: "${APP_VERSION:=1.0.2}"
+: "${APP_VERSION:=1.1.0}"
 
 # --------------------------------------------------------------------------
 # Drop the bundled natives for every platform except this build's target.
@@ -602,7 +604,7 @@ PKG_VERSION="${APP_VERSION%%-*}"
 ARGS=(
   --type "$JPACKAGE_TYPE"
   --name "$IMAGE_NAME"
-  --app-version "${PKG_VERSION:-1.0.2}"
+  --app-version "${PKG_VERSION:-1.1.0}"
   --vendor "$VENDOR"
   --description "$DESCRIPTION"
   --copyright "$COPYRIGHT"

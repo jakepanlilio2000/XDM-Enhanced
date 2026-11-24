@@ -20,6 +20,7 @@ import xdm.app.utils.openFolderExternal
 import xdm.app.utils.openInDefaultBrowser
 import xdm.app.utils.setClipBoardText
 import xdm.core.downloaders.DownloadType
+import xdm.core.downloaders.web.streaming.downloader.hls.HlsPlaylistStore
 import xdm.core.util.CoreUtils
 import xdm.core.util.Logger
 //import xdman.Config
@@ -108,7 +109,10 @@ object AppMenuHandler {
             }
 
             DownloadType.Hls -> db.getHlsTask(ent.id)?.let { t ->
-                val vid = AppContext.videoTracker.addRestart(t.copy(id = CoreUtils.uniqueId()))
+                // The playlists' text from the capture, kept until the download finishes: the links may
+                // not give it a second time.
+                val texts = HlsPlaylistStore.load(ent.id, AppContext.configDir)
+                val vid = AppContext.videoTracker.addRestart(t.copy(id = CoreUtils.uniqueId(), playlistTexts = texts))
                 AppContext.videoTracker.addVideoDownload(vid)
             }
 

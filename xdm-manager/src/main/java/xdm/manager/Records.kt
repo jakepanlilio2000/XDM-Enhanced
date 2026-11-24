@@ -61,6 +61,11 @@ data class DbRecord(
      * without holes (FAT32, exFAT) before the download splits, or -1 when it isn't being filled. Not persisted.
      */
     var allocating: Int = -1,
+    /**
+     * While downloading: wall-clock time the next attempt is due when every connection waits on a busy server
+     * ([xdm.core.downloaders.DownloadStatusInfo.ProgressInfo.retryAt]); 0 otherwise. Not persisted.
+     */
+    var retryAt: Long = 0,
 )
 
 data class QueueItem(val id: Long, val resume: Boolean)

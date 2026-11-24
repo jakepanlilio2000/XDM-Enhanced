@@ -9,23 +9,25 @@ Understand the release channel hierarchy, update mechanisms, and cryptographic i
 XDM Enhanced distributes builds through two release channels:
 
 ### Stable Channel (Recommended)
-- **Current Version:** `v1.0.2` (Published: November 20, 2026).
-- **Target Audience:** General users and mission-critical production environments.
-- **Characteristics:** Verified against full 15-phase and maintenance audit suites. Includes high-performance multi-connection segmentation, native BitTorrent 2.0, dynamic FlatLaf themes, custom skins, and companion extensions.
+- **Current Version:** `v1.1.0` (Published: November 24, 2026).
+- **Target Audience:** General users and production environments.
+- **Characteristics:** Graduates the Modular Plugin SDK v2 (`xdm-plugin-api:1.1.0`, Specification 2.0.0), multi-platform packaging (Windows NSIS & MSI, macOS Apple Silicon & Intel DMGs, Linux native `.deb`, `.rpm`, `.pkg.tar.zst`, and portable `.tar.gz`), quarantine trust security, `--safe-mode`, HLS/DASH muxing and playlist hook capture improvements, link refresh `sourceUrl`/`sourceCookie` forwarding, early `preferIPv4Stack` toggle, and assistive-technology compatibility fixes.
 
 ### Pre-release Channel (Beta / Preview)
-- **Current Preview:** `v1.1.0-beta.1` (Published: November 20, 2026).
-- **Target Audience:** Developers, early adopters, and community testers evaluating the Modular Plugin SDK v2 and expanded platform binaries.
-- **Characteristics:** Introduces the decoupled Plugin SPI v2 (`xdm-plugin-api:1.0.2`, Specification 2.0.0), multi-platform packaging (Windows NSIS & MSI, macOS Apple Silicon & Intel DMGs, Linux native `.deb`, `.rpm`, `.pkg.tar.zst`, and portable `.tar.gz`), 5 reference plugins, quarantine trust security, and disaster-recovery safe mode (`--safe-mode`).
-- **Archive:** Historical beta releases (`v1.0.0-beta.1` through `v1.0.0-beta.6`) and release candidate (`v1.0.0-rc.1`) remain permanently archived on GitHub Releases.
+- **Status:** `v1.1.0` has graduated to the Stable Channel. When future minor releases enter preview, beta builds are published here.
+- **Archive:** Historical preview and beta releases (`v1.1.0-beta.1`, `v1.0.0-rc.1`, and `v1.0.0-beta.1` through `v1.0.0-beta.6`) remain archived on GitHub Releases.
 
 ---
 
 ## 2. Cryptographic SHA-256 Checksum Verification
 
-Every official release includes a signed `SHA256SUMS.txt` manifest. Verifying checksums ensures that your download was not tampered with, intercepted, or corrupted during transit.
+Every official release includes a CI-generated `SHA256SUMS.txt` manifest. Verifying checksums ensures that your download was not tampered with, intercepted, or corrupted during transit.
 
-### Verified Hashes for `v1.1.0-beta.1` (Beta Preview)
+### Verified Hashes for `v1.1.0` (Current Stable)
+
+Download and verify against [`SHA256SUMS.txt`](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.1.0/SHA256SUMS.txt) attached to the [`v1.1.0` GitHub Release](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/tag/v1.1.0). *(Exact release binary hashes are synced here once the `v1.1.0` release workflow finishes publishing artifacts.)*
+
+### Verified Hashes for `v1.1.0-beta.1` (Archived Beta Preview)
 
 | Package Filename | Target System / Type | SHA-256 Hash |
 |:---|:---|:---|
@@ -55,7 +57,7 @@ Every official release includes a signed `SHA256SUMS.txt` manifest. Verifying ch
 | `checksum-verifier.xdmplugin` | Checksum Plugin | `c8f915c32a984515db8991537089f9324be18ab5c67421d419c5d30a83582806` |
 | `cyber-neon.xdmskin` | Custom FlatLaf Theme Skin | `476cbd73d0ae68105dc6eab00cfdf1c8e1ddf377e59677e301f4ec3191a85a29` |
 
-### Verified Hashes for `v1.0.2` (Current Stable)
+### Verified Hashes for `v1.0.2` (Previous Stable)
 
 | Package | SHA-256 Hash |
 |:---|:---|
@@ -70,12 +72,12 @@ Every official release includes a signed `SHA256SUMS.txt` manifest. Verifying ch
 
 #### On Windows (PowerShell):
 ```powershell
-Get-FileHash -Algorithm SHA256 .\XDM-Enhanced-Setup-v1.0.2-win-x64.exe
+Get-FileHash -Algorithm SHA256 .\XDM-Enhanced-Setup-v1.1.0-win-x64.exe
 ```
 
 #### On Linux or macOS (Terminal):
 ```bash
-sha256sum XDM-Enhanced-Setup-v1.0.2-win-x64.exe
+sha256sum XDM-Enhanced-Setup-v1.1.0-win-x64.exe
 ```
 
 ---

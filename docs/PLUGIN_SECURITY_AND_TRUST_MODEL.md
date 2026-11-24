@@ -2,7 +2,7 @@
 
 **Document Version:** 1.0.0  
 **Scope:** Security Posture, Trust Model, and Technical Boundaries for Plugin SDK v2  
-**Target Release:** `v1.1.0-beta.1` / `xdm-plugin-api:2.0.0`  
+**Target Release:** `v1.1.0` / `xdm-plugin-api:1.1.0` (Spec `2.0.0`)  
 
 ---
 

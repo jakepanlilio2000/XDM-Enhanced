@@ -78,7 +78,7 @@ Use this symptom-based diagnostic decision tree to locate quick resolutions for 
 ### Symptom 6: Plugin Fails to Load on Startup
 - **Symptoms:** An installed plugin does not appear in the active list, or Settings > Plugins shows a red error status.
 - **Probable Causes:**
-  1. The plugin requires an API version incompatible with host version `v1.0.2`.
+  1. The plugin requires an API version incompatible with host version `v1.1.0`.
   2. The plugin threw an unhandled exception during `onInitialize()`.
 - **Resolution:**
   1. Select the plugin in **Settings > Plugins** &rarr; click **View Details** to inspect the stack trace.

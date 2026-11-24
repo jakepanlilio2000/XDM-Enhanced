@@ -1,10 +1,10 @@
 # XDM Enhanced — Plugin SDK v2 Technical Design & Architecture Specification
 
-**Document Version:** 2.0.0-DRAFT  
+**Document Version:** 2.0.0  
 **Author:** Senior Java Architect & Independent Plugin-System Auditor  
 **Scope:** General-Purpose Extensibility Framework for XDM Enhanced  
-**Status:** Architecture Design (Phase P1 — Non-Runtime Design & Specifications)  
-**Target Release:** `v1.1.0-beta.1` / `xdm-plugin-api:2.0.0`
+**Status:** Architecture Specification (`v1.1.0`)  
+**Target Release:** `v1.1.0` / `xdm-plugin-api:2.0.0` (`xdm-plugin-api:1.1.0` artifact)
 
 ---
 
@@ -325,7 +325,7 @@ Instead of delegating to `ForkJoinPool.commonPool()`, `PluginHostContext` v2 use
 ## 8. API Compatibility, Migration & Coexistence Policy
 
 ### 8.1 Semantic Versioning Policy
-- **Host Engine:** Follows SemVer (`v1.0.2` $\rightarrow$ `v1.1.0-beta.1`).
+- **Host Engine:** Follows SemVer (`v1.0.2` $\rightarrow$ `v1.1.0`).
 - **Plugin API:** `xdm-plugin-api:2.0.0`.
 - **Backwards Compatibility Guarantee:** Any minor release `2.x.y` will maintain binary and source compatibility for all `2.0.0` plugins.
 
@@ -357,7 +357,7 @@ The `plugin.json` schema is versioned via `manifestVersion`:
   "version": "2.0.0",
   "author": "Community Developer",
   "entryPoint": "com.example.AdvancedPlugin",
-  "minAppVersion": "1.1.0-beta.1",
+  "minAppVersion": "1.1.0",
   "minApiVersion": "2.0.0",
   "apiCompatibility": "^2.0.0",
   "capabilities": [

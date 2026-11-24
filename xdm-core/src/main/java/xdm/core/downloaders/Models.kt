@@ -42,6 +42,8 @@ enum class DownloadError {
     OutputWriteError,
     /** The user stopped a move that was copying across volumes. The part file is still where it was. */
     Cancelled,
+    /** The server kept answering "busy" (429, 5xx, or a refusal with Retry-After) and nothing downloaded for minutes. */
+    ServerBusy,
 }
 
 enum class PauseEvent {
@@ -85,6 +87,13 @@ data class HttpDownloadTaskInfo(
      * saved under the same name with `.srt`. A file that turns out not to be convertible is kept as is.
      */
     var convertToSrt: Boolean = false,
+    /**
+     * The link the browser was redirected from to [url] (a site's download link in front of a signed,
+     * short-lived file URL). Asked again for a fresh [url] when this one expires; null when no redirect.
+     */
+    var sourceUrl: String? = null,
+    /** The cookies of [sourceUrl]'s host, sent only to it. */
+    var sourceCookie: String? = null,
 )
 
 /**
@@ -151,6 +160,17 @@ data class HlsDownloadTaskInfo(
     var independent: Boolean,
     /** The subtitles to save beside the video: the tracker offers all, a download keeps the one picked. */
     var subtitles: List<SubtitleTrack> = emptyList(),
+    /**
+     * Keep the stream's own format where it can be kept as it is: TS segments joined (or merged with
+     * a separate audio rendition) into one `.ts` at packet level instead of remuxed into MP4. Other
+     * formats are remuxed as usual. False: remux into MP4 (MKV when WebM is involved).
+     */
+    var keepOriginalFormat: Boolean = false,
+    /**
+     * Media playlist text the browser sent with the capture, by playlist URL. In memory only, never in
+     * `.info`: written to `<id>.playlists` when added and read by the download instead of refetching.
+     */
+    val playlistTexts: Map<String, ByteArray> = emptyMap(),
 ) : StreamingDownloadTaskInfo(
     id,
     fileName,
@@ -280,6 +300,11 @@ sealed interface DownloadStatusInfo {
         var filesDone: Int = 0,
         var failedFiles: Int = 0,
         var filesTotal: Int = 0,
+        /**
+         * Wall-clock time (ms) the next attempt of a stalled download is due, while every connection waits on the
+         * server; 0 when not waiting.
+         */
+        var retryAt: Long = 0,
     )
 
     data class AssembleInfo(
@@ -294,7 +319,26 @@ sealed interface DownloadStatusInfo {
         val finalOutputFolder: String,
         /** Batch only: files that could not be downloaded; the batch still finishes. */
         val failedFiles: Int = 0,
+        /** How the output was assembled when it wasn't the usual remux; null for the usual one. */
+        val note: AssemblyNote? = null,
+        /** The other file(s) [note] is about (the separate audio, the number of parts). */
+        val noteDetail: String? = null,
     )
+}
+
+/**
+ * A download whose streams couldn't all be remuxed into the container asked for, so it was saved another
+ * way rather than fail: shown as one line under the download-complete dialog.
+ */
+enum class AssemblyNote {
+    /** Saved as MPEG-TS: joined or merged without converting the streams. */
+    TS_FALLBACK,
+    /** Saved as it was downloaded (its own container). */
+    AS_IS,
+    /** Saved as a playlist folder (the segments and a `.m3u8`), which VLC plays. */
+    PLAYLIST_FOLDER,
+    /** Saved as separate files side by side ([DownloadStatusInfo.FinalInfo.noteDetail] names them). */
+    SEPARATE_FILES,
 }
 
 sealed interface CommitResult {

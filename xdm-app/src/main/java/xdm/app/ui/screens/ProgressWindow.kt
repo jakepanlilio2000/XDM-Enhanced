@@ -978,7 +978,12 @@ class ProgressWindow(val id: Long) : JFrame() {
         }
         lblStat2.text = textBuf.toString()
 
-        lblStat3.text = if (speed > 0) "Transfer rate: " + formatSize(speed.toDouble()) + "/sec" else "Transfer rate: ---"
+        val retryAt = rec?.retryAt?.takeIf { it > System.currentTimeMillis() && rec.status == RecordStatus.DOWNLOADING }
+        lblStat3.text = when {
+            retryAt != null -> retryAtText(retryAt)
+            speed > 0 -> "Transfer rate: " + formatSize(speed.toDouble()) + "/sec"
+            else -> "Transfer rate: ---"
+        }
         lblStat4.text = if (eta > 0) "Time left: " + toLongEta(eta) else "Time left: ---"
 
         lblTorrentSwarm.isVisible = false
@@ -1168,9 +1173,14 @@ fun downloadErrorText(error: DownloadError): String {
         DownloadError.DecryptionError -> text("ERR_DECRYPT")
         DownloadError.OutputWriteError -> text("ERR_OUTPUT_WRITE")
         DownloadError.MuxError -> text("ERR_MUX")
+        DownloadError.ServerBusy -> text("ERR_SERVER_BUSY")
         else -> text("ERR_INTERNAL")
     }
 }
+
+/** "Server busy, retrying at 14:32:05": a download whose every connection waits on a busy server. */
+fun retryAtText(at: Long): String =
+    String.format(text("STAT_RETRY_AT"), java.text.DateFormat.getTimeInstance(java.text.DateFormat.MEDIUM).format(java.util.Date(at)))
 
 fun downloadErrorHelpUrl(error: DownloadError): String? {
     val slug = when (error) {
@@ -1186,6 +1196,7 @@ fun downloadErrorHelpUrl(error: DownloadError): String? {
         DownloadError.DecryptionError -> "decryption-error"
         DownloadError.OutputWriteError -> "cannot-save-file"
         DownloadError.Cancelled -> return null
+        DownloadError.ServerBusy -> "server-busy"
     }
     return "$WEBSITE_URL/help/errors/$slug/"
 }

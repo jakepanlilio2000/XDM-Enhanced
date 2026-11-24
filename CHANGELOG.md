@@ -5,6 +5,27 @@ All notable changes to the XDM Enhanced project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-11-24
+
+### Added
+- **Graduated Modular Plugin SDK v2 (`xdm-plugin-api:1.1.0`):** Promoted the decoupled SDK v2 SPI suite (Specification 2.0.0) and all 6 reference plugins (`ytdlp-downloader`, `checksum-verifier`, `proxy-provider`, `vpn-status`, `ui-notification`, `v2-sample-plugin`) to stable `1.1.0`.
+- **Captured HLS Playlist Body Pipeline (`hls-hook.js` / `HlsPlaylistStore`):** Added Chromium MV3 page-world playlist interception (`hls-hook.js`, `hls-relay.js`, `request-watcher.js` held playlist map) and Firefox `readPlaylistBody` stream capture backed by `PlaylistTextCache` and `HlsPlaylistStore` for authenticated/short-lived HLS manifests.
+- **Early IPv4 Networking Toggle (`forceIpv4`):** Added **Force IPv4** in Advanced Settings, applied at startup via `AppMain` before socket/HTTP initialization (`java.net.preferIPv4Stack`), preventing IPv6 stall/timeout regressions on broken dual-stack networks.
+- **Stream Remux Preference (`saveStreamsAsMp4`):** Added configurable **Save streams as MP4** option (`AppConfig.saveStreamsAsMp4`, Download Settings, and `NewVideoDownloadWindow`) allowing users to keep original containers (e.g., TS/MKV/WebM) or remux to MP4.
+- **Source Page & Link Refresh Preservation (`sourceUrl` / `sourceCookie`):** Preserved origin page URL and cookies across browser extension captures, New Download / Refresh Link dialogs, completion dialogs (`lblNote`), and `LinkRefresher` retry flows, with a copy-page helper in `RefreshLinkWindow`.
+- **Assistive Technology Startup Guard:** Added `AssistiveTech.sanitize()` during `AppMain` startup and declared `uses javax.accessibility.AccessibilityProvider;` in packaging `module-info.java` to prevent AWT startup failures with missing/broken accessibility providers (see [upstream #1456](https://github.com/subhra74/xdm/issues/1456)).
+- **Linux Power & Shutdown Integration:** Added `PortalInhibit` XDG Desktop Portal sleep inhibition and `gdbus` desktop session power-action fallbacks in `KeepAwake` / `LinuxUtils`.
+
+### Changed
+- **Retry & Server-Busy Progress Feedback:** Surfaced HTTP 429/500/503 retry ETAs (`retryAt`) and `ServerBusy` diagnostics across `HttpDownloader`, `ProgressWindow`, and `HeadlessCli`.
+- **Configuration & UI Refinements:** Replaced reflection-based settings snapshotting with an explicit `ConfigSnapshot` list verified by `ConfigSnapshotTest`, and ported FlatLaf Light/Dark contrast, table row layout, and transfer view visual refinements.
+- **Companion Browser Extensions:** Synced upstream YouTube/blocked-site guards, `sourceUrl`/`sourceCookie` forwarding, and captured-playlist UI badges (`playlistCaptured`) in both Chromium MV3 (`3.5.4`, `version_name: 1.1.0`) and Firefox MV2 (`1.1.4`).
+
+### Fixed
+- **Plugin Task ID Signed-Range Collision (`PluginDownloadBridge`):** Masked `CoreUtils.uniqueId()` with `Long.MAX_VALUE` (guarding `0L`) so host-generated plugin task IDs are always strictly positive (`> 0`), preventing plugins using the `< 0` error convention (`ytdlp-downloader`) from mistaking valid tasks for failures.
+- **Plugin Task Terminal-State Delete Race (`PluginDownloadBridge` / `TaskInfoDB`):** Serialized `PluginDownloadBridge.deleteTask` against in-flight `handleProgress` callbacks, published `RecordStatus.FINISHED` only after filename/metadata persistence completes, marked `TaskInfoDB.deleteRecord` `@Synchronized`, and ignored late progress events after task deletion.
+- **Media Muxer & Container Reliability (`xdm-core`):** Synced upstream muxer and parser fixes across MP4/ISO, MKV, Ogg, TS, AAC/Opus/FLAC/AC3/Vorbis, chunk takeover/rate-limit handling, and atomic container commit paths.
+
 ## [1.1.0-beta.1] - 2026-11-20
 
 ### Added

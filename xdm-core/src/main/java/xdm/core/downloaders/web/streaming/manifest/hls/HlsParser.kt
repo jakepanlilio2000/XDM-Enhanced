@@ -50,7 +50,6 @@ object HlsParser {
     fun parseMediaSegments(
         manifestLines: Iterator<String>, playlistUrl: String
     ): Result<HlsPlaylist> {
-        Logger.info("XDM", "Parsing manifest")
         return runCatching {
             try {
                 val query = getQuery(playlistUrl) ?: ""
@@ -91,7 +90,6 @@ object HlsParser {
                 for (lineText in manifestLines) {
                     val line = lineText.trim()
                     if (line.isEmpty()) continue
-                    Logger.info("XDM", line)
                     if (line[0] != '#') {
                         if (isEncrypted && missingIv) {
                             iv = toBigEndian128BitHex(mediaSequence)
@@ -200,7 +198,8 @@ object HlsParser {
                                     duration = 0.0,
                                     keyUrl?.let { applyQuery(baseUrl, it, query) },
                                     iv,
-                                    isEncrypted
+                                    isEncrypted,
+                                    init = true,
                                 )
                             mediaSegments.add(segment)
                         }
@@ -214,6 +213,12 @@ object HlsParser {
                     Logger.error(msg)
                     throw Exception("No media segment in playlist")
                 }
+                Logger.info(
+                    "XDM",
+                    "Playlist: ${mediaSegments.size} segments, ${"%.0f".format(totalDuration)} s" +
+                        (if (anyEncrypted) ", encrypted" else "") + (if (anyDiscontinuity) ", discontinuities" else "") +
+                        (if (anyByteRange) ", byte ranges" else "")
+                )
                 HlsPlaylist(
                     mediaSegments,
                     encrypted = anyEncrypted,

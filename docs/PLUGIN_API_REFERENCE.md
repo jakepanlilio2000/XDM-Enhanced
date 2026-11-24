@@ -2,13 +2,13 @@
 
 **Public Plugin API Version:** `2.0.0`  
 **Host Runtime Compatibility:** `>=1.1.0`  
-**Target Milestone:** `v1.1.0-beta.1`  
+**Target Milestone:** `v1.1.0`  
 **Maven Artifact Coordinates:**
 ```xml
 <dependency>
     <groupId>xdm</groupId>
     <artifactId>xdm-plugin-api</artifactId>
-    <version>1.0.2</version>
+    <version>1.1.0</version>
     <scope>provided</scope>
 </dependency>
 ```

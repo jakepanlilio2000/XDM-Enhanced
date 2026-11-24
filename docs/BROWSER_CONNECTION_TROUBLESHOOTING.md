@@ -131,7 +131,7 @@ curl -v http://127.0.0.1:8597/sync
 HTTP/1.1 200 OK
 Content-Type: application/json; charset=utf-8
 
-{"enabled":true,"fileExts":[...],"instanceId":"...","appVersion":"1.0.0-beta.6",...}
+{"enabled":true,"fileExts":[...],"instanceId":"...","appVersion":"1.1.0",...}
 ```
 
 ### Step 2: Verify Listening Port
@@ -183,7 +183,7 @@ xdg-mime query default x-scheme-handler/xdm-app
 3. Under **XDM Enhanced - Browser Integration**, click **Inspect views: service worker**.
 4. In the DevTools Console, inspect live connector logs:
    - `[XDM] tryConnect(): attempting http://127.0.0.1:8597/sync`
-   - `[XDM] Connected to XDM Enhanced v1.0.0-beta.6`
+   - `[XDM] Connected to XDM Enhanced v1.1.0`
    - Look for any `ERR_CONNECTION_REFUSED` or timeout exceptions.
 
 **Firefox:**

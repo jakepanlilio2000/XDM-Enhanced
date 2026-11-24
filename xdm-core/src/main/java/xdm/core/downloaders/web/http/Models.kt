@@ -48,10 +48,25 @@ enum class ChunkStatus {
 sealed interface ConnectResult {
     data class Connected(val response: HttpResponse) : ConnectResult
     data class Retry(val delay: Long) : ConnectResult
+
+    /** A busy server (429, 5xx, or a refusal with Retry-After): asked again by [xdm.core.util.RetryPolicy]'s budget. */
+    data class ServerTrouble(val retryAfterMs: Long?) : ConnectResult
     data object InvalidResponse : ConnectResult
     data object NoResume : ConnectResult
     data object TlsError : ConnectResult
     data object LinkExpired : ConnectResult
+}
+
+/** What a chunk does after the link refused it (403/410/expired 401) once bytes were already downloaded. */
+enum class Refusal {
+    /**
+     * The download is still receiving data (another chunk is reading, or bytes came in within
+     * [xdm.core.util.RetryTimings.stallMs]): the server limits connections. Wait and ask again, uncounted.
+     */
+    Wait,
+
+    /** Nothing has come in for a while: the link expired. */
+    Expired,
 }
 
 enum class CopyResult {

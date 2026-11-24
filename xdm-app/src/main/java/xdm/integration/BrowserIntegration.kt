@@ -39,6 +39,12 @@ object BrowserIntegration {
     /** Body limit for `/batch`; every other path gets [HttpParser.DEFAULT_MAX_BODY_BYTES]. */
     const val MAX_BATCH_BODY_BYTES = 64L * 1024 * 1024
 
+    /**
+     * Longest playlist text taken from a `/media` message; the extension sends at most 256K. A longer
+     * one is ignored and the playlist fetched as before.
+     */
+    private const val MAX_MANIFEST_BODY_CHARS = 1024 * 1024
+
     private lateinit var server: HttpServer
     private var serverSocket: ServerSocket? = null
     /**
@@ -227,7 +233,12 @@ object BrowserIntegration {
         onSyncMessage(context)
     }
 
-    /** Asks the user, once per browser and run, to update an extension older than XDM expects. */
+    /**
+     * Asks the user, once per browser and run, to update an extension older than XDM expects.
+     * Judged on `/sync` and `/poll` only: every extension version sends those, and current ones
+     * always name themselves there. Other requests (e.g. popup `/preview` in 3.5/1.1) may omit the
+     * version header and would make a current extension look old.
+     */
     private fun checkExtensionVersion(context: RequestContext) {
         val headers = context.requestHeaders
         val headerVal = headers[ExtensionVersionCheck.HEADER]?.firstOrNull()
@@ -238,6 +249,7 @@ object BrowserIntegration {
             markConnected(it)
         }
 
+        if (context.requestPath != "/sync" && context.requestPath != "/poll") return
         val browser = ExtensionVersionCheck.outdatedBrowser(headerVal, originVal, uaVal) ?: return
         if (reportedOutdatedExtensions.add(browser)) {
             Logger.info("INTEGRATION", "Outdated ${browser.displayName} extension: ${headerVal ?: "no version"}")
@@ -373,18 +385,7 @@ object BrowserIntegration {
         if (req != null && req.args.isNotEmpty()) {
             Logger.info("INTEGRATION", "Launch arguments: ${req.args}")
             if (req.args.any { it.equals("--shutdown", ignoreCase = true) || it.equals("--exit", ignoreCase = true) || it.equals("--quit", ignoreCase = true) }) {
-                context.apply {
-                    statusCode = 200
-                    statusMessage = "OK"
-                    addResponseHeader("Content-Type", "application/json")
-                    responseBody = """{"status":"shutting_down"}""".toByteArray(StandardCharsets.UTF_8)
-                }.sendResponse()
-                Thread({
-                    try {
-                        Thread.sleep(150)
-                    } catch (_: InterruptedException) {}
-                    AppContext.app.gracefulShutdown()
-                }, "XDM-IpcShutdown").start()
+                respondAndShutdown(context)
                 return
             }
             AppContext.app.handleLaunchArgs(req.args)
@@ -394,6 +395,10 @@ object BrowserIntegration {
 
     private fun onShutdownMessage(context: RequestContext) {
         Logger.info("INTEGRATION", "Received /shutdown request")
+        respondAndShutdown(context)
+    }
+
+    private fun respondAndShutdown(context: RequestContext) {
         context.apply {
             statusCode = 200
             statusMessage = "OK"
@@ -428,7 +433,12 @@ object BrowserIntegration {
 
     private fun onMediaMessage(context: RequestContext) {
         Logger.info("Received media message..")
-        decodeBody<ExtensionMessage>(context)?.let { CaptureHandler.onMedia(it) }
+        decodeBody<ExtensionMessage>(context)?.let { msg ->
+            // Used once, for parsing; the message itself may be kept longer (split tracks, subtitles),
+            // so it does not carry the text along.
+            val body = msg.manifestBody?.takeIf { it.length <= MAX_MANIFEST_BODY_CHARS }
+            CaptureHandler.onMedia(if (msg.manifestBody == null) msg else msg.copy(manifestBody = null), body)
+        }
     }
 
     private fun onDownloadMessage(context: RequestContext) {
@@ -479,6 +489,8 @@ object BrowserIntegration {
                     previewable = it.previewable,
                     subtitle = it.subtitle,
                     badge = if (it.subtitle) I8N.text("ND_SUBTITLE_BADGE") else null,
+                    playlistCaptured = it.playlistCaptured,
+                    playlistHint = if (it.playlistCaptured) I8N.text("ND_PLAYLIST_CAPTURED_HINT") else null,
                     resolution = it.resolution,
                     format = it.format,
                     streamType = it.streamType,
@@ -561,6 +573,13 @@ data class VideoItem(
     val estimatedSize: String? = null,
     val hasAudio: Boolean? = null,
     val frameRate: String? = null,
+    /**
+     * XDM has the text of this HLS stream's playlists from the page, so it downloads even where the site
+     * allows the playlist link only once: the popup shows a tick on the thumbnail.
+     */
+    val playlistCaptured: Boolean = false,
+    /** The tick's translated hover text; null when there is no tick. */
+    val playlistHint: String? = null,
 )
 
 /** Body of a `/preview` request: the captured video, by its [VideoItem.id]. */

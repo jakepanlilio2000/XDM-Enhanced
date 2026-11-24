@@ -61,6 +61,9 @@ object ThemeManager {
     private var systemWatcher: ScheduledExecutorService? = null
     private var lastResolvedDark: Boolean? = null
 
+    @Volatile
+    private var customDefaultsRegistered: Boolean = false
+
     var currentTheme: String = "system"
         private set
 
@@ -238,7 +241,12 @@ object ThemeManager {
         val desktop = if (WaylandToolkit.isActive) DesktopFontSettings.read() else null
         desktop?.font?.let { UIManager.put("defaultFont", FontUIResource(it)) }
 
-        FlatLaf.registerCustomDefaultsSource("xdm.app.themes")
+        // Register once: FlatLaf appends duplicate package sources without deduplicating them.
+        if (!customDefaultsRegistered) {
+            FlatLaf.unregisterCustomDefaultsSource("xdm.app.themes")
+            FlatLaf.registerCustomDefaultsSource("xdm.app.themes")
+            customDefaultsRegistered = true
+        }
 
         if (zoomPercent != 100) UIScale.setZoomFactor(zoomPercent / 100f)
 

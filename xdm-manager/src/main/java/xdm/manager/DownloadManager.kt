@@ -5,6 +5,7 @@
 package xdm.manager
 
 import xdm.capture.CaptureContext
+import xdm.capture.VideoHelper
 import xdm.core.CoreConfig
 import xdm.core.downloaders.*
 import xdm.core.downloaders.web.batch.BatchDownloaderTask
@@ -19,6 +20,8 @@ import xdm.core.downloaders.web.saveState
 import xdm.core.downloaders.web.streaming.downloader.dash.DashDownloaderTask
 import xdm.core.downloaders.web.streaming.downloader.hls.HlsDownloaderTask
 import xdm.core.downloaders.web.streaming.downloader.hls.HlsKeyStore
+import xdm.core.downloaders.web.streaming.downloader.hls.HlsPlaylistStore
+import xdm.core.media.muxer.MuxContainer
 import xdm.core.media.muxer.impl.TransmuxingMuxer
 import xdm.core.media.subtitle.Subtitles
 import xdm.core.network.http.CertExceptions
@@ -35,6 +38,9 @@ import xdm.core.storage.uniqueFileName
 import xdm.core.util.AtomicIO
 import xdm.core.util.CoreUtils
 import xdm.core.util.FileUtils
+import xdm.core.util.getExtension
+import xdm.core.util.getFileNameWithoutExtension
+import xdm.core.util.isOutOfSpace
 import xdm.core.util.Logger
 import xdm.core.util.MovePhase
 import xdm.core.util.getFileName
@@ -71,10 +77,11 @@ interface IDownloadManager {
     /** [maxPiece] is the segment count picked in the dialog; null keeps the captured video's own. */
     /** [subtitle] is one of the stream's tracks, saved beside the video; null saves none. */
     /** [convertToSrt]: a captured WebVTT/TTML subtitle is saved as SRT; ignored for videos. */
+    /** [keepOriginalFormat]: an HLS stream's TS is kept as `.ts` ([HlsDownloadTaskInfo.keepOriginalFormat]). */
     /** Returns the new download's id, or null when the tracker no longer has [videoId]. */
     fun addVideoDownload(
         videoId: Long, fileName: String, categoryId: String?, targetFolder: String, maxPiece: Int? = null,
-        subtitle: SubtitleTrack? = null, convertToSrt: Boolean = false,
+        subtitle: SubtitleTrack? = null, convertToSrt: Boolean = false, keepOriginalFormat: Boolean = false,
     ): Long?
     fun startHlsDownload(task: HlsDownloadTaskInfo): Long
     fun startDashDownload(task: DashDownloadTaskInfo): Long
@@ -246,6 +253,7 @@ class DownloadManager(
                         it.progress = event.progress
                         it.speed = event.speed
                         it.eta = event.eta
+                        it.retryAt = event.retryAt
                         size = it.size
                         fileName = it.fileName
                     }
@@ -304,6 +312,8 @@ class DownloadManager(
                 // The working folder has served its purpose; leaving it behind would litter the
                 // temp folder with one empty directory per completed download.
                 deleteTempFolders(event.id)
+                // Only a start over needs the captured playlists, and a finished download has no use for them.
+                HlsPlaylistStore.delete(event.id, configDir)
                 // Before the record turns FINISHED, so nothing (the dialog, "Open", the virus scan,
                 // the custom command) can reach the file unmarked.
                 if (config.markDownloadedFiles) markDownloaded(event)
@@ -320,7 +330,7 @@ class DownloadManager(
                 ui.hideProgress(event.id)
                 when (config.downloadCompleteNotification) {
                     DownloadCompleteNotification.DIALOG -> ui.downloadCompleteDialog(
-                        event.id, event.finalOutputFolder, event.finalFileName, event.fileSize
+                        event.id, event.finalOutputFolder, event.finalFileName, event.fileSize, event.note, event.noteDetail
                     )
 
                     DownloadCompleteNotification.NOTIFICATION ->
@@ -351,7 +361,7 @@ class DownloadManager(
                 ui.downloadUpdated(id)
                 if (toDelete.remove(id)) {
                     deleteAfterStopped(id, it)
-                } else {
+                } else if (!tryRefreshLink(id, error)) {
                     ui.downloadFailed(id, error)
                     hooks.downloadFailed(id)
                 }
@@ -453,7 +463,9 @@ class DownloadManager(
             }
         }
 
-        override fun commitOutputFile(id: Long, part: StorageFile, downloadType: DownloadType): CommitResult {
+        override fun commitOutputFile(id: Long, part: StorageFile, downloadType: DownloadType, container: String?): CommitResult {
+            // A muxed download is named after the container written (MuxContainer), which may not be the one picked up front.
+            fun named(fileName: String) = container?.let { MuxContainer.withExtension(fileName, it) } ?: fileName
             when (downloadType) {
                 DownloadType.Http -> taskInfoDB.getHttpTask(id)?.let { t ->
                     val name = if (t.convertToSrt) convertToSrt(id, t.fileName, part) else t.fileName
@@ -464,14 +476,14 @@ class DownloadManager(
                 }
 
                 DownloadType.Hls -> taskInfoDB.getHlsTask(id)?.let { t ->
-                    return publishInFolder(t.fileName, part) { finalName, _ ->
+                    return publishInFolder(named(t.fileName), part) { finalName, _ ->
                         t.fileName = finalName
                         taskInfoDB.saveHlsTask(t)
                     }
                 }
 
                 DownloadType.Dash -> taskInfoDB.getDashTask(id)?.let { t ->
-                    return publishInFolder(t.fileName, part) { finalName, _ ->
+                    return publishInFolder(named(t.fileName), part) { finalName, _ ->
                         t.fileName = finalName
                         taskInfoDB.saveDashTask(t)
                     }
@@ -487,6 +499,46 @@ class DownloadManager(
 
         override fun outputFile(id: Long, downloadType: DownloadType, ext: String): StorageFile? =
             streamingOutputFile(id, downloadType, ext)
+
+        override fun commitOutputFolder(id: Long, folder: String, entry: String, downloadType: DownloadType): CommitResult {
+            val task: StreamingDownloadTaskInfo = (if (downloadType == DownloadType.Dash) taskInfoDB.getDashTask(id) else taskInfoDB.getHlsTask(id))
+                ?: return CommitResult.Failed(DownloadError.InternalError)
+            val target = storage.folder(task.targetFolder)
+            // A folder is published on the local file system only (Android: not yet).
+            val targetPath = target.localPath ?: return CommitResult.Failed(DownloadError.OutputWriteError)
+            val base = getFileNameWithoutExtension(task.fileName).ifBlank { "video" }
+            val name = uniqueFileName(base) { File(targetPath, it).exists() }
+            val destination = File(targetPath, name)
+            return try {
+                File(targetPath).mkdirs()
+                moveTree(File(folder), destination)
+                val playlist = "$name.m3u8"
+                if (!File(destination, entry).renameTo(File(destination, playlist))) throw java.io.IOException("Couldn't rename $entry")
+                task.fileName = "$name/$playlist"
+                when (task) {
+                    is HlsDownloadTaskInfo -> taskInfoDB.saveHlsTask(task)
+                    is DashDownloadTaskInfo -> taskInfoDB.saveDashTask(task)
+                }
+                Logger.info("XDM", "Published playlist folder $destination")
+                CommitResult.Success(fileName = task.fileName, outputDir = target.location)
+            } catch (e: Exception) {
+                Logger.error("XDM", "Unable to publish the playlist folder $folder as $destination", e)
+                CommitResult.Failed(if (isOutOfSpace(e)) DownloadError.DiskSpaceError else DownloadError.OutputWriteError)
+            }
+        }
+
+        override fun commitSidecar(id: Long, file: String, outputDir: String, mainFileName: String, suffix: String): String? {
+            val dir = storage.folder(outputDir).localPath ?: return null
+            val ext = getExtension(file)?.let { ".$it" } ?: ""
+            val name = uniqueFileName("${getFileNameWithoutExtension(mainFileName)}.$suffix$ext") { File(dir, it).exists() }
+            return try {
+                moveTree(File(file), File(dir, name))
+                name
+            } catch (e: Exception) {
+                Logger.error("XDM", "Unable to publish $file beside $mainFileName", e)
+                null
+            }
+        }
     }
 
     /**
@@ -845,13 +897,30 @@ class DownloadManager(
                 // Resolved first: the path is read from the task info that the purge deletes.
                 val files = if (fromDisk && rec.status == RecordStatus.FINISHED && rec.downloadType != DownloadType.Batch)
                     listOfNotNull(finishedFile(rec), subtitleSidecar(rec)) else emptyList()
+                val kept = if (fromDisk && rec.status == RecordStatus.FINISHED) fallbackOutputs(rec) else emptyList()
                 purgeFiles(rec, fromDisk)
                 files.forEach { Logger.info("XDM", "Delete file $it ${it.delete()}") }
+                kept.forEach { Logger.info("XDM", "Delete $it ${it.deleteRecursively()}") }
             } catch (error: Exception) {
                 Logger.error("XDM", "Error while deleting ${rec.id}", error)
             }
         }
         ui.downloadsRemoved()
+    }
+
+    /**
+     * What a finished HLS/DASH download kept besides its file when it couldn't be remuxed: its playlist
+     * folder (the file name is `<folder>/<name>.m3u8`), or the files published beside it
+     * (`<name>.audio.<ext>`, `<name>.partN.<ext>`).
+     */
+    private fun fallbackOutputs(rec: DbRecord): List<File> {
+        if (rec.downloadType != DownloadType.Hls && rec.downloadType != DownloadType.Dash) return emptyList()
+        val file = finishedFile(rec) ?: return emptyList()
+        val dir = file.folder.localPath?.let { File(it) } ?: return emptyList()
+        if ('/' in rec.fileName) return listOf(File(dir.parentFile ?: return emptyList(), rec.fileName.substringBefore('/')))
+        val base = Regex.escape(getFileNameWithoutExtension(rec.fileName))
+        val sidecar = Regex("$base\\.(audio|part\\d+)(\\.[^.]+)?")
+        return dir.listFiles { f -> f.isFile && sidecar.matches(f.name) }?.toList().orEmpty()
     }
 
     /** The `.srt` a finished HLS/DASH download saved beside its video, if it picked a subtitle. */
@@ -932,7 +1001,9 @@ class DownloadManager(
         taskInfoDB.deleteRecord(id)
         listOf("$id.state", "$id.state.bak1", "$id.state.bak2").forEach { File(configDir, it).delete() }
         HlsKeyStore.delete(id, configDir)
+        HlsPlaylistStore.delete(id, configDir)
         refused.remove(id)
+        linkRefresher.forget(id)
         hooks.downloadDeleted(id)
     }
 
@@ -978,7 +1049,7 @@ class DownloadManager(
 
     override fun addVideoDownload(
         videoId: Long, fileName: String, categoryId: String?, targetFolder: String, maxPiece: Int?,
-        subtitle: SubtitleTrack?, convertToSrt: Boolean,
+        subtitle: SubtitleTrack?, convertToSrt: Boolean, keepOriginalFormat: Boolean,
     ): Long? {
         // Each download of a detected video is a new download: copy the tracker's entry with a fresh
         // id instead of reusing (and mutating) it, so downloading the same video twice cannot share
@@ -1006,12 +1077,20 @@ class DownloadManager(
 
         // The tracker's entry lists every subtitle the stream has; the download keeps the picked one.
         tracker.getHlsVideo(videoId)?.let { source ->
+            // The media playlists' text the browser sent, if any (a Restart brings its own): some sites
+            // sign a playlist link for one request, which the page's player has already used.
+            val urls = listOfNotNull(source.url, source.audioUrl, subtitle?.playlistUrl)
+            val texts = source.playlistTexts.filterKeys { it in urls }.ifEmpty {
+                VideoHelper.capturedPlaylists(tracker.getDisplayInfo(videoId)?.tabId, urls)
+            }
             return startHlsDownload(
                 source.copy(
                     id = CoreUtils.uniqueId(), fileName = fileName, categoryId = categoryId,
                     targetFolder = targetFolder,
                     maxPiece = maxPiece ?: source.maxPiece,
                     subtitles = listOfNotNull(subtitle),
+                    keepOriginalFormat = keepOriginalFormat,
+                    playlistTexts = texts,
                 )
             )
         }
@@ -1035,6 +1114,11 @@ class DownloadManager(
     }
 
     private fun startHls(task: HlsDownloadTaskInfo): Long {
+        if (task.playlistTexts.isNotEmpty()) {
+            // Not fatal: without it the download fetches the playlists, as one without captured text does.
+            HlsPlaylistStore.save(task.id, configDir, task.playlistTexts)
+                .onFailure { Logger.error("XDM", "Unable to save the captured playlists of ${task.id}", it) }
+        }
         taskInfoDB.saveHlsTask(task)
         store.add(
             DbRecord(
@@ -1152,8 +1236,17 @@ class DownloadManager(
         return null
     }
 
-    override fun updateDownloadInfo(id: Long, task: HttpDownloadTaskInfo) =
+    override fun updateDownloadInfo(id: Long, task: HttpDownloadTaskInfo) {
         applyLinkUpdate(id, task.url, task.headers, task.cookie)
+        // A new capture from the browser brings its own source link, if it came through a redirect.
+        if (task.sourceUrl == null) return
+        taskInfoDB.getHttpTask(id)?.let {
+            it.sourceUrl = task.sourceUrl
+            it.sourceCookie = task.sourceCookie
+            taskInfoDB.saveHttpTask(it)
+        }
+        linkRefresher.forget(id)
+    }
 
     override fun updateDownloadLink(id: Long, url: String, headers: HeaderMap?, cookie: String?) =
         applyLinkUpdate(id, url, headers, cookie)
@@ -1536,6 +1629,44 @@ class DownloadManager(
         }
     }
 
+    private val linkRefresher = LinkRefresher({
+        HttpClientImpl(
+            1, config.toProxy(), hooks.insecureTrust(), config.readTimeoutSeconds,
+            config.proxyUser, config.proxyPass, auth = hooks.httpAuth, serverAuth = true,
+        )
+    })
+
+    /**
+     * An HTTP download whose link expired gets a fresh one from the link the browser was redirected from
+     * ([LinkRefresher]) and resumes; the error is shown only if that gives nothing. True when a refresh was
+     * started: the caller then shows nothing.
+     */
+    private fun tryRefreshLink(id: Long, error: DownloadError): Boolean {
+        if (error != DownloadError.LinkExpired) return false
+        val task = taskInfoDB.getHttpTask(id)?.takeIf { it.sourceUrl != null } ?: return false
+        val state = AtomicIO.readTransacted("$id.state", configDir) { fs -> readContext(fs, downloadHost, "", "") }
+            .getOrNull()
+        if (!linkRefresher.claim(id, state?.downloaded?.get() ?: 0L)) return false
+        Logger.info("XDM", "Download $id: link expired, asking its source link for a fresh one")
+        Thread({
+            val url = runCatching { linkRefresher.resolve(task, state?.totalSize, state?.validator) }
+                .onFailure { Logger.error("XDM", "Download $id: refreshing the link failed", it) }
+                .getOrNull()
+            // Resumed, deleted or refreshed by hand meanwhile: that is the user's choice, left alone.
+            val stillFailed = !activeSessions.containsKey(id) && store.getById(id)?.status == RecordStatus.ERROR
+            if (!stillFailed) return@Thread
+            if (url == null) {
+                ui.downloadFailed(id, error)
+                hooks.downloadFailed(id)
+                return@Thread
+            }
+            Logger.info("XDM", "Download $id: fresh link from its source, resuming")
+            updateDownloadLink(id, url, task.headers, task.cookie)
+            resumeDownload(id)
+        }, "link-refresh-$id").apply { isDaemon = true }.start()
+        return true
+    }
+
     /**
      * A run's client: the shared certificate checks unless the app replaces them ([PlatformHooks.insecureTrust]).
      * Refused certificates are collected for [resumeTrustingRefused]; a new run starts with none.
@@ -1678,3 +1809,10 @@ internal fun isPath(location: String) = !location.startsWith("content:")
 
 /** A location as recorded: paths made absolute, provider locations unchanged. */
 internal fun normalizeLocation(location: String) = if (isPath(location)) File(location).absolutePath else location
+
+/** Moves [from] (a file or a folder) to [to]: a rename on the same volume, else a copy and a delete. */
+private fun moveTree(from: File, to: File) {
+    if (from.renameTo(to)) return
+    if (!from.copyRecursively(to, overwrite = false)) throw java.io.IOException("Couldn't copy $from to $to")
+    from.deleteRecursively()
+}

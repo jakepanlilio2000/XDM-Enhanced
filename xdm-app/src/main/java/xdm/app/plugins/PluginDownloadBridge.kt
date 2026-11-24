@@ -27,6 +27,7 @@ import java.util.concurrent.ConcurrentHashMap
 object PluginDownloadBridge {
     private val activeTasks = ConcurrentHashMap<Long, PluginDownloadTask>()
     private val activeAdapters = ConcurrentHashMap<Long, PluginTaskAdapter>()
+    private val deletedTasks = ConcurrentHashMap.newKeySet<Long>()
     private val taskMetadata = ConcurrentHashMap<Long, PluginDownloadTaskInfo>()
     private val completedTasks = ConcurrentHashMap.newKeySet<Long>()
     private val failedTasks = ConcurrentHashMap.newKeySet<Long>()
@@ -67,8 +68,10 @@ object PluginDownloadBridge {
         task: PluginDownloadTask,
         startNow: Boolean = true
     ): Long {
-        var id = CoreUtils.uniqueId()
-        if (id == -1L) id = -2L
+        // PluginContext.submitPluginTask reserves negative IDs (< 0) to signal failure, whereas
+        // CoreUtils.uniqueId() returns a signed 64-bit random Long (50% negative).
+        val raw = CoreUtils.uniqueId() and Long.MAX_VALUE
+        val id = if (raw == 0L) 1L else raw
         val defaultFolder = AppContext.config.defaultDownloadFolder
         val reqFolder = request.destinationFolder?.ifBlank { null } ?: defaultFolder
         val reqFile = request.fileName?.ifBlank { null } ?: FileUtils.getFileName(request.url)
@@ -124,6 +127,7 @@ object PluginDownloadBridge {
         }
 
         val adapter = PluginTaskAdapter(id, task, finalFolder, reqFile)
+        deletedTasks.remove(id)
         completedTasks.remove(id)
         failedTasks.remove(id)
         activeTasks[id] = task
@@ -164,8 +168,8 @@ object PluginDownloadBridge {
         folder: String
     ) {
         synchronized(record) {
-            if (completedTasks.contains(id)) {
-                // Task is already terminal FINISHED; ignore late progress, failure or duplicate finished events
+            if (deletedTasks.contains(id) || completedTasks.contains(id)) {
+                // Task is deleted or terminal FINISHED; ignore late progress, failure or duplicate finished events
                 return
             }
 
@@ -205,9 +209,6 @@ object PluginDownloadBridge {
                         return
                     }
                     failedTasks.remove(id)
-                    record.status = RecordStatus.FINISHED
-                    record.progress = 100
-                    record.downloaded = if (size > 0) size else downloaded
                     val task = activeTasks.remove(id)
                     activeAdapters.remove(id)
 
@@ -219,12 +220,17 @@ object PluginDownloadBridge {
                             record.categoryId = DesktopCaptureHost.destination(finalFileName, null, null).first
                         }
                         val meta = taskMetadata[id] ?: AppContext.taskInfoDB.getPluginTask(id)
-                        if (meta != null) {
+                        if (meta != null && !deletedTasks.contains(id)) {
                             val updated = meta.copy(fileName = finalFileName, categoryId = record.categoryId)
                             taskMetadata[id] = updated
                             AppContext.taskInfoDB.savePluginTask(updated)
                         }
                     }
+                    // Publish FINISHED status only after updated fileName/taskInfoDB metadata are persisted
+                    // so polling observers (or immediate deletion) cannot observe half-updated terminal state.
+                    record.progress = 100
+                    record.downloaded = if (size > 0) size else downloaded
+                    record.status = RecordStatus.FINISHED
                     AppContext.db.update(record)
                     EngineContext.ui.downloadUpdated(id)
                     EngineContext.ui.hideProgress(id)
@@ -350,6 +356,7 @@ object PluginDownloadBridge {
     }
 
     fun deleteTask(id: Long, fromDisk: Boolean) {
+        deletedTasks.add(id)
         completedTasks.remove(id)
         failedTasks.remove(id)
         val task = activeTasks.remove(id)
@@ -357,17 +364,25 @@ object PluginDownloadBridge {
         task?.cancel()
 
         val rec = AppContext.db.getById(id)
-        val meta = taskMetadata.remove(id) ?: AppContext.taskInfoDB.getPluginTask(id)
-        if (fromDisk) {
-            val fileName = rec?.fileName ?: meta?.fileName
-            val folder = meta?.targetFolder ?: AppContext.config.defaultDownloadFolder
-            if (!fileName.isNullOrBlank()) {
-                File(folder, fileName).delete()
+        val cleanup = {
+            val meta = taskMetadata.remove(id) ?: AppContext.taskInfoDB.getPluginTask(id)
+            if (fromDisk) {
+                val fileName = rec?.fileName ?: meta?.fileName
+                val folder = meta?.targetFolder ?: AppContext.config.defaultDownloadFolder
+                if (!fileName.isNullOrBlank()) {
+                    File(folder, fileName).delete()
+                }
+                task?.outputFile?.delete()
             }
-            task?.outputFile?.delete()
+            AppContext.taskInfoDB.deleteRecord(id)
+            AppContext.db.removeItem(id)
         }
-        AppContext.taskInfoDB.deleteRecord(id)
-        AppContext.db.removeItem(id)
+        // Serialize against any in-flight handleProgress(id, record, ...) on the same record
+        if (rec != null) {
+            synchronized(rec) { cleanup() }
+        } else {
+            cleanup()
+        }
         EngineContext.ui.downloadRemoved(id, 0)
     }
 
@@ -398,6 +413,7 @@ object PluginDownloadBridge {
         activeAdapters.clear()
         completedTasks.clear()
         failedTasks.clear()
+        deletedTasks.clear()
         taskMetadata.clear()
     }
 }

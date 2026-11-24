@@ -90,7 +90,11 @@ object SkinManager {
      * Disposes previous skin resources safely and falls back cleanly if errors occur.
      */
     fun applySkin(skinId: String, saveConfig: Boolean = true): Boolean {
-        refreshSkins()
+        if (!skinId.equals(SKIN_ENHANCED, ignoreCase = true) &&
+            !skinId.equals(SKIN_ORIGINAL_XDM, ignoreCase = true)
+        ) {
+            refreshSkins()
+        }
         val targetSkin = getSkin(skinId) ?: run {
             Logger.error("Requested skin '$skinId' not found. Falling back to 'enhanced'.")
             if (AppContext.hasConfig) {

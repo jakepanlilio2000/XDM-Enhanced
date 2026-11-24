@@ -105,6 +105,21 @@ class ProgressTracker(val singleFile: Boolean) {
         @Synchronized get() = (if (singleFile) sortedSegments else segments).map { it.copy() }
 
     /**
+     * The download is done (about to assemble, or complete): takes the pieces' final state, which the
+     * periodic updates may not have caught, so the final progress snapshot shows every piece finished.
+     */
+    @Synchronized
+    fun finish(chunks: Map<Long, Chunk>) {
+        updateChunkProgressDataSingleFile(chunks)
+    }
+
+    /** Streaming: captures the final chunk state before assembly. */
+    @Synchronized
+    fun finish(chunks: List<StreamingChunk>) {
+        updateChunkProgressData(chunks)
+    }
+
+    /**
      * [prg] (percent) and [remainingBytes] are asked for on update ticks.
      * Throughput is derived from low-cost byte counter samples with monotonic timestamps
      * over a 400 ms rolling window, avoiding assumed exact tick duration divisions.
@@ -306,18 +321,7 @@ class ProgressTracker(val singleFile: Boolean) {
         }
         for (chunk in chunks.values) {
             val seg = sortedSegments.find { it.id == chunk.id }
-            val chunkStatus = chunk.status.get()
-            val statusStr = when (chunkStatus) {
-                ChunkStatus.Finished -> "Complete"
-                ChunkStatus.Downloading -> "Receiving data..."
-                ChunkStatus.Ready -> "Connecting..."
-                ChunkStatus.Retrying -> "Retrying..."
-                ChunkStatus.Paused -> "Paused"
-                ChunkStatus.Failed -> "Failed"
-                ChunkStatus.Cancelled -> "Cancelled"
-                ChunkStatus.Skipped -> "Skipped"
-                null -> "Pending"
-            }
+            val statusStr = statusLabel(chunk.status.get())
             if (seg == null) {
                 sortedSegments.add(
                     SegmentProgress(
@@ -343,7 +347,11 @@ class ProgressTracker(val singleFile: Boolean) {
      */
     private fun updateChunkProgressData(chunks: List<StreamingChunk>) {
         while (segments.size < chunks.size) {
-            segments.add(SegmentProgress())
+            segments.add(SegmentProgress(id = segments.size.toLong()))
+        }
+        // The chunk list can get shorter (a fresh playlist on resume): never report segments it no longer has.
+        while (segments.size > chunks.size) {
+            segments.removeAt(segments.size - 1)
         }
         for ((index, chunk) in chunks.withIndex()) {
             val len = chunk.length.get()
@@ -353,22 +361,23 @@ class ProgressTracker(val singleFile: Boolean) {
                 len > 0 -> (chunk.downloaded.get().toDouble() / len).coerceIn(0.0, 1.0)
                 else -> 0.0
             }
-            val statusStr = when (chunkStatus) {
-                ChunkStatus.Finished -> "Complete"
-                ChunkStatus.Downloading -> "Receiving data..."
-                ChunkStatus.Ready -> "Connecting..."
-                ChunkStatus.Retrying -> "Retrying..."
-                ChunkStatus.Paused -> "Paused"
-                ChunkStatus.Failed -> "Failed"
-                ChunkStatus.Cancelled -> "Cancelled"
-                ChunkStatus.Skipped -> "Skipped"
-                null -> "Pending"
-            }
             val s = segments[index]
             s.start = index * STREAM_SLOT
             s.length = STREAM_SLOT
             s.downloaded = (fraction * STREAM_SLOT).toLong()
-            s.status = statusStr
+            s.status = statusLabel(chunkStatus)
         }
+    }
+
+    private fun statusLabel(chunkStatus: ChunkStatus?): String = when (chunkStatus) {
+        ChunkStatus.Finished -> "Complete"
+        ChunkStatus.Downloading -> "Receiving data..."
+        ChunkStatus.Ready -> "Connecting..."
+        ChunkStatus.Retrying -> "Retrying..."
+        ChunkStatus.Paused -> "Paused"
+        ChunkStatus.Failed -> "Failed"
+        ChunkStatus.Cancelled -> "Cancelled"
+        ChunkStatus.Skipped -> "Skipped"
+        null -> "Pending"
     }
 }

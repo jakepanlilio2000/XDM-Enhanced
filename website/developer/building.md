@@ -29,7 +29,7 @@ cd XDM-Enhanced
 
 ## 3. Compiling with Maven
 
-Build all submodules (`xdm-plugin-api`, `xdm-core`, `xdm-manager`, and `xdm-app`):
+Build all submodules (`xdm-plugin-api`, `xdm-core`, `xdm-capture`, `xdm-torrent`, `xdm-manager`, and `xdm-app`):
 
 ```bash
 # Standard compilation and automated test run
@@ -40,8 +40,8 @@ mvn clean package -DskipTests
 ```
 
 ### Build Artifact Locations
-- **Universal Application JAR:** `xdm-app/target/xdm-app-1.0.2.jar`
-- **Plugin API JAR:** `xdm-plugin-api/target/xdm-plugin-api-1.0.2.jar`
+- **Universal Application JAR:** `xdm-app/target/xdm-app-1.1.0.jar`
+- **Plugin API JAR:** `xdm-plugin-api/target/xdm-plugin-api-1.1.0.jar`
 
 ---
 
@@ -50,12 +50,12 @@ mvn clean package -DskipTests
 Launch the compiled desktop application directly from the target output:
 
 ```bash
-java -jar xdm-app/target/xdm-app-1.0.2.jar
+java -jar xdm-app/target/xdm-app-1.1.0.jar
 ```
 
 To run with enhanced debug logging:
 ```bash
-java -Dxdm.debug=true -jar xdm-app/target/xdm-app-1.0.2.jar
+java -Dxdm.debug=true -jar xdm-app/target/xdm-app-1.1.0.jar
 ```
 
 ---

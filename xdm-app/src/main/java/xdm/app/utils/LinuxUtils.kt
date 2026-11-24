@@ -21,6 +21,12 @@ object LinuxUtils {
             "--dest=org.freedesktop.login1", "/org/freedesktop/login1",
             "org.freedesktop.login1.Manager.PowerOff", "boolean:true"
         ),
+        // Same call with GLib's tool when systemctl and dbus-send are absent.
+        arrayOf(
+            "gdbus", "call", "--system",
+            "--dest", "org.freedesktop.login1", "--object-path", "/org/freedesktop/login1",
+            "--method", "org.freedesktop.login1.Manager.PowerOff", "true"
+        ),
         // Legacy fallback for pre-systemd / ConsoleKit-based systems.
         arrayOf(
             "dbus-send", "--system", "--print-reply",

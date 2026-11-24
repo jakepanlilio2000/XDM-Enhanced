@@ -12,7 +12,7 @@ To create an independent plugin, add `xdm-plugin-api` to your Maven `pom.xml`:
 <dependency>
     <groupId>xdm</groupId>
     <artifactId>xdm-plugin-api</artifactId>
-    <version>1.0.2</version>
+    <version>1.1.0</version>
     <scope>provided</scope>
 </dependency>
 ```

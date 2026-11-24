@@ -3,6 +3,7 @@ package xdm.app.ui.components
 import com.formdev.flatlaf.FlatClientProperties
 import com.formdev.flatlaf.FlatLaf
 import xdm.app.AppContext
+import xdm.app.ui.screens.retryAtText
 import xdm.app.utils.*
 import xdm.core.downloaders.DownloadType
 import xdm.core.util.FormatHelper
@@ -340,8 +341,14 @@ class ClassicCardPanel {
         } else {
             when (ent.status) {
                 RecordStatus.DOWNLOADING -> {
-                    lblStatusPill.text = "● Downloading ${ent.progress}%"
-                    lblStatusPill.foreground = accent
+                    val now = System.currentTimeMillis()
+                    if (ent.retryAt > now) {
+                        lblStatusPill.text = "● ${retryAtText(ent.retryAt)}"
+                        lblStatusPill.foreground = AppTheme.pausedForeground
+                    } else {
+                        lblStatusPill.text = "● Downloading ${ent.progress}%"
+                        lblStatusPill.foreground = accent
+                    }
                 }
                 RecordStatus.FINISHED -> {
                     lblStatusPill.text = "● Completed"

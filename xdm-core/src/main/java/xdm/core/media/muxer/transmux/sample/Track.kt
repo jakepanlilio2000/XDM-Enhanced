@@ -15,9 +15,24 @@ class Track(val codec: Codec) {
     /** MP4 media timescale. Video: 90000 (TS clock). Audio: sampling rate. */
     var timescale: Int = 90000
 
+    /** ISO 639-2 language of the stream (TS ISO_639_language_descriptor), or null when not given. */
+    var language: String? = null
+
     // --- Video ---
     var width: Int = 0
     var height: Int = 0
+
+    /**
+     * Display matrix (rotation / flip) in the MP4 `tkhd` layout ([DisplayMatrix]); null for the identity.
+     * Written to `tkhd` in MP4 and as `Projection` pose in Matroska.
+     */
+    var matrix: IntArray? = null
+
+    /**
+     * The samples carry presentation times only (DTS = PTS, out of order between B-frames), as
+     * Matroska does. The timeline step then allows small backward steps and never rewrites them.
+     */
+    var ptsOnly: Boolean = false
 
     /** Sample (pixel) aspect ratio from the bitstream; 0 when unknown. Written as pasp, and scales tkhd. */
     var sarNum: Int = 0
@@ -80,6 +95,13 @@ class Track(val codec: Codec) {
     val additionalSampleEntries = ArrayList<ByteArray>()
 
     /**
+     * Sample indexes where a section of the playlist starts (after an HLS discontinuity), recorded by
+     * the demuxer as it reads them. The timeline aligns sections at these rather than at timestamp
+     * jumps it finds, which a section's dropped leading frames can hide (see `Timeline`).
+     */
+    val sectionBreaks = ArrayList<Int>()
+
+    /**
      * Matroska/WebM codec identity carried verbatim from a Matroska input (e.g. `V_VP9`, `A_OPUS`).
      * When set, the MKV writer emits it directly and uses [decoderConfigRecord] as the
      * `CodecPrivate` (used by the Matroska demux path, and the natural output form for MKV).
@@ -89,8 +111,37 @@ class Track(val codec: Codec) {
     /** MPEG-4 Systems objectTypeIndication for esds-described codecs (MPEG-1/2 video). */
     var objectTypeIndication: Int = 0
 
+    /** Matroska CodecDelay / SeekPreRoll (ns) from a Matroska input, written back as they were; 0 when absent. */
+    var codecDelayNs: Long = 0
+    var seekPreRollNs: Long = 0
+
+    /**
+     * Matroska `DiscardPadding` (ns) of the last block that had one, and the index of that block's
+     * last sample; -1 when none. Opus marks the audio past the stream's end this way; the Ogg writer
+     * ends its final granule position there when that sample is the last.
+     */
+    var endPaddingNs: Long = 0
+    var endPaddingSample: Int = -1
+
     /** Audio bit depth (Matroska `BitDepth`), when known — used for raw/PCM tracks. */
     var audioBitDepth: Int = 0
+
+    // --- What the remux check ([xdm.core.media.muxer.transmux.sample.RemuxCheck]) looks at ---
+
+    /**
+     * The input container stores composition offsets, which may present a sample before it is decoded
+     * (MP4 `ctts`/`trun` version 1): PTS < DTS is then the input's own timing, not a reading error.
+     */
+    var compositionMayPrecedeDecode: Boolean = false
+
+    /** Samples whose timestamps the reader guessed (no PES timestamp reached them); counted by the video readers. */
+    var guessedTimestamps: Int = 0
+
+    /**
+     * Ticks of the largest backward decode-time step the timeline repaired although the caller hadn't
+     * marked the stream discontinuous; -1 when none. Set by [Timeline.prepare].
+     */
+    var unmarkedJumpBack: Long = -1
 
     fun isReady(): Boolean {
         if (samples.isEmpty()) return false
@@ -108,6 +159,31 @@ class Track(val codec: Codec) {
     }
 
     fun durationTicks(): Long { var sum = 0L; for (i in 0 until samples.size) sum += samples.duration(i); return sum }
+
+    /** Copies [from]'s codec configuration (not its samples) into this track, which has the same codec. */
+    fun copyConfigFrom(from: Track) {
+        timescale = from.timescale
+        if (language == null) language = from.language
+        width = from.width; height = from.height
+        matrix = from.matrix
+        ptsOnly = from.ptsOnly
+        sarNum = from.sarNum; sarDen = from.sarDen
+        colourPrimaries = from.colourPrimaries; transferCharacteristics = from.transferCharacteristics
+        matrixCoefficients = from.matrixCoefficients; fullRange = from.fullRange
+        chromaFormat = from.chromaFormat; bitDepthLuma = from.bitDepthLuma; bitDepthChroma = from.bitDepthChroma
+        temporalLayers = from.temporalLayers; temporalIdNested = from.temporalIdNested
+        sampleRate = from.sampleRate; channelCount = from.channelCount; mpegAudioLayer = from.mpegAudioLayer
+        parameterSets.clear(); parameterSets.addAll(from.parameterSets)
+        audioSpecificConfig = from.audioSpecificConfig
+        decoderConfigRecord = from.decoderConfigRecord
+        sampleEntryBox = from.sampleEntryBox
+        additionalSampleEntries.clear(); additionalSampleEntries.addAll(from.additionalSampleEntries)
+        matroskaCodecId = from.matroskaCodecId
+        objectTypeIndication = from.objectTypeIndication
+        audioBitDepth = from.audioBitDepth
+        codecDelayNs = from.codecDelayNs; seekPreRollNs = from.seekPreRollNs
+        compositionMayPrecedeDecode = from.compositionMayPrecedeDecode
+    }
 
     /** 1-based stsd index of [entry], registering it as a further sample entry if unseen. */
     fun descriptionIndexFor(entry: ByteArray): Int {

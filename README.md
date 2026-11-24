@@ -7,19 +7,18 @@
 **An independent, open-source download manager focused on speed, reliability, and modular extensibility.**
 
 <p align="center">
-  <a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases"><img src="https://img.shields.io/github/v/release/jakepanlilio2000/XDM-Enhanced?include_prereleases&style=flat-square&color=blue&label=release" alt="Latest Release"/></a>
+  <a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases"><img src="https://img.shields.io/github/v/release/jakepanlilio2000/XDM-Enhanced?style=flat-square&color=blue&label=release" alt="Latest Release"/></a>
   <a href="https://github.com/jakepanlilio2000/XDM-Enhanced/releases"><img src="https://img.shields.io/github/downloads/jakepanlilio2000/XDM-Enhanced/total?style=flat-square&color=blue&label=downloads" alt="GitHub Release Downloads"/></a>
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-blue?style=flat-square" alt="Supported Platforms"/>
   <a href="LICENSE"><img src="https://img.shields.io/github/license/jakepanlilio2000/XDM-Enhanced?style=flat-square&color=blue" alt="License"/></a>
-  <img src="https://img.shields.io/badge/status-active%20beta-brightgreen?style=flat-square" alt="Development Status"/>
+  <img src="https://img.shields.io/badge/status-active%20stable-brightgreen?style=flat-square" alt="Development Status"/>
 </p>
 
 > **Quick Links:**  
 > [🌐 Official Website](https://jakepanlilio2000.github.io/XDM-Enhanced/) • 
 > [📖 Documentation & Guides](https://jakepanlilio2000.github.io/XDM-Enhanced/docs/) • 
 > [📚 Community Wiki](https://github.com/jakepanlilio2000/XDM-Enhanced/wiki) • 
-> [📦 Latest Stable (v1.0.2)](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/tag/v1.0.2) • 
-> [🧪 Preview (v1.1.0-beta.1)](https://github.com/jakepanlilio2000/XDM-Enhanced/releases) • 
+> [📦 Latest Stable (v1.1.0)](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/tag/v1.1.0) • 
 > [💬 Issue Tracker](https://github.com/jakepanlilio2000/XDM-Enhanced/issues)
 
 ---

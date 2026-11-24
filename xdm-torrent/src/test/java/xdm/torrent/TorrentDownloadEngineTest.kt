@@ -438,7 +438,7 @@ class TorrentDownloadEngineTest {
                 override val applySpeedLimit: Boolean get() = false
                 override val speedLimit: Int get() = 0
                 override fun getTempDir(id: Long, url: String, contentType: String?, contentDisposition: String?): String = tempDir.absolutePath
-                override fun commitOutputFile(id: Long, part: StorageFile, downloadType: DownloadType): CommitResult = CommitResult.Success("host_test.bin", destDir.absolutePath)
+                override fun commitOutputFile(id: Long, part: StorageFile, downloadType: DownloadType, container: String?): CommitResult = CommitResult.Success("host_test.bin", destDir.absolutePath)
             }
 
             val task = downloaderManager.createTask(

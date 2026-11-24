@@ -4,6 +4,7 @@ import xdm.app.power.CompletionCoordinator
 import xdm.app.utils.KeepAwake
 import xdm.app.utils.SoundPlayer
 import xdm.app.utils.WorkingSetTrim
+import xdm.core.downloaders.AssemblyNote
 import xdm.core.downloaders.DownloadError
 import xdm.core.downloaders.TaskInfoDB
 import xdm.core.downloaders.web.SegmentProgress
@@ -144,6 +145,17 @@ object DesktopUiSink : UiSink {
 
     override fun downloadCompleteDialog(id: Long, folder: String, fileName: String, fileSize: Long) =
         app.showDownloadCompleteWindow(id, folder, fileName, fileSize)
+
+    override fun downloadCompleteDialog(id: Long, folder: String, fileName: String, fileSize: Long, note: AssemblyNote?, noteDetail: String?) =
+        app.showDownloadCompleteWindow(id, folder, fileName, fileSize, note?.let { noteText(it, noteDetail) })
+
+    /** The one line the download-complete window shows for a download saved another way than the usual remux. */
+    private fun noteText(note: AssemblyNote, detail: String?): String = when (note) {
+        AssemblyNote.TS_FALLBACK -> I8N.text("CD_NOTE_TS")
+        AssemblyNote.AS_IS -> I8N.text("CD_NOTE_AS_IS")
+        AssemblyNote.PLAYLIST_FOLDER -> I8N.text("CD_NOTE_PLAYLIST")
+        AssemblyNote.SEPARATE_FILES -> I8N.text("CD_NOTE_SEPARATE").format(detail.orEmpty())
+    }
 
     override fun downloadCompleteNotification(folder: String, fileName: String) =
         app.showDownloadCompleteNotification(folder, fileName)

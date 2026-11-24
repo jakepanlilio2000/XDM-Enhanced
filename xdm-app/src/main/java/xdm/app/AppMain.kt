@@ -11,6 +11,7 @@ import xdm.app.headless.HeadlessCli
 import xdm.app.ui.components.ThemeManager
 import xdm.app.ui.components.WaylandComboBoxUI
 import xdm.app.utils.AppDirs
+import xdm.app.utils.AssistiveTech
 import xdm.app.utils.SystemTheme
 import xdm.app.utils.ConscryptTls
 import xdm.app.utils.GcScheduler
@@ -48,6 +49,9 @@ object AppMain {
     fun main(args: Array<String>) {
         // Before anything else: headless mode builds no UI, binds no port and loads no app state.
         if (CliParser.isHeadless(args)) {
+            // Quiet until HeadlessCli reads --verbose, and never on stdout (the CLI's own output).
+            Logger.consoleEnabled = false
+            Logger.infoToStderr = true
             ConscryptTls.install()
             exitProcess(HeadlessCli.run(args))
         }
@@ -63,6 +67,16 @@ object AppMain {
         // Holds cookies, captured request headers and logs: other users of the machine stay out.
         FileUtils.restrictToOwner(File(configDir))
         Logger.init(File(configDir))
+        // Before the AWT toolkit starts: it throws for an assistive technology it can't load (issue 1456).
+        AssistiveTech.sanitize().takeIf { it.isNotEmpty() }?.let {
+            Logger.info("Accessibility: ignoring assistive technologies not in this runtime: ${it.joinToString()}")
+        }
+        // Before anything resolves a name or opens a socket (TLS setup included): the JDK reads
+        // preferIPv4Stack once, when its networking first loads, so a change needs a restart.
+        if (AppConfig.readForceIpv4(configDir)) {
+            System.setProperty("java.net.preferIPv4Stack", "true")
+            Logger.info("Network: IPv4 only")
+        }
         // Before any HTTP client or digest: the shared TLS context (SharedTls) is built once.
         ConscryptTls.install()
         // Certificates the user chose to trust; read by every HTTPS handshake.

@@ -135,6 +135,11 @@ interface IAppConfig : EngineConfig {
     /** "Save as SRT" last chosen for a captured WebVTT/TTML subtitle. On by default. */
     var saveSubtitlesAsSrt: Boolean
     /**
+     * "Save as MP4 where possible" last chosen for a captured HLS stream. On by default; off keeps TS
+     * as `.ts` ([xdm.core.downloaders.HlsDownloadTaskInfo.keepOriginalFormat]).
+     */
+    var saveStreamsAsMp4: Boolean
+    /**
      * When true, finished downloads are marked as coming from the internet (Zone.Identifier on
      * Windows, com.apple.quarantine on macOS), as a browser would. On by default. See QUARANTINE.md.
      */
@@ -153,6 +158,11 @@ interface IAppConfig : EngineConfig {
      * (Advanced settings). Off by default. See [xdm.app.utils.linux.PortalFileChooser].
      */
     var swingFileChooser: Boolean
+    /**
+     * Run the whole process on IPv4 only (`java.net.preferIPv4Stack`, Advanced settings, next start).
+     * Read before any networking by [AppConfig.readForceIpv4]. Off by default.
+     */
+    var forceIpv4: Boolean
     var listSelectionMode: ListSelectionMode
     var tableHiddenColumns: String
     /** Play a sound when a download finishes or fails; ignored while [downloadCompleteNotification] is NONE. */
@@ -312,6 +322,8 @@ private const val F_VPN_PREREQUISITE_ENABLED = 93
 private const val F_VPN_REQUIRED_PROVIDER_ID = 94
 private const val F_VPN_REQUIRED_PROFILE_ID = 95
 private const val F_VPN_AUTO_RESUME_ON_RECONNECT = 96
+private const val F_FORCE_IPV4 = 97
+private const val F_SAVE_STREAMS_AS_MP4 = 98
 
 // Inside F_POST_DOWNLOAD_RULES: one F_RULE record per rule, in order.
 private const val F_RULE = 1
@@ -344,6 +356,26 @@ class AppConfig(private val configDir: String) : IAppConfig {
         const val MAX_PARALLEL_DOWNLOADS = 256
         /** The Interface size choices in Settings, in percent. */
         val UI_SCALES = listOf(90, 100, 110, 125, 150)
+
+        /**
+         * Only [forceIpv4], read from the saved config at startup before anything opens a socket or
+         * resolves a name: `java.net.preferIPv4Stack` is read once, when the JDK's networking first loads.
+         */
+        fun readForceIpv4(configDir: String): Boolean {
+            if (!AtomicIO.exists(CONFIG_FILE, configDir)) return false
+            return AtomicIO.readTransacted(CONFIG_FILE, configDir) {
+                val r = TaggedFile.read(it)
+                var value = false
+                while (true) {
+                    when (r.next()) {
+                        -1 -> break
+                        F_FORCE_IPV4 -> value = r.bool()
+                        else -> r.skip()
+                    }
+                }
+                value
+            }.getOrDefault(false)
+        }
     }
 
     private val changeListeners = java.util.concurrent.CopyOnWriteArrayList<() -> Unit>()
@@ -482,11 +514,13 @@ class AppConfig(private val configDir: String) : IAppConfig {
     override var skipDuplicateManifests: Boolean = false
     override var detectSubtitles: Boolean = true
     override var saveSubtitlesAsSrt: Boolean = true
+    override var saveStreamsAsMp4: Boolean = true
     override var markDownloadedFiles: Boolean = true
     override var batchAsOneFromBrowser: Boolean = true
     override var batchAsOneFromClipboard: Boolean = false
     override var nativeWayland: Boolean = true
     override var swingFileChooser: Boolean = false
+    override var forceIpv4: Boolean = false
     override var listSelectionMode: ListSelectionMode = ListSelectionMode.CLASSIC
     override var tableHiddenColumns: String = ""
 
@@ -664,6 +698,8 @@ class AppConfig(private val configDir: String) : IAppConfig {
         w.string(F_VPN_REQUIRED_PROVIDER_ID, vpnRequiredProviderId)
         w.string(F_VPN_REQUIRED_PROFILE_ID, vpnRequiredProfileId)
         w.bool(F_VPN_AUTO_RESUME_ON_RECONNECT, vpnAutoResumeOnReconnect)
+        w.bool(F_FORCE_IPV4, forceIpv4)
+        w.bool(F_SAVE_STREAMS_AS_MP4, saveStreamsAsMp4)
         w.raw(unknownFields)
     }
 
@@ -780,6 +816,8 @@ class AppConfig(private val configDir: String) : IAppConfig {
                 F_VPN_REQUIRED_PROVIDER_ID -> vpnRequiredProviderId = r.string()
                 F_VPN_REQUIRED_PROFILE_ID -> vpnRequiredProfileId = r.string()
                 F_VPN_AUTO_RESUME_ON_RECONNECT -> vpnAutoResumeOnReconnect = r.bool()
+                F_FORCE_IPV4 -> forceIpv4 = r.bool()
+                F_SAVE_STREAMS_AS_MP4 -> saveStreamsAsMp4 = r.bool()
                 else -> unknown.raw(r.rawField())
             }
         }
