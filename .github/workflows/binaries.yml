@@ -215,6 +215,9 @@ jobs:
         run: |
           if (-not (Get-Command makensis.exe -ErrorAction SilentlyContinue) -and -not (Test-Path "C:\Program Files (x86)\NSIS\makensis.exe")) {
             choco install nsis --no-progress -y
+            if (-not (Get-Command makensis.exe -ErrorAction SilentlyContinue) -and -not (Test-Path "C:\Program Files (x86)\NSIS\makensis.exe") -and (Get-Command winget.exe -ErrorAction SilentlyContinue)) {
+              winget install NSIS.NSIS --silent --accept-source-agreements --accept-package-agreements
+            }
           }
           if (Test-Path "C:\Program Files (x86)\NSIS") {
             $env:Path += ";C:\Program Files (x86)\NSIS"

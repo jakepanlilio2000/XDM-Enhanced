@@ -197,14 +197,19 @@ if (-not $foundMakensis -and $InstallNsis) {
   if (Get-Command choco.exe -ErrorAction SilentlyContinue) {
     Write-Host '   installing NSIS via chocolatey...'
     & choco install nsis --no-progress -y
-  } elseif (Get-Command winget.exe -ErrorAction SilentlyContinue) {
-    Write-Host '   installing NSIS via winget...'
-    & winget install NSIS.NSIS --silent --accept-source-agreements --accept-package-agreements
   }
   Update-SessionPath
   $makensisCmd = Get-Command makensis.exe -ErrorAction SilentlyContinue
   if ($makensisCmd) { $makensisCandidates = @($makensisCmd.Source) + $makensisCandidates }
   $foundMakensis = $makensisCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+  if (-not $foundMakensis -and (Get-Command winget.exe -ErrorAction SilentlyContinue)) {
+    Write-Host '   chocolatey did not provide makensis.exe; installing NSIS via winget...'
+    & winget install NSIS.NSIS --silent --accept-source-agreements --accept-package-agreements
+    Update-SessionPath
+    $makensisCmd = Get-Command makensis.exe -ErrorAction SilentlyContinue
+    if ($makensisCmd) { $makensisCandidates = @($makensisCmd.Source) + $makensisCandidates }
+    $foundMakensis = $makensisCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+  }
 }
 
 if ($foundMakensis) {

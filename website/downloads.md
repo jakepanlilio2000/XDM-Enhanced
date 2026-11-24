@@ -180,7 +180,114 @@ Install the companion browser extension to enable automatic link capturing and t
 
 ## 4. SHA-256 Checksums (`v1.2.0` &amp; `v1.1.0`)
 
-Verify `v1.2.0` release assets against [`SHA256SUMS.txt`](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.2.0/SHA256SUMS.txt) on the `v1.2.0` GitHub Release.
+Verify `v1.2.0` release assets against [`SHA256SUMS.txt`](https://github.com/jakepanlilio2000/XDM-Enhanced/releases/download/v1.2.0/SHA256SUMS.txt) on the `v1.2.0` GitHub Release:
+
+<table class="checksum-table">
+  <thead>
+    <tr>
+      <th style="width: 45%;">File Name (v1.2.0)</th>
+      <th>SHA-256 Checksum</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>XDM-Enhanced-Setup-v1.2.0-win-x64.exe</strong></td>
+      <td><code>66085730c6974d8b9fe446e765cf2bb4cadb084141016c32b02a7f33697a782c</code></td>
+    </tr>
+    <tr>
+      <td><strong>XDM-Enhanced-v1.2.0-windows-x64.zip</strong></td>
+      <td><code>f13bbba5c3c7aba67ab6ea42d901745b9a1afb215ea89fcf6d56dc4b0a7392fd</code></td>
+    </tr>
+    <tr>
+      <td><strong>xdm-1.2.0-x64.msi</strong></td>
+      <td><code>b7aa6922f5739b6d91864f24b349cf1ea922ea903c0d88cdb92f9c7e938e8d98</code></td>
+    </tr>
+    <tr>
+      <td><strong>xdm-1.2.0-arm64.msi</strong></td>
+      <td><code>af74795226fa79988d12994872eb1b4dec6b3a23ced5b55c01fdb6e6663dda87</code></td>
+    </tr>
+    <tr>
+      <td><strong>xdm-app-1.2.0-arm64.dmg</strong></td>
+      <td><code>5491c6f498653186320194d798be2289de56b455e664876c20dabf5d5c8d5910</code></td>
+    </tr>
+    <tr>
+      <td><strong>xdm-app-1.2.0-x64.dmg</strong></td>
+      <td><code>1c6457974ed90c314bce97c6ba9802ef18f7ffa7d28a6cc60e9f6a5663349cdc</code></td>
+    </tr>
+    <tr>
+      <td><strong>xdm-app_1.2.0_amd64.deb</strong></td>
+      <td><code>9e74190b1c7e8ed1c889d49897d08d9b518d4a28ee449e92f01b19d184917080</code></td>
+    </tr>
+    <tr>
+      <td><strong>xdm-app_1.2.0_arm64.deb</strong></td>
+      <td><code>64d95fdc316b79c7b4c45aa037c23c166d306289c150de4392ec4d9cfb7229e2</code></td>
+    </tr>
+    <tr>
+      <td><strong>xdm-app-1.2.0-1.x86_64.rpm</strong></td>
+      <td><code>672de2a3c63a5b29788c2aa01aaffc0ca556d83afb5d0ef3d8a4326fc3c1f760</code></td>
+    </tr>
+    <tr>
+      <td><strong>xdm-app-1.2.0-1.aarch64.rpm</strong></td>
+      <td><code>0a8e8bd1fda77674b02927eb6b82809c2356887f0a4023e0da555287dc541d39</code></td>
+    </tr>
+    <tr>
+      <td><strong>xdm-app-1.2.0-1-x86_64.pkg.tar.zst</strong></td>
+      <td><code>0141892bc9ef7a3af1eb95548c8bb06c868050eebc02a638dec9a7ee01c72c2f</code></td>
+    </tr>
+    <tr>
+      <td><strong>xdm-app-1.2.0-1-aarch64.pkg.tar.zst</strong></td>
+      <td><code>30fd4faccd5683239d5a697c54e173a7528870f27b961544802c8ccb5c5da246</code></td>
+    </tr>
+    <tr>
+      <td><strong>xdm-app-1.2.0-linux-x64.tar.gz</strong></td>
+      <td><code>349416b0eefa72a54f52e0a047a235116683e52f2ad483590cbd50344cc63f0a</code></td>
+    </tr>
+    <tr>
+      <td><strong>xdm-app-1.2.0-linux-arm64.tar.gz</strong></td>
+      <td><code>b257770603a1833daf7a77ebdeffe9f0d7276e785f14771c877255368322e900</code></td>
+    </tr>
+    <tr>
+      <td><strong>xdm-app-1.2.0.jar</strong></td>
+      <td><code>8b64d7c62d61a97e210700f71ecd759a7549e41273b18ed13d1d1d6c2d22f25b</code></td>
+    </tr>
+    <tr>
+      <td><strong>xdm-plugin-api-1.2.0.jar</strong></td>
+      <td><code>9627829ea3f499f4d7d125e61111535ce8ec1347ff0e8d3ca3a6546adac92400</code></td>
+    </tr>
+    <tr>
+      <td><strong>XDM-Enhanced-Extension-Chromium-v1.2.0.zip</strong></td>
+      <td><code>b384768b277f28d5c1727ae5303466ac5a59e7ef63e25eccddc81c07a25fbc7e</code></td>
+    </tr>
+    <tr>
+      <td><strong>XDM-Enhanced-Extension-Firefox-v1.2.0.xpi</strong></td>
+      <td><code>e0b56e616a53ee008292040a98b65edaeef1e65e271198119ecbef05d4512e6d</code></td>
+    </tr>
+    <tr>
+      <td><strong>retro-hifi.xdmskin</strong></td>
+      <td><code>5e833a5e2fa403f0d602946442c64218f0e18f23ac995a178ded74f21c1b59f0</code></td>
+    </tr>
+    <tr>
+      <td><strong>anime-sakura.xdmskin</strong></td>
+      <td><code>43c3332d72db84025b5271682da4d628b88f992c040942b511dc7e9a831999bd</code></td>
+    </tr>
+    <tr>
+      <td><strong>steampunk-brass.xdmskin</strong></td>
+      <td><code>5c59e99971066a25e7998fd3923be8c99f9f5f78b8e9640004f2eb002d0d8cf1</code></td>
+    </tr>
+    <tr>
+      <td><strong>modern-aurora.xdmskin</strong></td>
+      <td><code>cdc94af5313fc58331343879540a3e641018541c91f21318b6bd8abfbcc0bbdf</code></td>
+    </tr>
+    <tr>
+      <td><strong>synthwave-outrun.xdmskin</strong></td>
+      <td><code>88e38ffab4a392faa3f28925b6c5b1b456444e321922713aacf223d534278bca</code></td>
+    </tr>
+    <tr>
+      <td><strong>cyber-neon.xdmskin</strong></td>
+      <td><code>684d2ff6bb77c337ab93b34347100e40a4b8c6b3800fb29c8bc16d47e0bb1e23</code></td>
+    </tr>
+  </tbody>
+</table>
 
 ### Historical Verified Checksums (`v1.1.0`)
 
