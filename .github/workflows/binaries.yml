@@ -111,7 +111,7 @@ jobs:
           mkdir -p build/dist/jars
           version="$(sed -n 's/.*"currentVersion"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' \
             xdm-app/src/main/resources/app-version.json | head -1)"
-          cp "xdm-app/target/xdm-app-$version.jar" "build/dist/jars/xdm-app-$version.jar" 2>/dev/null || cp xdm-app/target/xdm-app.jar "build/dist/jars/xdm-app-$version.jar"
+          cp xdm-app/target/xdm-app.jar "build/dist/jars/xdm-app-$version.jar"
           cp "xdm-plugin-api/target/xdm-plugin-api-$version.jar" "build/dist/jars/xdm-plugin-api-$version.jar" 2>/dev/null || true
 
       - uses: actions/upload-artifact@v7
